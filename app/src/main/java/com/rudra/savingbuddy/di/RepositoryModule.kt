@@ -2,14 +2,17 @@ package com.rudra.savingbuddy.di
 
 import com.rudra.savingbuddy.data.local.dao.BudgetDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
+import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import com.rudra.savingbuddy.data.repository.BudgetRepositoryImpl
 import com.rudra.savingbuddy.data.repository.ExpenseRepositoryImpl
+import com.rudra.savingbuddy.data.repository.GoalRepositoryImpl
 import com.rudra.savingbuddy.data.repository.IncomeRepositoryImpl
 import com.rudra.savingbuddy.data.repository.SettingsRepositoryImpl
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
+import com.rudra.savingbuddy.domain.repository.GoalRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import dagger.Module
@@ -37,4 +40,8 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideSettingsRepository(userSettingsDao: UserSettingsDao): SettingsRepository = SettingsRepositoryImpl(userSettingsDao)
+
+    @Provides
+    @Singleton
+    fun provideGoalRepository(goalDao: GoalDao): GoalRepository = GoalRepositoryImpl(goalDao)
 }

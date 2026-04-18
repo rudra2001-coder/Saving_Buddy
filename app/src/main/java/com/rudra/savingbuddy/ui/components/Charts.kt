@@ -5,16 +5,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rudra.savingbuddy.ui.theme.*
-import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
 
 @Composable
@@ -29,6 +29,8 @@ fun PieChart(
         }
         return
     }
+
+    val surfaceColor = MaterialTheme.colorScheme.surface
 
     Column(modifier = modifier) {
         Canvas(
@@ -48,15 +50,15 @@ fun PieChart(
                 )
                 startAngle += sweepAngle
             }
-            
+
             drawCircle(
-                color = MaterialTheme.colorScheme.surface,
+                color = surfaceColor,
                 radius = size.width / 4
             )
         }
-        
+
         Spacer(modifier = Modifier.height(8.dp))
-        
+
         data.forEach { item ->
             Row(
                 modifier = Modifier

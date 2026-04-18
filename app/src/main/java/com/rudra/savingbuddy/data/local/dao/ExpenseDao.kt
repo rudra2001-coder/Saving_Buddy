@@ -6,8 +6,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ExpenseDao {
+    @Query("SELECT * FROM expense ORDER BY date DESC LIMIT :limit OFFSET :offset")
+    fun getExpensesPaginated(limit: Int, offset: Int): Flow<List<ExpenseEntity>>
+
     @Query("SELECT * FROM expense ORDER BY date DESC")
     fun getAllExpenses(): Flow<List<ExpenseEntity>>
+
+    @Query("SELECT COUNT(*) FROM expense")
+    fun getExpenseCount(): Flow<Int>
 
     @Query("SELECT * FROM expense WHERE date BETWEEN :startDate AND :endDate ORDER BY date DESC")
     fun getExpensesByDateRange(startDate: Long, endDate: Long): Flow<List<ExpenseEntity>>

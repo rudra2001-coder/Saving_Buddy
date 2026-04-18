@@ -1,5 +1,6 @@
 package com.rudra.savingbuddy.ui.navigation
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -10,9 +11,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.rudra.savingbuddy.ui.screens.budget.BudgetScreen
 import com.rudra.savingbuddy.ui.screens.dashboard.DashboardScreen
 import com.rudra.savingbuddy.ui.screens.expense.ExpenseScreen
+import com.rudra.savingbuddy.ui.screens.features.FeaturesScreen
+import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.income.IncomeScreen
+import com.rudra.savingbuddy.ui.screens.notifications.NotificationsScreen
 import com.rudra.savingbuddy.ui.screens.reports.ReportsScreen
 import com.rudra.savingbuddy.ui.screens.settings.SettingsScreen
 
@@ -56,11 +61,23 @@ fun MainNavigation() {
             composable(Screen.Add.route) {
                 AddScreen()
             }
+            composable(Screen.Goals.route) {
+                GoalsScreen()
+            }
+            composable(Screen.Budget.route) {
+                BudgetScreen()
+            }
             composable(Screen.Reports.route) {
                 ReportsScreen()
             }
             composable(Screen.Settings.route) {
-                SettingsScreen()
+                SettingsScreen(navController = navController)
+            }
+            composable(Screen.Features.route) {
+                FeaturesScreen(navController = navController)
+            }
+            composable(Screen.Notifications.route) {
+                NotificationsScreen()
             }
         }
     }
@@ -68,7 +85,7 @@ fun MainNavigation() {
 
 @Composable
 fun AddScreen() {
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
 
     Column {
         TabRow(selectedTabIndex = selectedTab) {

@@ -171,11 +171,12 @@ fun DashboardScreen(
                         }
                     }
                     
-                    if (uiState.budget != null) {
+                    val budgetAmount = uiState.budget
+                    if (budgetAmount > 0) {
                         Spacer(modifier = Modifier.height(16.dp))
-                        val progress = (uiState.monthlyExpenses / uiState.budget!!).coerceIn(0.0, 1.0)
+                        val progress = (uiState.monthlyExpenses / budgetAmount).coerceIn(0.0, 1.0)
                         Text(
-                            text = "Budget: ${CurrencyFormatter.format(uiState.budget)}",
+                            text = "Budget: ${CurrencyFormatter.format(budgetAmount)}",
                             style = MaterialTheme.typography.bodySmall
                         )
                         LinearProgressIndicator(

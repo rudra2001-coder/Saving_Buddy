@@ -1,17 +1,30 @@
 package com.rudra.savingbuddy.ui.screens.income
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.savingbuddy.domain.model.Income
@@ -27,6 +40,18 @@ fun IncomeScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<Income?>(null) }
+    var showFilterSheet by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
+    val listState = rememberLazyListState()
+
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
+            .collect { lastIndex ->
+                if (lastIndex != null && lastIndex >= uiState.incomeList.size - 5) {
+                    viewModel.loadMoreIncome()
+                }
+            }
+    }
 
     Scaffold(
         floatingActionButton = {
@@ -46,11 +71,54 @@ fun IncomeScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Text(
-                    text = "Income",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Income",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "${uiState.totalCount} total",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { 
+                                searchQuery = it
+                                viewModel.searchIncome(it)
+                            },
+                            placeholder = { Text("Search income...") },
+                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        FilterChip(
+                            selected = showFilterSheet,
+                            onClick = { showFilterSheet = true },
+                            label = { Text("Filter") }
+                        )
+                    }
+                }
             }
 
             if (uiState.incomeList.isEmpty()) {
@@ -76,6 +144,70 @@ fun IncomeScreen(
                     onEdit = { viewModel.showEditDialog(income) },
                     onDelete = { showDeleteDialog = income }
                 )
+            }
+        }
+    }
+
+    if (showFilterSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showFilterSheet = false }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp)
+            ) {
+                Text(
+                    text = "Filter Income",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Recurring Status",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            viewModel.filterByRecurring(null)
+                            showFilterSheet = false
+                        },
+                        label = { Text("All") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            viewModel.filterByRecurring(true)
+                            showFilterSheet = false
+                        },
+                        label = { Text("Recurring") }
+                    )
+                    FilterChip(
+                        selected = false,
+                        onClick = {
+                            viewModel.filterByRecurring(false)
+                            showFilterSheet = false
+                        },
+                        label = { Text("One-time") }
+                    )
+                }
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        searchQuery = ""
+                        viewModel.refreshIncome()
+                        showFilterSheet = false
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Clear Filters")
+                }
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }

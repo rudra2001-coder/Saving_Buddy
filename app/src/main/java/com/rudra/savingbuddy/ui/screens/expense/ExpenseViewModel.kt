@@ -17,7 +17,10 @@ data class ExpenseUiState(
     val error: String? = null,
     val showAddDialog: Boolean = false,
     val editingExpense: Expense? = null,
-    val quickAddCategory: ExpenseCategory? = null
+    val quickAddCategory: ExpenseCategory? = null,
+    val totalCount: Int = 0,
+    val currentPage: Int = 0,
+    val hasMoreItems: Boolean = true
 )
 
 @HiltViewModel
@@ -28,6 +31,10 @@ class ExpenseViewModel @Inject constructor(
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
 
+    companion object {
+        private const val PAGE_SIZE = 100
+    }
+
     init {
         loadExpenses()
     }
@@ -35,10 +42,47 @@ class ExpenseViewModel @Inject constructor(
     private fun loadExpenses() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            expenseRepository.getAllExpenses().collect { list ->
-                _uiState.update { it.copy(expenseList = list, isLoading = false) }
+            combine(
+                expenseRepository.getExpensesPaginated(PAGE_SIZE, 0),
+                expenseRepository.getExpenseCount()
+            ) { list, count ->
+                Pair(list, count)
+            }.collect { (list, count) ->
+                _uiState.update { 
+                    it.copy(
+                        expenseList = list, 
+                        totalCount = count,
+                        isLoading = false,
+                        hasMoreItems = list.size >= PAGE_SIZE
+                    ) 
+                }
             }
         }
+    }
+
+    fun loadMoreExpenses() {
+        val currentState = _uiState.value
+        if (currentState.isLoading || !currentState.hasMoreItems) return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val nextPage = currentState.currentPage + 1
+            expenseRepository.getExpensesPaginated(PAGE_SIZE, nextPage * PAGE_SIZE).collect { newItems ->
+                _uiState.update { state ->
+                    state.copy(
+                        expenseList = state.expenseList + newItems,
+                        currentPage = nextPage,
+                        isLoading = false,
+                        hasMoreItems = newItems.size >= PAGE_SIZE
+                    )
+                }
+            }
+        }
+    }
+
+    fun refreshExpenses() {
+        _uiState.update { it.copy(currentPage = 0, hasMoreItems = true) }
+        loadExpenses()
     }
 
     fun quickAdd(category: ExpenseCategory, amount: Double) {
@@ -108,5 +152,47 @@ class ExpenseViewModel @Inject constructor(
 
     fun clearError() {
         _uiState.update { it.copy(error = null) }
+    }
+
+    fun filterByCategory(category: ExpenseCategory?) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            if (category == null) {
+                expenseRepository.getExpensesPaginated(PAGE_SIZE, 0).collect { list ->
+                    _uiState.update { it.copy(expenseList = list, isLoading = false) }
+                }
+            } else {
+                expenseRepository.getExpensesPaginated(PAGE_SIZE, 0).collect { list ->
+                    val filtered = list.filter { it.category == category }
+                    _uiState.update { it.copy(expenseList = filtered, isLoading = false) }
+                }
+            }
+        }
+    }
+
+    fun filterByDateRange(startDate: Long, endDate: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            expenseRepository.getExpensesByDateRange(startDate, endDate).collect { list ->
+                _uiState.update { it.copy(expenseList = list, isLoading = false) }
+            }
+        }
+    }
+
+    fun searchExpenses(query: String) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            expenseRepository.getExpensesPaginated(1000, 0).collect { list ->
+                val filtered = if (query.isBlank()) {
+                    list
+                } else {
+                    list.filter { 
+                        it.category.displayName.contains(query, ignoreCase = true) ||
+                        it.notes?.contains(query, ignoreCase = true) == true
+                    }
+                }
+                _uiState.update { it.copy(expenseList = filtered, isLoading = false) }
+            }
+        }
     }
 }

@@ -21,7 +21,7 @@ data class DashboardUiState(
     val monthlyIncome: Double = 0.0,
     val monthlyExpenses: Double = 0.0,
     val monthlySavings: Double = 0.0,
-    val budget: Double? = null,
+    val budget: Double = 0.0,
     val budgetWarning: Boolean = false,
     val expensesByCategory: List<CategoryTotal> = emptyList(),
     val recentTransactions: List<TransactionItem> = emptyList(),
@@ -77,7 +77,8 @@ class DashboardViewModel @Inject constructor(
 
                 val todaySavings = todayIncome - todayExpenses
                 val monthlySavings = monthlyIncome - monthlyExpenses
-                val budgetWarning = budget != null && monthlyExpenses >= (budget.monthlyLimit * 0.8)
+                val budgetAmount = budget?.monthlyLimit ?: 0.0
+                val budgetWarning = budgetAmount > 0 && monthlyExpenses >= (budgetAmount * 0.8)
 
                 val insights = generateInsights(monthlyIncome, monthlyExpenses, todayExpenses, startOfMonth)
 
@@ -88,7 +89,7 @@ class DashboardViewModel @Inject constructor(
                     monthlyIncome = monthlyIncome,
                     monthlyExpenses = monthlyExpenses,
                     monthlySavings = monthlySavings,
-                    budget = budget?.monthlyLimit,
+                    budget = budgetAmount,
                     budgetWarning = budgetWarning,
                     expensesByCategory = expensesByCategory,
                     insights = insights

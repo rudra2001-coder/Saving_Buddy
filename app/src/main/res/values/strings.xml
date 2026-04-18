@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Saving Buddy</string>
+    <string name="widget_description">Quick add expenses from your home screen</string>
 </resources>

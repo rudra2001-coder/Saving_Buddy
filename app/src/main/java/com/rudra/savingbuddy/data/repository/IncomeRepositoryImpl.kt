@@ -16,6 +16,12 @@ class IncomeRepositoryImpl @Inject constructor(
     override fun getAllIncome(): Flow<List<Income>> =
         incomeDao.getAllIncome().map { list -> list.map { it.toDomain() } }
 
+    override fun getIncomePaginated(limit: Int, offset: Int): Flow<List<Income>> =
+        incomeDao.getIncomePaginated(limit, offset).map { list -> list.map { it.toDomain() } }
+
+    override fun getIncomeCount(): Flow<Int> =
+        incomeDao.getIncomeCount()
+
     override fun getIncomeByDateRange(startDate: Long, endDate: Long): Flow<List<Income>> =
         incomeDao.getIncomeByDateRange(startDate, endDate).map { list -> list.map { it.toDomain() } }
 

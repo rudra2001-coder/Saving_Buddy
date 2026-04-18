@@ -22,7 +22,23 @@ data class ReportsUiState(
     val categoryBreakdown: List<CategoryBreakdownItem> = emptyList(),
     val selectedMonth: Int = DateUtils.getCurrentMonth(),
     val selectedYear: Int = DateUtils.getCurrentYear(),
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val transactionLogs: List<TransactionLog> = emptyList(),
+    val logCount: Int = 0,
+    val currentLogPage: Int = 0,
+    val filterStartDate: Long? = null,
+    val filterEndDate: Long? = null,
+    val filterType: String? = null
+)
+
+data class TransactionLog(
+    val id: Long,
+    val type: String,
+    val description: String,
+    val amount: Double,
+    val category: String,
+    val date: Long,
+    val notes: String?
 )
 
 data class MonthlyData(
@@ -135,5 +151,73 @@ class ReportsViewModel @Inject constructor(
 
     fun refreshData() {
         loadReportsData()
+    }
+
+    fun loadTransactionLogs(startDate: Long? = null, endDate: Long? = null, type: String? = null) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, filterStartDate = startDate, filterEndDate = endDate, filterType = type) }
+            
+            combine(
+                incomeRepository.getIncomePaginated(1000, 0),
+                expenseRepository.getExpensesPaginated(1000, 0)
+            ) { incomeList, expenseList ->
+                val allTransactions = mutableListOf<TransactionLog>()
+                
+                incomeList.forEach { income ->
+                    allTransactions.add(
+                        TransactionLog(
+                            id = income.id,
+                            type = "Income",
+                            description = income.source,
+                            amount = income.amount,
+                            category = income.category.displayName,
+                            date = income.date,
+                            notes = income.notes
+                        )
+                    )
+                }
+                
+                expenseList.forEach { expense ->
+                    allTransactions.add(
+                        TransactionLog(
+                            id = expense.id,
+                            type = "Expense",
+                            description = expense.category.displayName,
+                            amount = expense.amount,
+                            category = expense.category.displayName,
+                            date = expense.date,
+                            notes = expense.notes
+                        )
+                    )
+                }
+                
+                allTransactions.sortedByDescending { it.date }
+            }.first().let { logs ->
+                var filtered = logs
+                
+                if (startDate != null) {
+                    filtered = filtered.filter { it.date >= startDate }
+                }
+                if (endDate != null) {
+                    filtered = filtered.filter { it.date <= endDate }
+                }
+                if (type != null) {
+                    filtered = filtered.filter { it.type == type }
+                }
+                
+                _uiState.update { 
+                    it.copy(
+                        transactionLogs = filtered.take(500),
+                        logCount = filtered.size,
+                        isLoading = false
+                    ) 
+                }
+            }
+        }
+    }
+
+    fun clearFilters() {
+        _uiState.update { it.copy(filterStartDate = null, filterEndDate = null, filterType = null) }
+        loadTransactionLogs()
     }
 }

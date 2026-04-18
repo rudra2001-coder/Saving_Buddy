@@ -5,6 +5,7 @@ import androidx.room.Room
 import com.rudra.savingbuddy.data.local.SavingBuddyDatabase
 import com.rudra.savingbuddy.data.local.dao.BudgetDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
+import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import dagger.Module
@@ -39,4 +40,7 @@ object DatabaseModule {
 
     @Provides
     fun provideUserSettingsDao(database: SavingBuddyDatabase): UserSettingsDao = database.userSettingsDao()
+
+    @Provides
+    fun provideGoalDao(database: SavingBuddyDatabase): GoalDao = database.goalDao()
 }

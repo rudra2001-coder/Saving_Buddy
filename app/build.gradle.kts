@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.hilt)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -46,6 +47,7 @@ android {
 }
 
 dependencies {
+    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel)
@@ -57,21 +59,59 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons)
+
+    // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
+
+    // Hilt DI
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
-    implementation(libs.navigation.compose)
-    implementation(libs.work.runtime)
     implementation(libs.hilt.work)
     ksp(libs.work.compiler)
+
+    // Navigation
+    implementation(libs.navigation.compose)
+
+    // Background Work
+    implementation(libs.work.runtime)
+
+    // Image Loading
     implementation(libs.coil.compose)
+
+    // Biometric
+    implementation(libs.biometric)
+
+    // Splash Screen
+    implementation(libs.splashscreen)
+
+    // Paging
+    implementation(libs.paging.runtime)
+    implementation(libs.paging.compose)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines)
+    implementation(libs.kotlinx.coroutines.android)
+
+    // DateTime
+    implementation(libs.kotlinx.datetime)
+
+    // Lottie Animations
+    implementation(libs.lottie)
+
+    // Accompanist
+    implementation(libs.accompanist.permissions)
+    implementation(libs.accompanist.systemuicontroller)
+
+    // DataStore
+    implementation(libs.datastore)
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    androidTestImplementation(platform(libs.androidx.compose.bom))
+    androidTestImplementation(libs.androidx.compose.bom)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)

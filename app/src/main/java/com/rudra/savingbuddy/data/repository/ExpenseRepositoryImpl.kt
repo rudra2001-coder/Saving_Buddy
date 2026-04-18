@@ -17,6 +17,12 @@ class ExpenseRepositoryImpl @Inject constructor(
     override fun getAllExpenses(): Flow<List<Expense>> =
         expenseDao.getAllExpenses().map { list -> list.map { it.toDomain() } }
 
+    override fun getExpensesPaginated(limit: Int, offset: Int): Flow<List<Expense>> =
+        expenseDao.getExpensesPaginated(limit, offset).map { list -> list.map { it.toDomain() } }
+
+    override fun getExpenseCount(): Flow<Int> =
+        expenseDao.getExpenseCount()
+
     override fun getExpensesByDateRange(startDate: Long, endDate: Long): Flow<List<Expense>> =
         expenseDao.getExpensesByDateRange(startDate, endDate).map { list -> list.map { it.toDomain() } }
 

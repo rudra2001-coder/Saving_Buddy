@@ -5,6 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface IncomeRepository {
     fun getAllIncome(): Flow<List<Income>>
+    fun getIncomePaginated(limit: Int, offset: Int): Flow<List<Income>>
+    fun getIncomeCount(): Flow<Int>
     fun getIncomeByDateRange(startDate: Long, endDate: Long): Flow<List<Income>>
     fun getTodayIncome(startOfDay: Long, endOfDay: Long): Flow<List<Income>>
     fun getTotalIncomeByDateRange(startDate: Long, endDate: Long): Flow<Double?>
