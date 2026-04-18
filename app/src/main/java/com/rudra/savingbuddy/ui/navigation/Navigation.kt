@@ -10,7 +10,6 @@ sealed class Screen(
     val icon: ImageVector
 ) {
     data object Dashboard : Screen("dashboard", "Dashboard", Icons.Default.Dashboard)
-    data object Add : Screen("add", "Add", Icons.Default.Add)
     data object Goals : Screen("goals", "Goals", Icons.Default.Flag)
     data object Reports : Screen("reports", "Reports", Icons.Default.Receipt)
     data object Settings : Screen("settings", "Settings", Icons.Default.Settings)
@@ -18,19 +17,20 @@ sealed class Screen(
     data object More : Screen("more", "More", Icons.Default.MoreVert)
     data object Notifications : Screen("notifications", "Notifications", Icons.Default.Notifications)
     data object Budget : Screen("budget", "Budget", Icons.Default.AccountBalance)
+    data object AddIncome : Screen("add_income", "Income", Icons.Default.TrendingUp)
+    data object AddExpense : Screen("add_expense", "Expense", Icons.Default.TrendingDown)
+    data object Recurring : Screen("recurring", "Recurring", Icons.Default.Repeat)
 }
 
 val bottomNavItems = listOf(
     Screen.Dashboard,
-    Screen.Add,
-    Screen.Goals,
-    Screen.Budget,
+    Screen.Features,
     Screen.Reports,
-    Screen.Settings
+    Screen.Settings,
+
 )
 
 val moreMenuItems = listOf(
-    Screen.Features,
     Screen.Notifications,
     Screen.Dashboard
 )

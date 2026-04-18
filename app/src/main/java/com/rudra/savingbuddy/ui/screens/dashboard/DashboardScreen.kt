@@ -4,6 +4,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
@@ -13,7 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.rudra.savingbuddy.ui.components.PieChart
+import androidx.navigation.NavController
+import com.rudra.savingbuddy.ui.components.CategoryBarChart
 import com.rudra.savingbuddy.ui.components.BarChart
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
@@ -22,9 +25,11 @@ import com.rudra.savingbuddy.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
-    viewModel: DashboardViewModel = hiltViewModel()
+    viewModel: DashboardViewModel = hiltViewModel(),
+    navController: NavController? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    var showFabMenu by remember { mutableStateOf(false) }
 
     LazyColumn(
         modifier = Modifier
@@ -43,6 +48,43 @@ fun DashboardScreen(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "Net Balance",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    val netBalance = uiState.monthlyIncome - uiState.monthlyExpenses
+                    Text(
+                        text = CurrencyFormatter.format(netBalance),
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (netBalance >= 0) IncomeGreen else ExpenseRed
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = if (netBalance >= 0) "You're saving ${((netBalance / uiState.monthlyIncome) * 100).toInt()}% of income" 
+                        else "Over budget by ${CurrencyFormatter.format(-netBalance)}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                    )
+                }
+            }
         }
 
         item {
@@ -201,15 +243,27 @@ fun DashboardScreen(
             item {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Expense Categories",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Expenses by Category",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = "Top 10",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                         Spacer(modifier = Modifier.height(12.dp))
-                        PieChart(
+                        CategoryBarChart(
                             data = uiState.expensesByCategory,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            maxBars = 10
                         )
                     }
                 }
@@ -256,6 +310,84 @@ fun DashboardScreen(
                         }
                     }
                 }
+            }
+        }
+    }
+
+    // Floating Action Button with Menu
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.BottomEnd
+    ) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            if (showFabMenu) {
+                // Income option
+                Card(
+                    onClick = {
+                        navController?.navigate("add_income")
+                        showFabMenu = false
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = IncomeGreen)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Add Income",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+                
+                // Expense option
+                Card(
+                    onClick = {
+                        navController?.navigate("add_expense")
+                        showFabMenu = false
+                    },
+                    modifier = Modifier.padding(bottom = 8.dp),
+                    colors = CardDefaults.cardColors(containerColor = ExpenseRed)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            Icons.Default.TrendingDown,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            "Add Expense",
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                }
+            }
+            
+            // Main FAB
+            FloatingActionButton(
+                onClick = { showFabMenu = !showFabMenu },
+                containerColor = MaterialTheme.colorScheme.primary
+            ) {
+                Icon(
+                    if (showFabMenu) Icons.Default.Close else Icons.Default.Add,
+                    contentDescription = "Add"
+                )
             }
         }
     }

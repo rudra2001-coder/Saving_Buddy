@@ -369,6 +369,13 @@ private fun getExpenseCategoryColor(category: ExpenseCategory): androidx.compose
         ExpenseCategory.TRANSPORT -> TransportColor
         ExpenseCategory.BILLS -> BillsColor
         ExpenseCategory.SHOPPING -> ShoppingColor
+        ExpenseCategory.ENTERTAINMENT -> EntertainmentColor
+        ExpenseCategory.HEALTH -> HealthColor
+        ExpenseCategory.EDUCATION -> EducationColor
+        ExpenseCategory.GIFTS -> GiftsColor
+        ExpenseCategory.TRAVEL -> TravelColor
+        ExpenseCategory.SUBSCRIPTIONS -> SubscriptionsColor
+        ExpenseCategory.RENT -> RentColor
         ExpenseCategory.OTHERS -> OthersColor
     }
 }

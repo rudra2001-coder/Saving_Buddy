@@ -1,7 +1,19 @@
 package com.rudra.savingbuddy.ui.components
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -16,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
+import com.rudra.savingbuddy.util.CurrencyFormatter
 
 @Composable
 fun PieChart(
@@ -175,6 +188,77 @@ fun BarChart(
                     text = label.take(3),
                     style = MaterialTheme.typography.labelSmall
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun CategoryBarChart(
+    data: List<CategoryTotal>,
+    modifier: Modifier = Modifier,
+    maxBars: Int = 10
+) {
+    val sortedData = data.sortedByDescending { it.total }.take(maxBars)
+    val total = data.sumOf { it.total }
+    
+    if (sortedData.isEmpty() || total <= 0) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text("No data", style = MaterialTheme.typography.bodyMedium)
+        }
+        return
+    }
+    
+    val maxValue = sortedData.maxOfOrNull { it.total } ?: 1.0
+    
+    Column(modifier = modifier) {
+        sortedData.forEach { item ->
+            val percentage = if (total > 0) (item.total / total * 100) else 0.0
+            val barProgress = (item.total / maxValue).toFloat()
+            
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.category.replace("_", " "),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.width(80.dp)
+                )
+                
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(20.dp)
+                ) {
+                    Canvas(modifier = Modifier.fillMaxSize()) {
+                        drawRoundRect(
+                            color = getCategoryColor(item.category).copy(alpha = 0.3f),
+                            size = Size(size.width, size.height)
+                        )
+                        drawRoundRect(
+                            color = getCategoryColor(item.category),
+                            size = Size(size.width * barProgress, size.height)
+                        )
+                    }
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = CurrencyFormatter.format(item.total),
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "${percentage.toInt()}%",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }

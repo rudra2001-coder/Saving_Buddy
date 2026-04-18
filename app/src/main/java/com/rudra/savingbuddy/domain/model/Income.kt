@@ -2,10 +2,10 @@ package com.rudra.savingbuddy.domain.model
 
 data class Income(
     val id: Long = 0,
-    val source: String,
+    val source: String = "",
     val amount: Double,
     val category: IncomeCategory,
-    val date: Long,
+    val date: Long = System.currentTimeMillis(),
     val isRecurring: Boolean = false,
     val recurringInterval: RecurringInterval? = null,
     val notes: String? = null,

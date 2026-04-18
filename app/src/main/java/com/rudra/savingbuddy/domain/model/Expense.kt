@@ -4,15 +4,23 @@ data class Expense(
     val id: Long = 0,
     val amount: Double,
     val category: ExpenseCategory,
-    val date: Long,
+    val date: Long = System.currentTimeMillis(),
     val notes: String? = null,
+    val isRecurring: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
 
 enum class ExpenseCategory(val displayName: String, val icon: String) {
-    FOOD("Food", "restaurant"),
-    TRANSPORT("Transport", "directions_car"),
-    BILLS("Bills", "receipt"),
-    SHOPPING("Shopping", "shopping_bag"),
-    OTHERS("Others", "more_horiz")
+    FOOD("Food", "🍔"),
+    TRANSPORT("Transport", "🚌"),
+    BILLS("Bills", "💡"),
+    SHOPPING("Shopping", "🛒"),
+    ENTERTAINMENT("Entertainment", "🎬"),
+    HEALTH("Health", "💊"),
+    EDUCATION("Education", "📚"),
+    GIFTS("Gifts", "🎁"),
+    TRAVEL("Travel", "✈️"),
+    SUBSCRIPTIONS("Subscriptions", "📱"),
+    RENT("Rent", "🏠"),
+    OTHERS("Others", "📦")
 }

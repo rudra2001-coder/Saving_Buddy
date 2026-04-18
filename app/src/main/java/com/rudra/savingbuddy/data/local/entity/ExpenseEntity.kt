@@ -11,5 +11,6 @@ data class ExpenseEntity(
     val category: String,
     val date: Long,
     val notes: String? = null,
+    val isRecurring: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )

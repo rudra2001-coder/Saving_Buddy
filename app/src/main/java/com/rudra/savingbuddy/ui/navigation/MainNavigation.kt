@@ -11,6 +11,9 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.rudra.savingbuddy.ui.screens.add.AddExpenseScreen
+import com.rudra.savingbuddy.ui.screens.add.AddIncomeScreen
+import com.rudra.savingbuddy.ui.screens.recurring.RecurringScreen
 import com.rudra.savingbuddy.ui.screens.budget.BudgetScreen
 import com.rudra.savingbuddy.ui.screens.dashboard.DashboardScreen
 import com.rudra.savingbuddy.ui.screens.expense.ExpenseScreen
@@ -56,16 +59,22 @@ fun MainNavigation() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen()
+                DashboardScreen(navController = navController)
             }
-            composable(Screen.Add.route) {
-                AddScreen()
+            composable(Screen.AddIncome.route) {
+                AddIncomeScreen(navController = navController)
+            }
+            composable(Screen.AddExpense.route) {
+                AddExpenseScreen(navController = navController)
             }
             composable(Screen.Goals.route) {
                 GoalsScreen()
             }
             composable(Screen.Budget.route) {
                 BudgetScreen()
+            }
+            composable(Screen.Recurring.route) {
+                RecurringScreen(navController = navController)
             }
             composable(Screen.Reports.route) {
                 ReportsScreen()
@@ -79,31 +88,6 @@ fun MainNavigation() {
             composable(Screen.Notifications.route) {
                 NotificationsScreen()
             }
-        }
-    }
-}
-
-@Composable
-fun AddScreen() {
-    var selectedTab by remember { mutableIntStateOf(0) }
-
-    Column {
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(
-                selected = selectedTab == 0,
-                onClick = { selectedTab = 0 },
-                text = { Text("Expense") }
-            )
-            Tab(
-                selected = selectedTab == 1,
-                onClick = { selectedTab = 1 },
-                text = { Text("Income") }
-            )
-        }
-
-        when (selectedTab) {
-            0 -> ExpenseScreen()
-            1 -> IncomeScreen()
         }
     }
 }
