@@ -3,10 +3,14 @@ package com.rudra.savingbuddy.ui.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
+import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Expense
+import com.rudra.savingbuddy.domain.model.Goal
 import com.rudra.savingbuddy.domain.model.Income
+import com.rudra.savingbuddy.domain.repository.BillReminderRepository
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
+import com.rudra.savingbuddy.domain.repository.GoalRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import com.rudra.savingbuddy.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,7 +29,10 @@ data class DashboardUiState(
     val budgetWarning: Boolean = false,
     val expensesByCategory: List<CategoryTotal> = emptyList(),
     val recentTransactions: List<TransactionItem> = emptyList(),
-    val insights: List<String> = emptyList()
+    val insights: List<String> = emptyList(),
+    val activeGoal: Goal? = null,
+    val upcomingBills: List<BillReminder> = emptyList(),
+    val monthlyTrend: List<Double> = emptyList()
 )
 
 data class TransactionItem(
@@ -41,7 +48,9 @@ data class TransactionItem(
 class DashboardViewModel @Inject constructor(
     private val incomeRepository: IncomeRepository,
     private val expenseRepository: ExpenseRepository,
-    private val budgetRepository: BudgetRepository
+    private val budgetRepository: BudgetRepository,
+    private val goalRepository: GoalRepository,
+    private val billReminderRepository: BillReminderRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -100,6 +109,50 @@ class DashboardViewModel @Inject constructor(
         }
 
         loadRecentTransactions(startOfMonth, endOfMonth)
+        loadGoalsAndBills()
+        loadMonthlyTrend()
+    }
+
+    private fun loadGoalsAndBills() {
+        viewModelScope.launch {
+            goalRepository.getActiveGoals().collect { goals ->
+                val activeGoal = goals.firstOrNull { !it.isCompleted }
+                _uiState.update { it.copy(activeGoal = activeGoal) }
+            }
+        }
+
+        viewModelScope.launch {
+            billReminderRepository.getActiveBillReminders().collect { bills ->
+                val upcomingBills = bills
+                    .filter { it.isActive }
+                    .sortedBy { it.billingDay }
+                    .take(3)
+                _uiState.update { it.copy(upcomingBills = upcomingBills) }
+            }
+        }
+    }
+
+    private fun loadMonthlyTrend() {
+        viewModelScope.launch {
+            val today = System.currentTimeMillis()
+            val trend = mutableListOf<Double>()
+            
+            for (i in 6 downTo 0) {
+                val monthStart = DateUtils.getStartOfMonth(today - (i * 30L * 24 * 60 * 60 * 1000))
+                val monthEnd = DateUtils.getEndOfMonth(today - (i * 30L * 24 * 60 * 60 * 1000))
+                
+                combine(
+                    incomeRepository.getTotalIncomeByDateRange(monthStart, monthEnd),
+                    expenseRepository.getTotalExpensesByDateRange(monthStart, monthEnd)
+                ) { income, expense ->
+                    (income as? Double ?: 0.0) - (expense as? Double ?: 0.0)
+                }.first().let { savings ->
+                    trend.add(savings)
+                }
+            }
+            
+            _uiState.update { it.copy(monthlyTrend = trend) }
+        }
     }
 
     private fun loadRecentTransactions(startDate: Long, endDate: Long) {

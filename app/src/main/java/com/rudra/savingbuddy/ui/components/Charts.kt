@@ -23,6 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -271,5 +272,93 @@ private fun getCategoryColor(category: String): Color {
         "BILLS" -> BillsColor
         "SHOPPING" -> ShoppingColor
         else -> OthersColor
+    }
+}
+
+@Composable
+fun Sparkline(
+    data: List<Double>,
+    modifier: Modifier = Modifier,
+    lineColor: Color = MaterialTheme.colorScheme.primary,
+    fillColor: Color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+) {
+    if (data.isEmpty()) {
+        Box(modifier = modifier, contentAlignment = Alignment.Center) {
+            Text("No data", style = MaterialTheme.typography.bodySmall)
+        }
+        return
+    }
+
+    val maxValue = data.maxOfOrNull { it } ?: 1.0
+    val minValue = data.minOfOrNull { it } ?: 0.0
+    val range = (maxValue - minValue).coerceAtLeast(1.0)
+
+    Canvas(modifier = modifier.fillMaxWidth().height(60.dp)) {
+        val stepX = size.width / (data.size - 1).coerceAtLeast(1)
+        
+        val points = data.mapIndexed { index, value ->
+            val x = index * stepX
+            val y = if (range > 0) {
+                size.height - ((value - minValue) / range * size.height).toFloat()
+            } else {
+                size.height / 2
+            }
+            Offset(x, y)
+        }
+
+        val path = Path().apply {
+            if (points.isNotEmpty()) {
+                moveTo(points[0].x, points[0].y)
+                for (i in 1 until points.size) {
+                    val prev = points[i - 1]
+                    val curr = points[i]
+                    val controlX = (prev.x + curr.x) / 2
+                    cubicTo(
+                        controlX, prev.y,
+                        controlX, curr.y,
+                        curr.x, curr.y
+                    )
+                }
+            }
+        }
+
+        val fillPath = Path().apply {
+            addPath(path)
+            if (points.isNotEmpty()) {
+                lineTo(points.last().x, size.height)
+                lineTo(points.first().x, size.height)
+                close()
+            }
+        }
+
+        drawPath(path = fillPath, color = fillColor, style = Fill)
+        
+        drawPath(
+            path = path,
+            color = lineColor,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3f)
+        )
+
+        points.forEach { point ->
+            drawCircle(
+                color = lineColor,
+                radius = 4f,
+                center = point
+            )
+            drawCircle(
+                color = Color.White,
+                radius = 2f,
+                center = point
+            )
+        }
+
+        if (points.isNotEmpty()) {
+            val lastPoint = points.last()
+            drawCircle(
+                color = lineColor,
+                radius = 6f,
+                center = lastPoint
+            )
+        }
     }
 }
