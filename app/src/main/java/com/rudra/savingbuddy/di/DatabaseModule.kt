@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import com.rudra.savingbuddy.data.local.SavingBuddyDatabase
 import com.rudra.savingbuddy.data.local.dao.BudgetDao
+import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
@@ -43,4 +44,7 @@ object DatabaseModule {
 
     @Provides
     fun provideGoalDao(database: SavingBuddyDatabase): GoalDao = database.goalDao()
+
+    @Provides
+    fun provideBillReminderDao(database: SavingBuddyDatabase): BillReminderDao = database.billReminderDao()
 }

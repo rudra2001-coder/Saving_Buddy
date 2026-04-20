@@ -3,11 +3,13 @@ package com.rudra.savingbuddy.data.local
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.rudra.savingbuddy.data.local.dao.BudgetDao
+import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import com.rudra.savingbuddy.data.local.entity.BudgetEntity
+import com.rudra.savingbuddy.data.local.entity.BillReminderEntity
 import com.rudra.savingbuddy.data.local.entity.ExpenseEntity
 import com.rudra.savingbuddy.data.local.entity.GoalEntity
 import com.rudra.savingbuddy.data.local.entity.IncomeEntity
@@ -19,9 +21,10 @@ import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
         ExpenseEntity::class,
         BudgetEntity::class,
         UserSettingsEntity::class,
-        GoalEntity::class
+        GoalEntity::class,
+        BillReminderEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = true
 )
 abstract class SavingBuddyDatabase : RoomDatabase() {
@@ -30,4 +33,5 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
     abstract fun budgetDao(): BudgetDao
     abstract fun userSettingsDao(): UserSettingsDao
     abstract fun goalDao(): GoalDao
+    abstract fun billReminderDao(): BillReminderDao
 }

@@ -20,6 +20,9 @@ sealed class Screen(
     data object AddIncome : Screen("add_income", "Income", Icons.Default.TrendingUp)
     data object AddExpense : Screen("add_expense", "Expense", Icons.Default.TrendingDown)
     data object Recurring : Screen("recurring", "Recurring", Icons.Default.Repeat)
+    data object Bills : Screen("bills", "Bills", Icons.Default.Receipt)
+    data object Income : Screen("income", "Income History", Icons.Default.TrendingUp)
+    data object Expense : Screen("expense", "Expense History", Icons.Default.TrendingDown)
 }
 
 val bottomNavItems = listOf(

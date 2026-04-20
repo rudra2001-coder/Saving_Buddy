@@ -10,6 +10,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import com.rudra.savingbuddy.ui.navigation.MainNavigation
 import com.rudra.savingbuddy.ui.theme.SavingBuddyTheme
+import com.rudra.savingbuddy.util.BillNotificationWorker
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -17,6 +18,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        BillNotificationWorker.scheduleBillReminderCheck(this)
+        
         setContent {
             SavingBuddyTheme {
                 Surface(

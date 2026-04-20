@@ -37,9 +37,16 @@ val allFeatures = listOf(
     // Add Transactions
     FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Add", "add_income"),
     FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, Color(0xFFF44336), "Add", "add_expense"),
-    
+
+    // History
+    FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, Color(0xFF4CAF50), "History", "income"),
+    FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, Color(0xFFF44336), "History", "expense"),
+
     // Recurring
     FeatureItem("recurring", "Recurring", "Manage recurring", Icons.Default.Repeat, Color(0xFF9C27B6), "Transactions", "recurring"),
+    
+    // Bills
+    FeatureItem("bills", "Bill Reminders", "Upcoming bills", Icons.Default.Receipt, Color(0xFFFF9800), "Transactions", "bills"),
     
     // Goals
     FeatureItem("goals", "Goals", "Savings goals", Icons.Default.Flag, Color(0xFFE91E63), "Goals", "goals"),
@@ -57,7 +64,7 @@ val allFeatures = listOf(
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
 )
 
-val featureCategories = listOf("All", "Main", "Add", "Transactions", "Goals", "Budget", "Reports", "Settings")
+val featureCategories = listOf("All", "Main", "Add", "History", "Transactions", "Goals", "Budget", "Reports", "Settings")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

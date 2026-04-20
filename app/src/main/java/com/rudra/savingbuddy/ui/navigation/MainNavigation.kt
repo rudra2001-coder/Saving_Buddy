@@ -13,13 +13,14 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.rudra.savingbuddy.ui.screens.add.AddExpenseScreen
 import com.rudra.savingbuddy.ui.screens.add.AddIncomeScreen
+import com.rudra.savingbuddy.ui.screens.bills.BillRemindersScreen
 import com.rudra.savingbuddy.ui.screens.recurring.RecurringScreen
 import com.rudra.savingbuddy.ui.screens.budget.BudgetScreen
 import com.rudra.savingbuddy.ui.screens.dashboard.DashboardScreen
 import com.rudra.savingbuddy.ui.screens.expense.ExpenseScreen
 import com.rudra.savingbuddy.ui.screens.features.FeaturesScreen
-import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.income.IncomeScreen
+import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.notifications.NotificationsScreen
 import com.rudra.savingbuddy.ui.screens.reports.ReportsScreen
 import com.rudra.savingbuddy.ui.screens.settings.SettingsScreen
@@ -87,6 +88,15 @@ fun MainNavigation() {
             }
             composable(Screen.Notifications.route) {
                 NotificationsScreen()
+            }
+            composable(Screen.Bills.route) {
+                BillRemindersScreen(navController = navController)
+            }
+            composable(Screen.Income.route) {
+                IncomeScreen()
+            }
+            composable(Screen.Expense.route) {
+                ExpenseScreen()
             }
         }
     }
