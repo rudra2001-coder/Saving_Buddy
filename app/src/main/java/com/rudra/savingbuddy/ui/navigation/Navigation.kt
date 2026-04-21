@@ -23,6 +23,8 @@ sealed class Screen(
     data object Bills : Screen("bills", "Bills", Icons.Default.Receipt)
     data object Income : Screen("income", "Income History", Icons.Default.TrendingUp)
     data object Expense : Screen("expense", "Expense History", Icons.Default.TrendingDown)
+    data object Calendar : Screen("calendar", "Calendar", Icons.Default.CalendarMonth)
+    data object Scanner : Screen("scanner", "Scanner", Icons.Default.QrCodeScanner)
 }
 
 val bottomNavItems = listOf(

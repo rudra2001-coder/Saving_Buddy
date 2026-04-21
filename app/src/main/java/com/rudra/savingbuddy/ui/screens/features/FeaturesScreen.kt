@@ -57,6 +57,12 @@ val allFeatures = listOf(
     // Reports
     FeatureItem("reports", "Reports", "Analytics & transaction logs", Icons.Default.Analytics, Color(0xFF2196F3), "Reports", "reports"),
     
+    // Calendar
+    FeatureItem("calendar", "Calendar", "View transactions by date", Icons.Default.CalendarMonth, Color(0xFF673AB7), "Transactions", "calendar"),
+    
+    // Scanner
+    FeatureItem("scanner", "Receipt Scanner", "Scan receipts for transactions", Icons.Default.QrCodeScanner, Color(0xFF009688), "Add", "scanner"),
+    
     // Notification Center
     FeatureItem("notifications", "Notifications", "All notifications", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
     
@@ -64,7 +70,7 @@ val allFeatures = listOf(
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
 )
 
-val featureCategories = listOf("All", "Main", "Add", "History", "Transactions", "Goals", "Budget", "Reports", "Settings")
+val featureCategories = listOf("All", "Main", "Add", "History", "Transactions", "Goals", "Budget", "Reports", "Settings", "Tools")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -63,6 +63,7 @@ dependencies {
     // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.androidx.camera.lifecycle)
     ksp(libs.room.compiler)
 
     // Hilt DI
@@ -107,6 +108,11 @@ dependencies {
 
     // DataStore
     implementation(libs.datastore)
+
+    // CameraX
+    implementation(libs.camera)
+    implementation(libs.camera.view)
+    implementation(libs.mlkit.text.recognition)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

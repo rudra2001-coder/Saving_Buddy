@@ -24,6 +24,8 @@ import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.notifications.NotificationsScreen
 import com.rudra.savingbuddy.ui.screens.reports.ReportsScreen
 import com.rudra.savingbuddy.ui.screens.settings.SettingsScreen
+import com.rudra.savingbuddy.ui.screens.calendar.CalendarScreen
+import com.rudra.savingbuddy.ui.screens.scanner.ScannerScreen
 
 @Composable
 fun MainNavigation() {
@@ -97,6 +99,12 @@ fun MainNavigation() {
             }
             composable(Screen.Expense.route) {
                 ExpenseScreen()
+            }
+            composable(Screen.Calendar.route) {
+                CalendarScreen(navController = navController)
+            }
+            composable(Screen.Scanner.route) {
+                ScannerScreen(navController = navController)
             }
         }
     }
