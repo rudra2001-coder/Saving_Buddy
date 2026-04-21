@@ -28,7 +28,13 @@ data class ReportsUiState(
     val currentLogPage: Int = 0,
     val filterStartDate: Long? = null,
     val filterEndDate: Long? = null,
-    val filterType: String? = null
+    val filterType: String? = null,
+    val overviewStartDate: Long? = null,
+    val overviewEndDate: Long? = null,
+    val isToday: Boolean = false,
+    val isThisWeek: Boolean = false,
+    val isThisMonth: Boolean = true,
+    val isThisYear: Boolean = false
 )
 
 data class TransactionLog(
@@ -75,44 +81,43 @@ class ReportsViewModel @Inject constructor(
             val startOfMonth = DateUtils.getStartOfMonth(now)
             val endOfMonth = DateUtils.getEndOfMonth(now)
 
-            combine(
-                incomeRepository.getTotalIncomeByDateRange(startOfMonth, endOfMonth),
-                expenseRepository.getTotalExpensesByDateRange(startOfMonth, endOfMonth),
-                expenseRepository.getExpensesByCategoryGrouped(startOfMonth, endOfMonth)
-            ) { totalIncome, totalExpenses, categoryData ->
-                val income = totalIncome ?: 0.0
-                val expenses = totalExpenses ?: 0.0
-                val savings = income - expenses
-                val savingsRate = if (income > 0) (savings / income) * 100 else 0.0
+            loadDataForRange(startOfMonth, endOfMonth)
+            loadMonthlyTrend()
+        }
+    }
 
-                val categoryBreakdown = categoryData.map { cat ->
-                    CategoryBreakdownItem(
-                        category = cat.category,
-                        amount = cat.total,
-                        percentage = if (expenses > 0) (cat.total / expenses) * 100 else 0.0
-                    )
-                }
+    private suspend fun loadDataForRange(startDate: Long, endDate: Long) {
+        combine(
+            incomeRepository.getTotalIncomeByDateRange(startDate, endDate),
+            expenseRepository.getTotalExpensesByDateRange(startDate, endDate),
+            expenseRepository.getExpensesByCategoryGrouped(startDate, endDate)
+        ) { totalIncome, totalExpenses, categoryData ->
+            val income = totalIncome ?: 0.0
+            val expenses = totalExpenses ?: 0.0
+            val savings = income - expenses
+            val savingsRate = if (income > 0) (savings / income) * 100 else 0.0
 
-                Triple(
-                    Triple(income, expenses, savings),
-                    savingsRate,
-                    categoryBreakdown
+            val categoryBreakdown = categoryData.map { cat ->
+                CategoryBreakdownItem(
+                    category = cat.category,
+                    amount = cat.total,
+                    percentage = if (expenses > 0) (cat.total / expenses) * 100 else 0.0
                 )
-            }.collect { (totals, rate, breakdown) ->
-                _uiState.update {
-                    it.copy(
-                        totalIncome = totals.first,
-                        totalExpenses = totals.second,
-                        totalSavings = totals.third,
-                        savingsRate = rate,
-                        categoryBreakdown = breakdown,
-                        isLoading = false
-                    )
-                }
+            }
+
+            Triple(Triple(income, expenses, savings), savingsRate, categoryBreakdown)
+        }.first().let { (totals, rate, breakdown) ->
+            _uiState.update {
+                it.copy(
+                    totalIncome = totals.first,
+                    totalExpenses = totals.second,
+                    totalSavings = totals.third,
+                    savingsRate = rate,
+                    categoryBreakdown = breakdown,
+                    isLoading = false
+                )
             }
         }
-
-        loadMonthlyTrend()
     }
 
     private fun loadMonthlyTrend() {
@@ -144,6 +149,74 @@ class ReportsViewModel @Inject constructor(
         }
     }
 
+    fun selectDatePreset(preset: String) {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val (startDate, endDate) = when (preset) {
+                "today" -> Pair(now - (24 * 60 * 60 * 1000), now)
+                "week" -> Pair(now - (7 * 24 * 60 * 60 * 1000), now)
+                "month" -> {
+                    val startOfMonth = DateUtils.getStartOfMonth(now)
+                    Pair(startOfMonth, now)
+                }
+                "year" -> {
+                    val calendar = Calendar.getInstance()
+                    calendar.set(Calendar.DAY_OF_YEAR, 1)
+                    calendar.set(Calendar.HOUR_OF_DAY, 0)
+                    calendar.set(Calendar.MINUTE, 0)
+                    calendar.set(Calendar.SECOND, 0)
+                    Pair(calendar.timeInMillis, now)
+                }
+                else -> Pair(DateUtils.getStartOfMonth(now), now)
+            }
+
+            _uiState.update {
+                it.copy(
+                    overviewStartDate = startDate,
+                    overviewEndDate = endDate,
+                    isToday = preset == "today",
+                    isThisWeek = preset == "week",
+                    isThisMonth = preset == "month",
+                    isThisYear = preset == "year"
+                )
+            }
+
+            loadDataForRange(startDate, endDate)
+        }
+    }
+
+    fun applyDateRangeToOverview(startDate: Long?, endDate: Long?) {
+        if (startDate != null && endDate != null) {
+            _uiState.update {
+                it.copy(
+                    overviewStartDate = startDate,
+                    overviewEndDate = endDate,
+                    isToday = false,
+                    isThisWeek = false,
+                    isThisMonth = false,
+                    isThisYear = false
+                )
+            }
+            viewModelScope.launch {
+                loadDataForRange(startDate, endDate)
+            }
+        }
+    }
+
+    fun clearOverviewDateRange() {
+        _uiState.update {
+            it.copy(
+                overviewStartDate = null,
+                overviewEndDate = null,
+                isToday = false,
+                isThisWeek = false,
+                isThisMonth = true,
+                isThisYear = false
+            )
+        }
+        loadReportsData()
+    }
+
     fun selectMonth(month: Int, year: Int) {
         _uiState.update { it.copy(selectedMonth = month, selectedYear = year) }
         loadReportsData()
@@ -164,46 +237,20 @@ class ReportsViewModel @Inject constructor(
                 val allTransactions = mutableListOf<TransactionLog>()
                 
                 incomeList.forEach { income ->
-                    allTransactions.add(
-                        TransactionLog(
-                            id = income.id,
-                            type = "Income",
-                            description = income.source,
-                            amount = income.amount,
-                            category = income.category.displayName,
-                            date = income.date,
-                            notes = income.notes
-                        )
-                    )
+                    allTransactions.add(TransactionLog(id = income.id, type = "Income", description = income.source, amount = income.amount, category = income.category.displayName, date = income.date, notes = income.notes))
                 }
                 
                 expenseList.forEach { expense ->
-                    allTransactions.add(
-                        TransactionLog(
-                            id = expense.id,
-                            type = "Expense",
-                            description = expense.category.displayName,
-                            amount = expense.amount,
-                            category = expense.category.displayName,
-                            date = expense.date,
-                            notes = expense.notes
-                        )
-                    )
+                    allTransactions.add(TransactionLog(id = expense.id, type = "Expense", description = expense.category.displayName, amount = expense.amount, category = expense.category.displayName, date = expense.date, notes = expense.notes))
                 }
                 
                 allTransactions.sortedByDescending { it.date }
             }.first().let { logs ->
                 var filtered = logs
                 
-                if (startDate != null) {
-                    filtered = filtered.filter { it.date >= startDate }
-                }
-                if (endDate != null) {
-                    filtered = filtered.filter { it.date <= endDate }
-                }
-                if (type != null) {
-                    filtered = filtered.filter { it.type == type }
-                }
+                if (startDate != null) filtered = filtered.filter { it.date >= startDate }
+                if (endDate != null) filtered = filtered.filter { it.date <= endDate }
+                if (type != null) filtered = filtered.filter { it.type == type }
                 
                 _uiState.update { 
                     it.copy(

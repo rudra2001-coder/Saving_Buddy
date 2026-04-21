@@ -101,10 +101,10 @@ fun MainNavigation() {
                 BillRemindersScreen(navController = navController)
             }
             composable(Screen.Income.route) {
-                IncomeScreen()
+                IncomeScreen(navController = navController)
             }
             composable(Screen.Expense.route) {
-                ExpenseScreen()
+                ExpenseScreen(navController = navController)
             }
             composable(Screen.Calendar.route) {
                 CalendarScreen(navController = navController)

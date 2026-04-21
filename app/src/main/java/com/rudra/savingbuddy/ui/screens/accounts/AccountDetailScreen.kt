@@ -1,18 +1,26 @@
 package com.rudra.savingbuddy.ui.screens.accounts
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -20,9 +28,11 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.Account
+import com.rudra.savingbuddy.domain.model.AccountType
 import com.rudra.savingbuddy.domain.model.Transfer
 import com.rudra.savingbuddy.domain.model.TransferStatus
 import com.rudra.savingbuddy.ui.navigation.Screen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 
@@ -52,97 +62,82 @@ fun AccountDetailScreen(
                     IconButton(onClick = { navController.navigate(Screen.Transfer.route) }) {
                         Icon(Icons.Default.SwapHoriz, contentDescription = "Transfer")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
-            contentPadding = PaddingValues(16.dp),
+                .padding(padding)
+                .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Balance Card
+            item { Spacer(modifier = Modifier.height(8.dp)) }
+
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            "Current Balance",
-                            style = MaterialTheme.typography.bodyMedium
-                        )
-                        Text(
-                            CurrencyFormatter.formatBDT(uiState.account?.balance ?: 0.0),
-                            style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Last updated: ${uiState.account?.let { DateUtils.formatDate(it.lastUpdated) } ?: "N/A"}",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            // Quick Actions
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickActionButton(
-                        title = "Add Money",
-                        icon = Icons.Default.Add,
-                        onClick = { viewModel.showAddMoneyDialog() },
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickActionButton(
-                        title = "Cash Out",
-                        icon = Icons.Default.Remove,
-                        onClick = { viewModel.showCashOutDialog() },
-                        modifier = Modifier.weight(1f)
-                    )
-                    QuickActionButton(
-                        title = "Send",
-                        icon = Icons.Default.Send,
-                        onClick = { navController.navigate(Screen.Transfer.route) },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // Daily Limit Progress
-            uiState.account?.dailyLimit?.let { limit ->
-                if (limit > 0) {
-                    item {
-                        Card(modifier = Modifier.fillMaxWidth()) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text("Daily Transfer Limit", style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        "${CurrencyFormatter.formatBDT(limit - (uiState.account?.usedToday ?: 0.0))} remaining",
-                                        style = MaterialTheme.typography.bodyMedium
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.linearGradient(
+                                    colors = listOf(
+                                        uiState.account?.let { Color(it.iconColor) } ?: MaterialTheme.colorScheme.primary,
+                                        uiState.account?.let { Color(it.iconColor) }?.copy(alpha = 0.7f) ?: MaterialTheme.colorScheme.primary,
+                                        MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)
                                     )
-                                }
-                                Spacer(modifier = Modifier.height(8.dp))
-                                LinearProgressIndicator(
-                                    progress = { ((uiState.account?.usedToday ?: 0.0) / limit).toFloat().coerceIn(0f, 1f) },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(CircleShape),
+                                )
+                            )
+                            .padding(28.dp)
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    imageVector = getAccountIcon(uiState.account?.type),
+                                    contentDescription = null,
+                                    tint = Color.White.copy(alpha = 0.9f),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "Current Balance",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = Color.White.copy(alpha = 0.9f)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                CurrencyFormatter.formatBDT(uiState.account?.balance ?: 0.0),
+                                style = MaterialTheme.typography.displayMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Surface(
+                                color = Color.White.copy(alpha = 0.2f),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    "Last updated: ${uiState.account?.let { DateUtils.formatDate(it.lastUpdated) } ?: "N/A"}",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                                 )
                             }
                         }
@@ -150,7 +145,92 @@ fun AccountDetailScreen(
                 }
             }
 
-            // Balance History (Chart placeholder)
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionButton(
+                        title = "Add Money",
+                        icon = Icons.Outlined.AddCircle,
+                        color = IncomeGreen,
+                        onClick = { viewModel.showAddMoneyDialog() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionButton(
+                        title = "Cash Out",
+                        icon = Icons.Outlined.RemoveCircle,
+                        color = ExpenseRed,
+                        onClick = { viewModel.showCashOutDialog() },
+                        modifier = Modifier.weight(1f)
+                    )
+                    QuickActionButton(
+                        title = "Send",
+                        icon = Icons.Outlined.Send,
+                        color = SavingsBlue,
+                        onClick = { navController.navigate(Screen.Transfer.route) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            uiState.account?.dailyLimit?.let { limit ->
+                if (limit > 0) {
+                    item {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                            Column(modifier = Modifier.padding(20.dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            Icons.Outlined.Speed,
+                                            contentDescription = null,
+                                            tint = Color(0xFFFF9800),
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            "Daily Transfer Limit",
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                    }
+                                }
+                                Spacer(modifier = Modifier.height(12.dp))
+                                val progress = ((uiState.account?.usedToday ?: 0.0) / limit).toFloat().coerceIn(0f, 1f)
+                                val animatedProgress by animateFloatAsState(
+                                    targetValue = progress,
+                                    animationSpec = tween(500),
+                                    label = "limit_progress"
+                                )
+                                LinearProgressIndicator(
+                                    progress = { animatedProgress },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(8.dp)
+                                        .clip(RoundedCornerShape(4.dp)),
+                                    color = when {
+                                        progress >= 0.9f -> ExpenseRed
+                                        progress >= 0.7f -> Color(0xFFFF9800)
+                                        else -> IncomeGreen
+                                    },
+                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    "${CurrencyFormatter.formatBDT(limit - (uiState.account?.usedToday ?: 0.0))} remaining of ${CurrencyFormatter.formatBDT(limit)}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
             item {
                 Text(
                     "Balance History (Last 7 days)",
@@ -160,11 +240,11 @@ fun AccountDetailScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(20.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
                         listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun").forEach { day ->
@@ -175,35 +255,54 @@ fun AccountDetailScreen(
                                         .height(60.dp)
                                         .background(
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                                            CircleShape
+                                            RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)
                                         )
                                 )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(day, style = MaterialTheme.typography.labelSmall)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    day,
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Recent Transactions
             item {
-                Text(
-                    "Recent Transactions",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "Recent Transactions",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             if (uiState.transfers.isEmpty()) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        Box(
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp)
+                    ) {
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(32.dp),
-                            contentAlignment = Alignment.Center
+                            horizontalAlignment = Alignment.CenterHorizontally
                         ) {
+                            Icon(
+                                Icons.Outlined.SwapHoriz,
+                                contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = SavingsBlue.copy(alpha = 0.5f)
+                            )
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "No transactions yet",
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -221,14 +320,23 @@ fun AccountDetailScreen(
                     )
                 }
             }
+
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 
-    // Add Money Dialog
     if (uiState.showAddMoneyDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.hideAddMoneyDialog() },
-            title = { Text("Add Money") },
+            icon = {
+                Icon(
+                    Icons.Default.AddCircle,
+                    contentDescription = null,
+                    tint = IncomeGreen,
+                    modifier = Modifier.size(40.dp)
+                )
+            },
+            title = { Text("Add Money", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Add money to ${uiState.account?.name}")
@@ -240,7 +348,8 @@ fun AccountDetailScreen(
                         leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     uiState.error?.let { error ->
                         Spacer(modifier = Modifier.height(8.dp))
@@ -251,7 +360,9 @@ fun AccountDetailScreen(
             confirmButton = {
                 Button(
                     onClick = { viewModel.addMoney() },
-                    enabled = uiState.addMoneyAmount.isNotBlank() && !uiState.isLoading
+                    enabled = uiState.addMoneyAmount.isNotBlank() && !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -268,11 +379,18 @@ fun AccountDetailScreen(
         )
     }
 
-    // Cash Out Dialog
     if (uiState.showCashOutDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.hideCashOutDialog() },
-            title = { Text("Cash Out") },
+            icon = {
+                Icon(
+                    Icons.Default.RemoveCircle,
+                    contentDescription = null,
+                    tint = ExpenseRed,
+                    modifier = Modifier.size(40.dp)
+                )
+            },
+            title = { Text("Cash Out", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     Text("Withdraw from ${uiState.account?.name}")
@@ -289,7 +407,8 @@ fun AccountDetailScreen(
                         leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp)
                     )
                     uiState.error?.let { error ->
                         Spacer(modifier = Modifier.height(8.dp))
@@ -300,7 +419,9 @@ fun AccountDetailScreen(
             confirmButton = {
                 Button(
                     onClick = { viewModel.cashOut() },
-                    enabled = uiState.cashOutAmount.isNotBlank() && !uiState.isLoading
+                    enabled = uiState.cashOutAmount.isNotBlank() && !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     if (uiState.isLoading) {
                         CircularProgressIndicator(modifier = Modifier.size(16.dp))
@@ -317,17 +438,21 @@ fun AccountDetailScreen(
         )
     }
 
-    // Success Dialog
     if (uiState.operationResult?.success == true) {
         AlertDialog(
             onDismissRequest = { viewModel.clearResult() },
-            icon = { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(48.dp)) },
-            title = { Text("Success!") },
+            icon = {
+                Icon(Icons.Default.CheckCircle, null, tint = IncomeGreen, modifier = Modifier.size(48.dp))
+            },
+            title = { Text("Success!", fontWeight = FontWeight.Bold) },
             text = {
                 Text("New balance: ${CurrencyFormatter.formatBDT(uiState.operationResult?.toAccountNewBalance ?: uiState.operationResult?.fromAccountNewBalance ?: 0.0)}")
             },
             confirmButton = {
-                Button(onClick = { viewModel.clearResult() }) {
+                Button(
+                    onClick = { viewModel.clearResult() },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
                     Text("OK")
                 }
             }
@@ -336,19 +461,52 @@ fun AccountDetailScreen(
 }
 
 @Composable
+private fun getAccountIcon(type: AccountType?): androidx.compose.ui.graphics.vector.ImageVector {
+    return when (type) {
+        AccountType.WALLET -> Icons.Default.AccountBalanceWallet
+        AccountType.BANK -> Icons.Default.AccountBalance
+        AccountType.MOBILE_BANKING -> Icons.Default.PhoneAndroid
+        AccountType.DIGITAL_WALLET -> Icons.Default.CreditCard
+        AccountType.CREDIT_CARD -> Icons.Default.CreditCard
+        null -> Icons.Default.AccountBalanceWallet
+    }
+}
+
+@Composable
 fun QuickActionButton(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier
+    Card(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = color.copy(alpha = 0.1f)
+        )
     ) {
-        Icon(icon, null, modifier = Modifier.size(16.dp))
-        Spacer(modifier = Modifier.width(4.dp))
-        Text(title, style = MaterialTheme.typography.labelSmall)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Medium,
+                color = color
+            )
+        }
     }
 }
 
@@ -359,9 +517,16 @@ fun TransferItem(
     toAccountName: String,
     accounts: List<com.rudra.savingbuddy.domain.model.Account>
 ) {
-    val isSent = transfer.toAccountId != transfer.fromAccountId // Simplified
-    
-    Card(modifier = Modifier.fillMaxWidth()) {
+    val isSent = transfer.toAccountId != transfer.fromAccountId
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -370,23 +535,24 @@ fun TransferItem(
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(44.dp)
                     .clip(CircleShape)
                     .background(
-                        if (isSent) Color(0xFFFFEBEE) else Color(0xFFE8F5E9)
+                        if (isSent) ExpenseRed.copy(alpha = 0.15f)
+                        else IncomeGreen.copy(alpha = 0.15f)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (isSent) Icons.Default.ArrowForward else Icons.Default.ArrowBack,
+                    if (isSent) Icons.Outlined.Output else Icons.Outlined.Input,
                     null,
-                    tint = if (isSent) Color(0xFFF44336) else Color(0xFF4CAF50),
-                    modifier = Modifier.size(20.dp)
+                    tint = if (isSent) ExpenseRed else IncomeGreen,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            
+
             Spacer(modifier = Modifier.width(12.dp))
-            
+
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     if (isSent) "To account" else "From account",
@@ -406,12 +572,12 @@ fun TransferItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            
+
             Text(
                 "${if (isSent) "-" else "+"}${CurrencyFormatter.formatBDT(transfer.amount)}",
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
-                color = if (isSent) Color(0xFFF44336) else Color(0xFF4CAF50)
+                color = if (isSent) ExpenseRed else IncomeGreen
             )
         }
     }

@@ -1,33 +1,29 @@
 package com.rudra.savingbuddy.ui.screens.income
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.savingbuddy.domain.model.Income
+import com.rudra.savingbuddy.domain.model.IncomeCategory
 import com.rudra.savingbuddy.ui.components.IncomeDialog
 import com.rudra.savingbuddy.ui.theme.IncomeGreen
 import com.rudra.savingbuddy.util.CurrencyFormatter
@@ -36,13 +32,23 @@ import com.rudra.savingbuddy.util.DateUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun IncomeScreen(
+    navController: androidx.navigation.NavController? = null,
     viewModel: IncomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showDeleteDialog by remember { mutableStateOf<Income?>(null) }
-    var showFilterSheet by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
+    var selectedCategory by remember { mutableStateOf<IncomeCategory?>(null) }
     val listState = rememberLazyListState()
+
+    val categoryEmojis = mapOf(
+        IncomeCategory.SALARY to "💰",
+        IncomeCategory.FREELANCE to "💻",
+        IncomeCategory.INVESTMENTS to "📈",
+        IncomeCategory.BUSINESS to "🏢",
+        IncomeCategory.GIFTS to "🎁",
+        IncomeCategory.OTHERS to "💵"
+    )
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
@@ -55,280 +61,215 @@ fun IncomeScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { viewModel.showAddDialog() },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = IncomeGreen,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Income")
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Income")
             }
         }
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+                .padding(padding),
+            state = listState,
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Income",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${uiState.totalCount} total",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { 
-                                searchQuery = it
-                                viewModel.searchIncome(it)
-                            },
-                            placeholder = { Text("Search income...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        FilterChip(
-                            selected = showFilterSheet,
-                            onClick = { showFilterSheet = true },
-                            label = { Text("Filter") }
-                        )
-                    }
-                }
+                HeaderCard(
+                    searchQuery = searchQuery,
+                    onSearchChange = { searchQuery = it; viewModel.searchIncome(it) },
+                    selectedCategory = selectedCategory,
+                    onCategorySelect = { selectedCategory = it; viewModel.filterByCategory(it) },
+                    totalCount = uiState.totalCount,
+                    categoryEmojis = categoryEmojis
+                )
             }
 
             if (uiState.incomeList.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "No income recorded yet",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    EmptyStateCard()
                 }
             }
 
             items(uiState.incomeList, key = { it.id }) { income ->
-                IncomeCard(
+                IncomeListCard(
                     income = income,
+                    categoryEmoji = categoryEmojis[income.category] ?: "💵",
                     onEdit = { viewModel.showEditDialog(income) },
                     onDelete = { showDeleteDialog = income }
                 )
             }
+
+            if (uiState.isLoading) {
+                item {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = IncomeGreen, modifier = Modifier.size(32.dp))
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
-    if (showFilterSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showFilterSheet = false }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Filter Income",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Recurring Status",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    FilterChip(
-                        selected = false,
-                        onClick = {
-                            viewModel.filterByRecurring(null)
-                            showFilterSheet = false
-                        },
-                        label = { Text("All") }
-                    )
-                    FilterChip(
-                        selected = false,
-                        onClick = {
-                            viewModel.filterByRecurring(true)
-                            showFilterSheet = false
-                        },
-                        label = { Text("Recurring") }
-                    )
-                    FilterChip(
-                        selected = false,
-                        onClick = {
-                            viewModel.filterByRecurring(false)
-                            showFilterSheet = false
-                        },
-                        label = { Text("One-time") }
-                    )
+    showDeleteDialog?.let { income ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete Income") },
+            text = { Text("Delete ${CurrencyFormatter.formatBDT(income.amount)}?") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.deleteIncome(income); showDeleteDialog = null }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        searchQuery = ""
-                        viewModel.refreshIncome()
-                        showFilterSheet = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Clear Filters")
-                }
-                Spacer(modifier = Modifier.height(32.dp))
-            }
-        }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") } }
+        )
     }
 
     if (uiState.showAddDialog) {
         IncomeDialog(
             income = uiState.editingIncome,
             onDismiss = { viewModel.hideDialog() },
-            onSave = { source, amount, category, date, isRecurring, interval, notes, accountId ->
-                viewModel.saveIncome(source, amount, category, date, isRecurring, interval, notes, accountId)
-            }
-        )
-    }
-
-    showDeleteDialog?.let { income ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Income") },
-            text = { Text("Are you sure you want to delete this income?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteIncome(income)
-                    showDeleteDialog = null
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
-                }
-            }
+            onSave = { s, a, c, d, r, i, n, acc -> viewModel.saveIncome(s, a, c, d, r, i, n, acc) }
         )
     }
 }
 
 @Composable
-fun IncomeCard(
-    income: Income,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
+private fun HeaderCard(
+    searchQuery: String,
+    onSearchChange: (String) -> Unit,
+    selectedCategory: IncomeCategory?,
+    onCategorySelect: (IncomeCategory?) -> Unit,
+    totalCount: Int,
+    categoryEmojis: Map<IncomeCategory, String>
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = { expanded = !expanded }
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.1f), IncomeGreen.copy(alpha = 0.05f))))
+                .padding(20.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text(
-                        text = income.source,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = income.category.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("Income History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                    Text("$totalCount records", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(
-                    text = CurrencyFormatter.format(income.amount),
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = IncomeGreen
-                )
+                Box(
+                    modifier = Modifier.size(40.dp).background(IncomeGreen.copy(alpha = 0.2f), CircleShape).padding(8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.TrendingUp, null, tint = IncomeGreen)
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchChange,
+                placeholder = { Text("Search income...") },
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchChange("") }) { Icon(Icons.Default.Clear, null) } },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = IncomeGreen)
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    text = DateUtils.formatDate(income.date),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                FilterChip(
+                    selected = selectedCategory == null,
+                    onClick = { onCategorySelect(null) },
+                    label = { Text("All") },
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen.copy(alpha = 0.2f), selectedLabelColor = IncomeGreen)
                 )
-                if (income.isRecurring) {
-                    AssistChip(
-                        onClick = {},
-                        label = { Text(income.recurringInterval?.displayName ?: "Recurring") }
+                IncomeCategory.entries.forEach { category ->
+                    FilterChip(
+                        selected = selectedCategory == category,
+                        onClick = { onCategorySelect(category) },
+                        label = { Row(verticalAlignment = Alignment.CenterVertically) { Text(categoryEmojis[category] ?: "💵"); Spacer(Modifier.width(4.dp)); Text(category.displayName) } },
+                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen.copy(alpha = 0.2f), selectedLabelColor = IncomeGreen)
                     )
                 }
             }
+        }
+    }
+}
 
-            if (expanded) {
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                income.notes?.let { notes ->
-                    Text(
-                        text = notes,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
+@Composable
+private fun EmptyStateCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(40.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+            Spacer(Modifier.height(16.dp))
+            Text("No income recorded yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(8.dp))
+            Text("Tap + to add your first income", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+        }
+    }
+}
+
+@Composable
+private fun IncomeListCard(income: Income, categoryEmoji: String, onEdit: () -> Unit, onDelete: () -> Unit) {
+    var showMenu by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().clickable { onEdit() }.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.size(48.dp).background(IncomeGreen.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) {
+                Text(categoryEmoji, style = MaterialTheme.typography.titleLarge)
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(income.source, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${income.category.displayName} • ${DateUtils.formatDate(income.date)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                Text("+${CurrencyFormatter.formatBDT(income.amount)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                if (income.isRecurring) Icon(Icons.Default.Repeat, null, tint = IncomeGreen, modifier = Modifier.size(16.dp))
+            }
+            Box {
+                IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, null) }
+                DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                    DropdownMenuItem(text = { Text("Edit") }, onClick = { showMenu = false; onEdit() }, leadingIcon = { Icon(Icons.Default.Edit, null) })
+                    DropdownMenuItem(text = { Text("Delete") }, onClick = { showMenu = false; onDelete() }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) })
                 }
             }
         }

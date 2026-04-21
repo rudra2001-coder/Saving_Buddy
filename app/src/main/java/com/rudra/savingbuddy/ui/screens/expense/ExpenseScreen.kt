@@ -1,54 +1,55 @@
 package com.rudra.savingbuddy.ui.screens.expense
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
 import com.rudra.savingbuddy.ui.components.ExpenseDialog
 import com.rudra.savingbuddy.ui.components.QuickAddExpenseDialog
-import com.rudra.savingbuddy.ui.theme.*
+import com.rudra.savingbuddy.ui.theme.ExpenseRed
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ExpenseScreen(
+    navController: androidx.navigation.NavController? = null,
     viewModel: ExpenseViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
     var showQuickAddDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf<Expense?>(null) }
-    var showFilterSheet by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf<ExpenseCategory?>(null) }
     val listState = rememberLazyListState()
+
+    val categoryEmojis = mapOf(
+        ExpenseCategory.FOOD to "🍔", ExpenseCategory.TRANSPORT to "🚌", ExpenseCategory.BILLS to "💡",
+        ExpenseCategory.SHOPPING to "🛒", ExpenseCategory.ENTERTAINMENT to "🎬", ExpenseCategory.HEALTH to "💊",
+        ExpenseCategory.EDUCATION to "📚", ExpenseCategory.GIFTS to "🎁", ExpenseCategory.TRAVEL to "✈️",
+        ExpenseCategory.SUBSCRIPTIONS to "📱", ExpenseCategory.RENT to "🏠", ExpenseCategory.UTILITY to "⚡",
+        ExpenseCategory.INSURANCE to "🛡️", ExpenseCategory.TAX to "📋", ExpenseCategory.EMI to "🏦",
+        ExpenseCategory.OTHERS to "📦"
+    )
 
     LaunchedEffect(listState) {
         snapshotFlow { listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index }
@@ -61,92 +62,75 @@ fun ExpenseScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
+            ExtendedFloatingActionButton(
                 onClick = { showQuickAddDialog = true },
-                containerColor = MaterialTheme.colorScheme.primary
+                containerColor = ExpenseRed,
+                contentColor = MaterialTheme.colorScheme.onPrimary
             ) {
-                Icon(Icons.Default.Add, contentDescription = "Quick Add Expense")
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Expense")
             }
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            state = listState
+            modifier = Modifier.fillMaxSize().padding(padding),
+            state = listState,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Expenses",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        text = "${uiState.totalCount} total",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
-                    Row(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .background(Brush.verticalGradient(listOf(ExpenseRed.copy(alpha = 0.1f), ExpenseRed.copy(alpha = 0.05f))))
+                            .padding(20.dp)
                     ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column {
+                                Text("Expense History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                                Text("${uiState.totalCount} records", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Box(
+                                modifier = Modifier.size(40.dp).background(ExpenseRed.copy(alpha = 0.2f), CircleShape).padding(8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.TrendingDown, null, tint = ExpenseRed)
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                         OutlinedTextField(
                             value = searchQuery,
-                            onValueChange = { 
-                                searchQuery = it
-                                viewModel.searchExpenses(it)
-                            },
+                            onValueChange = { searchQuery = it; viewModel.searchExpenses(it) },
                             placeholder = { Text("Search expenses...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        FilterChip(
-                            selected = selectedCategory != null,
-                            onClick = { showFilterSheet = true },
-                            label = { Text("Filter") }
-                        )
-                    }
-                }
-            }
-
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Quick Add",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            leadingIcon = { Icon(Icons.Default.Search, null) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = ExpenseRed)
                         )
                         Spacer(modifier = Modifier.height(12.dp))
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            items(ExpenseCategory.entries) { category ->
-                                QuickAddChip(
-                                    category = category,
-                                    onClick = { showQuickAddDialog = true }
+                        Row(modifier = Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = selectedCategory == null,
+                                onClick = { selectedCategory = null; viewModel.filterByCategory(null) },
+                                label = { Text("All") },
+                                colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed.copy(alpha = 0.2f), selectedLabelColor = ExpenseRed)
+                            )
+                            ExpenseCategory.entries.take(8).forEach { category ->
+                                FilterChip(
+                                    selected = selectedCategory == category,
+                                    onClick = { selectedCategory = category; viewModel.filterByCategory(category) },
+                                    label = { Row(verticalAlignment = Alignment.CenterVertically) { Text(categoryEmojis[category] ?: "📦"); Spacer(Modifier.width(4.dp)); Text(category.displayName, maxLines = 1) } },
+                                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ExpenseRed.copy(alpha = 0.2f), selectedLabelColor = ExpenseRed)
                                 )
                             }
                         }
@@ -156,86 +140,82 @@ fun ExpenseScreen(
 
             if (uiState.expenseList.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
+                    Card(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                     ) {
-                        Text(
-                            text = "No expenses recorded yet",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(
+                            modifier = Modifier.fillMaxWidth().padding(40.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Icon(Icons.Default.ShoppingCart, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
+                            Spacer(Modifier.height(16.dp))
+                            Text("No expenses recorded yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(Modifier.height(8.dp))
+                            Text("Tap + to add your first expense", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+                        }
                     }
                 }
             }
 
             items(uiState.expenseList, key = { it.id }) { expense ->
-                ExpenseCard(
-                    expense = expense,
-                    onEdit = { viewModel.showEditDialog(expense) },
-                    onDelete = { showDeleteDialog = expense }
-                )
-            }
-        }
-    }
-
-    if (showFilterSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showFilterSheet = false }
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-            ) {
-                Text(
-                    text = "Filter by Category",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Card(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                 ) {
-                    ExpenseCategory.entries.chunked(2).forEach { rowCategories ->
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            rowCategories.forEach { category ->
-                                FilterChip(
-                                    selected = selectedCategory == category,
-                                    onClick = {
-                                        selectedCategory = if (selectedCategory == category) null else category
-                                        viewModel.filterByCategory(selectedCategory)
-                                        showFilterSheet = false
-                                    },
-                                    label = { Text(category.displayName) }
-                                )
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clickable { viewModel.showEditDialog(expense) }.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(modifier = Modifier.size(48.dp).background(ExpenseRed.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) {
+                            Text(categoryEmojis[expense.category] ?: "📦", style = MaterialTheme.typography.titleLarge)
                         }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(expense.category.displayName, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            expense.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            Text(DateUtils.formatDate(expense.date), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text("-${CurrencyFormatter.formatBDT(expense.amount)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ExpenseRed)
+                            if (expense.isRecurring) Icon(Icons.Default.Repeat, null, tint = ExpenseRed, modifier = Modifier.size(16.dp))
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        IconButton(onClick = { showDeleteDialog = expense }) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Button(
-                    onClick = {
-                        selectedCategory = null
-                        searchQuery = ""
-                        viewModel.refreshExpenses()
-                        showFilterSheet = false
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Clear Filters")
-                }
-                Spacer(modifier = Modifier.height(32.dp))
             }
+
+            item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
+    if (showQuickAddDialog) {
+        QuickAddExpenseDialog(
+            onDismiss = { showQuickAddDialog = false },
+            onSave = { amount, category, date, notes, accountId ->
+                viewModel.quickAdd(category, amount, accountId)
+                showQuickAddDialog = false
+            }
+        )
+    }
 
+    showDeleteDialog?.let { expense ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
+            title = { Text("Delete Expense") },
+            text = { Text("Delete ${CurrencyFormatter.formatBDT(expense.amount)}?") },
+            confirmButton = {
+                TextButton(onClick = { viewModel.deleteExpense(expense); showDeleteDialog = null }) {
+                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") } }
+        )
+    }
 
     if (uiState.showAddDialog) {
         ExpenseDialog(
@@ -245,134 +225,5 @@ fun ExpenseScreen(
                 viewModel.saveExpense(amount, category, date, notes, accountId)
             }
         )
-    }
-
-    showDeleteDialog?.let { expense ->
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Expense") },
-            text = { Text("Are you sure you want to delete this expense?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    viewModel.deleteExpense(expense)
-                    showDeleteDialog = null
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
-                }
-            }
-        )
-    }
-}
-
-@Composable
-private fun QuickAddChip(
-    category: ExpenseCategory,
-    onClick: () -> Unit
-) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = getExpenseCategoryColor(category)
-        )
-    ) {
-        Text(category.displayName)
-    }
-}
-
-@Composable
-fun ExpenseCard(
-    expense: Expense,
-    onEdit: () -> Unit,
-    onDelete: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        onClick = { expanded = !expanded }
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = expense.category.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = DateUtils.formatDate(expense.date),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Text(
-                    text = "-${CurrencyFormatter.format(expense.amount)}",
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = ExpenseRed
-                )
-            }
-
-            if (expanded) {
-                Spacer(modifier = Modifier.height(12.dp))
-                HorizontalDivider()
-                Spacer(modifier = Modifier.height(8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    IconButton(onClick = onEdit) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                    IconButton(onClick = onDelete) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-                expense.notes?.let { notes ->
-                    Text(
-                        text = notes,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                }
-            }
-        }
-    }
-}
-
-private fun getExpenseCategoryColor(category: ExpenseCategory): Color {
-    return when (category) {
-        ExpenseCategory.FOOD -> Color(0xFFFF7043)
-        ExpenseCategory.TRANSPORT -> Color(0xFF42A5F5)
-        ExpenseCategory.BILLS -> Color(0xFFFFCA28)
-        ExpenseCategory.SHOPPING -> Color(0xFFAB47BC)
-        ExpenseCategory.ENTERTAINMENT -> Color(0xFFE91E63)
-        ExpenseCategory.HEALTH -> Color(0xFF26A69A)
-        ExpenseCategory.EDUCATION -> Color(0xFF5C6BC0)
-        ExpenseCategory.GIFTS -> Color(0xFFFF9800)
-        ExpenseCategory.TRAVEL -> Color(0xFF9C27B0)
-        ExpenseCategory.SUBSCRIPTIONS -> Color(0xFF00BCD4)
-        ExpenseCategory.RENT -> Color(0xFF795548)
-        ExpenseCategory.UTILITY -> Color(0xFFFF9800)
-        ExpenseCategory.INSURANCE -> Color(0xFF2196F3)
-        ExpenseCategory.TAX -> Color(0xFFF44336)
-        ExpenseCategory.EMI -> Color(0xFF9C27B0)
-        ExpenseCategory.OTHERS -> Color(0xFF78909C)
     }
 }
