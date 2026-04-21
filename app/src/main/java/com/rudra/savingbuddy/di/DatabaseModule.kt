@@ -1,6 +1,7 @@
 package com.rudra.savingbuddy.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.rudra.savingbuddy.data.local.SavingBuddyDatabase
 import com.rudra.savingbuddy.data.local.dao.AccountBalanceHistoryDao
@@ -62,4 +63,10 @@ object DatabaseModule {
 
     @Provides
     fun provideAccountBalanceHistoryDao(database: SavingBuddyDatabase): AccountBalanceHistoryDao = database.accountBalanceHistoryDao()
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences("dashboard_prefs", Context.MODE_PRIVATE)
+    }
 }

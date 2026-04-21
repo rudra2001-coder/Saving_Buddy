@@ -1,14 +1,17 @@
 package com.rudra.savingbuddy.ui.screens.dashboard
 
+import android.content.SharedPreferences
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
+import com.rudra.savingbuddy.domain.model.Account
 import com.rudra.savingbuddy.domain.model.AccountHealth
 import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.Goal
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.model.NetWorthSummary
+import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.BillReminderRepository
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
@@ -39,7 +42,11 @@ data class DashboardUiState(
     val mainBalance: Double = 0.0,
     val netWorth: Double = 0.0,
     val totalAssets: Double = 0.0,
-    val accountHealthList: List<AccountHealth> = emptyList()
+    val accountHealthList: List<AccountHealth> = emptyList(),
+    val selectedAccountId: Long? = null,
+    val selectedAccountName: String = "Wallet",
+    val selectedAccountBalance: Double = 0.0,
+    val availableAccounts: List<AccountSelection> = emptyList()
 )
 
 data class TransactionItem(
@@ -51,6 +58,13 @@ data class TransactionItem(
     val date: Long
 )
 
+data class AccountSelection(
+    val id: Long,
+    val name: String,
+    val balance: Double,
+    val iconColor: Long
+)
+
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
     private val incomeRepository: IncomeRepository,
@@ -59,7 +73,8 @@ class DashboardViewModel @Inject constructor(
     private val goalRepository: GoalRepository,
     private val billReminderRepository: BillReminderRepository,
     private val fusionRepository: FusionRepository,
-    private val accountRepository: com.rudra.savingbuddy.domain.repository.AccountRepository
+    private val accountRepository: AccountRepository,
+    private val prefs: SharedPreferences
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -67,15 +82,59 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadDashboardData()
-        loadMainBalance()
+        loadAccounts()
     }
 
-    private fun loadMainBalance() {
+    private fun loadAccounts() {
         viewModelScope.launch {
-            incomeRepository.getMainBalance().collect { balance ->
-                _uiState.update { it.copy(mainBalance = balance) }
+            accountRepository.getAllAccounts().collect { accounts ->
+                val accountList = accounts.map { acc ->
+                    AccountSelection(
+                        id = acc.id,
+                        name = acc.name,
+                        balance = acc.balance,
+                        iconColor = acc.iconColor
+                    )
+                }
+                
+                val savedAccountId = prefs.getLong("dashboard_selected_account_id", -1L)
+                val selectedAccount = if (savedAccountId > 0) {
+                    accounts.find { it.id == savedAccountId }
+                } else {
+                    accounts.find { it.name == "Wallet" } ?: accounts.firstOrNull()
+                }
+
+                _uiState.update { state ->
+                    state.copy(
+                        availableAccounts = accountList,
+                        selectedAccountId = selectedAccount?.id,
+                        selectedAccountName = selectedAccount?.name ?: "Wallet",
+                        selectedAccountBalance = selectedAccount?.balance ?: state.mainBalance,
+                        mainBalance = selectedAccount?.balance ?: state.mainBalance
+                    )
+                }
             }
         }
+    }
+
+    fun selectAccount(accountId: Long) {
+        val state = _uiState.value
+        val account = state.availableAccounts.find { it.id == accountId }
+        
+        if (account != null) {
+            prefs.edit().putLong("dashboard_selected_account_id", accountId).apply()
+            _uiState.update { it.copy(
+                selectedAccountId = accountId,
+                selectedAccountName = account.name,
+                selectedAccountBalance = account.balance,
+                mainBalance = account.balance
+            )}
+        }
+    }
+
+    fun clearAccountSelection() {
+        prefs.edit().remove("dashboard_selected_account_id").apply()
+        loadAccounts()
     }
 
     private fun loadDashboardData() {

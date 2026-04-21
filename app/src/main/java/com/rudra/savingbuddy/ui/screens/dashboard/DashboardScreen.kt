@@ -94,7 +94,10 @@ fun DashboardScreen(
                 item {
                     NetBalanceCard(
                         netBalance = uiState.mainBalance,
-                        monthlyIncome = uiState.monthlyIncome
+                        monthlyIncome = uiState.monthlyIncome,
+                        selectedAccountName = uiState.selectedAccountName,
+                        availableAccounts = uiState.availableAccounts,
+                        onAccountSelect = { viewModel.selectAccount(it) }
                     )
                 }
 
@@ -258,14 +261,17 @@ private fun DashboardHeader() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NetBalanceCard(netBalance: Double, monthlyIncome: Double) {
+private fun NetBalanceCard(
+    netBalance: Double, 
+    monthlyIncome: Double,
+    selectedAccountName: String,
+    availableAccounts: List<AccountSelection>,
+    onAccountSelect: (Long) -> Unit
+) {
     val isPositive = netBalance >= 0
-    val animatedBalance by animateFloatAsState(
-        targetValue = netBalance.toFloat(),
-        animationSpec = tween(1000),
-        label = "balance_animation"
-    )
+    var showAccountPicker by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -292,28 +298,40 @@ private fun NetBalanceCard(netBalance: Double, monthlyIncome: Double) {
                         }
                     )
                 )
-                .padding(28.dp)
+                .padding(24.dp)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showAccountPicker = true }
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = if (isPositive) Icons.Default.AccountBalanceWallet else Icons.Default.Warning,
+                            contentDescription = null,
+                            tint = Color.White.copy(alpha = 0.9f),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = selectedAccountName,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White.copy(alpha = 0.9f)
+                        )
+                    }
                     Icon(
-                        imageVector = if (isPositive) Icons.Default.AccountBalanceWallet else Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Net Balance",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.9f)
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "Change account",
+                        tint = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
@@ -347,6 +365,66 @@ private fun NetBalanceCard(netBalance: Double, monthlyIncome: Double) {
                 }
             }
         }
+    }
+
+    if (showAccountPicker) {
+        AlertDialog(
+            onDismissRequest = { showAccountPicker = false },
+            title = { Text("Select Account", fontWeight = FontWeight.Bold) },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(availableAccounts.size) { index ->
+                        val account = availableAccounts[index]
+                        Card(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onAccountSelect(account.id)
+                                    showAccountPicker = false
+                                },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (account.name == selectedAccountName) 
+                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = account.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Balance: ${CurrencyFormatter.format(account.balance)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (account.name == selectedAccountName) {
+                                    Icon(
+                                        Icons.Default.Check,
+                                        contentDescription = "Selected",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showAccountPicker = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
 
