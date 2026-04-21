@@ -26,6 +26,12 @@ import com.rudra.savingbuddy.ui.screens.reports.ReportsScreen
 import com.rudra.savingbuddy.ui.screens.settings.SettingsScreen
 import com.rudra.savingbuddy.ui.screens.calendar.CalendarScreen
 import com.rudra.savingbuddy.ui.screens.scanner.ScannerScreen
+import com.rudra.savingbuddy.ui.screens.accounts.AccountsScreen
+import com.rudra.savingbuddy.ui.screens.accounts.TransferScreen
+import com.rudra.savingbuddy.ui.screens.accounts.AddAccountScreen
+import com.rudra.savingbuddy.ui.screens.accounts.AccountDetailScreen
+import com.rudra.savingbuddy.ui.screens.fusion.FusionScreen
+import com.rudra.savingbuddy.ui.screens.backup.BackupScreen
 
 @Composable
 fun MainNavigation() {
@@ -105,6 +111,25 @@ fun MainNavigation() {
             }
             composable(Screen.Scanner.route) {
                 ScannerScreen(navController = navController)
+            }
+            composable(Screen.Accounts.route) {
+                AccountsScreen(navController = navController)
+            }
+            composable(Screen.Transfer.route) {
+                TransferScreen(navController = navController)
+            }
+            composable(Screen.AddAccount.route) {
+                AddAccountScreen(navController = navController)
+            }
+            composable(Screen.AccountDetail.route + "/{accountId}") { backStackEntry ->
+                val accountId = backStackEntry.arguments?.getString("accountId")?.toLongOrNull() ?: 0L
+                AccountDetailScreen(navController = navController, accountId = accountId)
+            }
+            composable(Screen.Fusion.route) {
+                FusionScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.Backup.route) {
+                BackupScreen(onNavigateBack = { navController.popBackStack() })
             }
         }
     }

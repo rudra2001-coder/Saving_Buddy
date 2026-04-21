@@ -24,6 +24,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -234,22 +235,14 @@ fun ExpenseScreen(
         }
     }
 
-    if (showQuickAddDialog) {
-        QuickAddExpenseDialog(
-            onDismiss = { showQuickAddDialog = false },
-            onSave = { amount, category ->
-                viewModel.quickAdd(category, amount)
-                showQuickAddDialog = false
-            }
-        )
-    }
+
 
     if (uiState.showAddDialog) {
         ExpenseDialog(
             expense = uiState.editingExpense,
             onDismiss = { viewModel.hideDialog() },
-            onSave = { amount, category, date, notes ->
-                viewModel.saveExpense(amount, category, date, notes)
+            onSave = { amount, category, date, notes, accountId ->
+                viewModel.saveExpense(amount, category, date, notes, accountId)
             }
         )
     }
@@ -363,19 +356,23 @@ fun ExpenseCard(
     }
 }
 
-private fun getExpenseCategoryColor(category: ExpenseCategory): androidx.compose.ui.graphics.Color {
+private fun getExpenseCategoryColor(category: ExpenseCategory): Color {
     return when (category) {
-        ExpenseCategory.FOOD -> FoodColor
-        ExpenseCategory.TRANSPORT -> TransportColor
-        ExpenseCategory.BILLS -> BillsColor
-        ExpenseCategory.SHOPPING -> ShoppingColor
-        ExpenseCategory.ENTERTAINMENT -> EntertainmentColor
-        ExpenseCategory.HEALTH -> HealthColor
-        ExpenseCategory.EDUCATION -> EducationColor
-        ExpenseCategory.GIFTS -> GiftsColor
-        ExpenseCategory.TRAVEL -> TravelColor
-        ExpenseCategory.SUBSCRIPTIONS -> SubscriptionsColor
-        ExpenseCategory.RENT -> RentColor
-        ExpenseCategory.OTHERS -> OthersColor
+        ExpenseCategory.FOOD -> Color(0xFFFF7043)
+        ExpenseCategory.TRANSPORT -> Color(0xFF42A5F5)
+        ExpenseCategory.BILLS -> Color(0xFFFFCA28)
+        ExpenseCategory.SHOPPING -> Color(0xFFAB47BC)
+        ExpenseCategory.ENTERTAINMENT -> Color(0xFFE91E63)
+        ExpenseCategory.HEALTH -> Color(0xFF26A69A)
+        ExpenseCategory.EDUCATION -> Color(0xFF5C6BC0)
+        ExpenseCategory.GIFTS -> Color(0xFFFF9800)
+        ExpenseCategory.TRAVEL -> Color(0xFF9C27B0)
+        ExpenseCategory.SUBSCRIPTIONS -> Color(0xFF00BCD4)
+        ExpenseCategory.RENT -> Color(0xFF795548)
+        ExpenseCategory.UTILITY -> Color(0xFFFF9800)
+        ExpenseCategory.INSURANCE -> Color(0xFF2196F3)
+        ExpenseCategory.TAX -> Color(0xFFF44336)
+        ExpenseCategory.EMI -> Color(0xFF9C27B0)
+        ExpenseCategory.OTHERS -> Color(0xFF78909C)
     }
 }

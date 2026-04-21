@@ -6,15 +6,21 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface BudgetDao {
-    @Query("SELECT * FROM budget WHERE id = 1")
+    @Query("SELECT * FROM budgets WHERE id = 1")
     fun getBudget(): Flow<BudgetEntity?>
 
-    @Query("SELECT * FROM budget WHERE month = :month AND year = :year")
-    suspend fun getBudgetForMonth(month: Int, year: Int): BudgetEntity?
+    @Query("SELECT * FROM budgets WHERE month = :month AND year = :year")
+    suspend fun getBudgetForMonth(month: String, year: Int): BudgetEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBudget(budget: BudgetEntity)
 
-    @Query("DELETE FROM budget WHERE id = 1")
+    @Query("DELETE FROM budgets WHERE id = 1")
     suspend fun deleteBudget()
+
+    @Query("DELETE FROM budgets")
+    suspend fun deleteAll()
+
+    @Query("SELECT * FROM budgets")
+    fun getAllBudgets(): Flow<List<BudgetEntity>>
 }

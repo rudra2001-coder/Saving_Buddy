@@ -66,6 +66,13 @@ object DateUtils {
         return "${calendar.get(Calendar.DAY_OF_MONTH)}/${calendar.get(Calendar.MONTH) + 1}"
     }
 
+    fun formatShortTime(timestamp: Long): String {
+        val calendar = Calendar.getInstance().apply { timeInMillis = timestamp }
+        val hour = calendar.get(Calendar.HOUR_OF_DAY)
+        val minute = calendar.get(Calendar.MINUTE)
+        return String.format(Locale.getDefault(), "%02d:%02d", hour, minute)
+    }
+
     fun getStartOfWeek(timestamp: Long = System.currentTimeMillis()): Long {
         val calendar = Calendar.getInstance().apply {
             timeInMillis = timestamp

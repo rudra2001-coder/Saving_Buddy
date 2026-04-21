@@ -19,7 +19,10 @@ data class SettingsUiState(
     val dailyReminderTime: String = "20:00",
     val billReminderEnabled: Boolean = true,
     val showBudgetDialog: Boolean = false,
-    val isLoading: Boolean = false
+    val isLoading: Boolean = false,
+    val accountCount: Int = 0,
+    val goalCount: Int = 0,
+    val billCount: Int = 0
 )
 
 @HiltViewModel

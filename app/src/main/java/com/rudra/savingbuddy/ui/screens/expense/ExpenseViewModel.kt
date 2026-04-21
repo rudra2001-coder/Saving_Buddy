@@ -2,8 +2,10 @@ package com.rudra.savingbuddy.ui.screens.expense
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rudra.savingbuddy.domain.model.Account
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
+import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -25,11 +27,20 @@ data class ExpenseUiState(
 
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
     val uiState: StateFlow<ExpenseUiState> = _uiState.asStateFlow()
+
+    fun loadAccountsForSelection(onAccountsLoaded: (List<Account>) -> Unit) {
+        viewModelScope.launch {
+            accountRepository.getAllAccounts().collect { accounts ->
+                onAccountsLoaded(accounts)
+            }
+        }
+    }
 
     companion object {
         private const val PAGE_SIZE = 100
@@ -85,15 +96,16 @@ class ExpenseViewModel @Inject constructor(
         loadExpenses()
     }
 
-    fun quickAdd(category: ExpenseCategory, amount: Double) {
+    fun quickAdd(category: ExpenseCategory, amount: Double, accountId: Long? = null) {
         viewModelScope.launch {
             try {
                 val expense = Expense(
                     amount = amount,
                     category = category,
-                    date = System.currentTimeMillis()
+                    date = System.currentTimeMillis(),
+                    accountId = accountId
                 )
-                expenseRepository.insertExpense(expense)
+                expenseRepository.insertExpense(expense, deductFromAccount = accountId != null)
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
@@ -116,7 +128,8 @@ class ExpenseViewModel @Inject constructor(
         amount: Double,
         category: ExpenseCategory,
         date: Long,
-        notes: String?
+        notes: String?,
+        accountId: Long?
     ) {
         viewModelScope.launch {
             try {
@@ -125,13 +138,14 @@ class ExpenseViewModel @Inject constructor(
                     amount = amount,
                     category = category,
                     date = date,
-                    notes = notes
+                    notes = notes,
+                    accountId = accountId
                 )
                 
                 if (_uiState.value.editingExpense != null) {
                     expenseRepository.updateExpense(expense)
                 } else {
-                    expenseRepository.insertExpense(expense)
+                    expenseRepository.insertExpense(expense, deductFromAccount = accountId != null)
                 }
                 hideDialog()
             } catch (e: Exception) {

@@ -10,7 +10,8 @@ fun ExpenseEntity.toDomain(): Expense = Expense(
     category = try { ExpenseCategory.valueOf(category) } catch (e: Exception) { ExpenseCategory.OTHERS },
     date = date,
     notes = notes,
-    createdAt = createdAt
+    createdAt = createdAt,
+    accountId = accountId
 )
 
 fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
@@ -19,5 +20,6 @@ fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     category = category.name,
     date = date,
     notes = notes,
-    createdAt = createdAt
+    createdAt = createdAt,
+    accountId = accountId
 )

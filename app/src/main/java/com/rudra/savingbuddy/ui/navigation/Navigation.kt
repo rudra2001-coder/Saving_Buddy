@@ -25,6 +25,12 @@ sealed class Screen(
     data object Expense : Screen("expense", "Expense History", Icons.Default.TrendingDown)
     data object Calendar : Screen("calendar", "Calendar", Icons.Default.CalendarMonth)
     data object Scanner : Screen("scanner", "Scanner", Icons.Default.QrCodeScanner)
+    data object Accounts : Screen("accounts", "Accounts", Icons.Default.AccountBalanceWallet)
+    data object Transfer : Screen("transfer", "Transfer", Icons.Default.SwapHoriz)
+    data object AddAccount : Screen("add_account", "Add Account", Icons.Default.Add)
+    data object AccountDetail : Screen("account_detail", "Account Detail", Icons.Default.Info)
+    data object Fusion : Screen("fusion", "Fusion", Icons.Default.JoinFull)
+    data object Backup : Screen("backup", "Backup", Icons.Default.Backup)
 }
 
 val bottomNavItems = listOf(

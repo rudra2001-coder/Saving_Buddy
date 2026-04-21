@@ -216,8 +216,8 @@ fun IncomeScreen(
         IncomeDialog(
             income = uiState.editingIncome,
             onDismiss = { viewModel.hideDialog() },
-            onSave = { source, amount, category, date, isRecurring, interval, notes ->
-                viewModel.saveIncome(source, amount, category, date, isRecurring, interval, notes)
+            onSave = { source, amount, category, date, isRecurring, interval, notes, accountId ->
+                viewModel.saveIncome(source, amount, category, date, isRecurring, interval, notes, accountId)
             }
         )
     }

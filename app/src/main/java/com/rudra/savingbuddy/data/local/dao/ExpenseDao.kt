@@ -44,6 +44,9 @@ interface ExpenseDao {
 
     @Query("DELETE FROM expense WHERE id = :id")
     suspend fun deleteExpenseById(id: Long)
+
+    @Query("DELETE FROM expense")
+    suspend fun deleteAll()
 }
 
 data class CategoryTotal(

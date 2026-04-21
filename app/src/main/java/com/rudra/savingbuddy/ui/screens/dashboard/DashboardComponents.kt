@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
 import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Goal
+import com.rudra.savingbuddy.domain.model.HealthStatus
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import java.util.Calendar
@@ -580,5 +581,204 @@ private fun getCategoryColor(category: String): Color {
         "HEALTH" -> Color(0xFF26A69A)
         "EDUCATION" -> Color(0xFF5C6BC0)
         else -> Color(0xFF78909C)
+    }
+}
+
+@Composable
+fun AccountHealthCard(
+    accountHealthList: List<com.rudra.savingbuddy.domain.model.AccountHealth>,
+    onAccountClick: (Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    if (accountHealthList.isEmpty()) return
+
+    val hasIssues = accountHealthList.any { it.status != com.rudra.savingbuddy.domain.model.HealthStatus.GOOD }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (hasIssues) 
+                Color(0xFFFF9800).copy(alpha = 0.1f) 
+            else 
+                MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Favorite,
+                        contentDescription = null,
+                        tint = if (hasIssues) Color(0xFFFF9800) else IncomeGreen,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Account Health",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Surface(
+                    color = if (hasIssues) Color(0xFFFF9800).copy(alpha = 0.2f) else IncomeGreen.copy(alpha = 0.2f),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(
+                        text = "${accountHealthList.count { it.status == com.rudra.savingbuddy.domain.model.HealthStatus.GOOD }}/${accountHealthList.size} Good",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (hasIssues) Color(0xFFFF9800) else IncomeGreen,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            accountHealthList.take(4).forEach { health ->
+                AccountHealthItem(
+                    health = health,
+                    onClick = { onAccountClick(health.accountId) }
+                )
+                if (accountHealthList.indexOf(health) < minOf(accountHealthList.size - 1, 3)) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AccountHealthItem(
+    health: com.rudra.savingbuddy.domain.model.AccountHealth,
+    onClick: () -> Unit
+) {
+    val statusColor = when (health.status) {
+        com.rudra.savingbuddy.domain.model.HealthStatus.GOOD -> IncomeGreen
+        com.rudra.savingbuddy.domain.model.HealthStatus.MEDIUM -> Color(0xFFFFC107)
+        com.rudra.savingbuddy.domain.model.HealthStatus.LOW -> Color(0xFFFF9800)
+        com.rudra.savingbuddy.domain.model.HealthStatus.CRITICAL -> ExpenseRed
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(1f)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(10.dp)
+                    .clip(CircleShape)
+                    .background(statusColor)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(
+                    text = health.accountName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                health.recommendation?.let { rec ->
+                    Text(
+                        text = rec,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+        
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = CurrencyFormatter.formatBDT(health.balance),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            if (health.dailyLimit != null && health.dailyLimit > 0) {
+                val usagePercent = (health.usedToday / health.dailyLimit * 100).toInt()
+                Text(
+                    text = "$usagePercent% of limit",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = statusColor
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun NetWorthCard(
+    netWorth: Double,
+    totalAssets: Double,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "Net Worth",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = CurrencyFormatter.formatBDT(netWorth),
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = if (netWorth >= 0) IncomeGreen else ExpenseRed
+                )
+            }
+            
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    text = "Total Assets",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = CurrencyFormatter.formatBDT(totalAssets),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = IncomeGreen
+                )
+            }
+            
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "View Details",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }

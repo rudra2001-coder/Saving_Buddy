@@ -18,7 +18,7 @@ import com.rudra.savingbuddy.domain.model.RecurringInterval
 fun IncomeDialog(
     income: Income? = null,
     onDismiss: () -> Unit,
-    onSave: (String, Double, IncomeCategory, Long, Boolean, RecurringInterval?, String?) -> Unit
+    onSave: (String, Double, IncomeCategory, Long, Boolean, RecurringInterval?, String?, Long?) -> Unit
 ) {
     var source by remember { mutableStateOf(income?.source ?: "") }
     var amount by remember { mutableStateOf(income?.amount?.toString() ?: "") }
@@ -153,7 +153,8 @@ fun IncomeDialog(
                             income?.date ?: System.currentTimeMillis(),
                             isRecurring,
                             if (isRecurring) selectedInterval else null,
-                            notes.ifBlank { null }
+                            notes.ifBlank { null },
+                            income?.accountId
                         )
                     }
                 }

@@ -16,7 +16,8 @@ fun IncomeEntity.toDomain(): Income = Income(
         try { RecurringInterval.valueOf(it) } catch (e: Exception) { null }
     },
     notes = notes,
-    createdAt = createdAt
+    createdAt = createdAt,
+    accountId = accountId
 )
 
 fun Income.toEntity(): IncomeEntity = IncomeEntity(
@@ -28,5 +29,6 @@ fun Income.toEntity(): IncomeEntity = IncomeEntity(
     isRecurring = isRecurring,
     recurringInterval = recurringInterval?.name,
     notes = notes,
-    createdAt = createdAt
+    createdAt = createdAt,
+    accountId = accountId
 )

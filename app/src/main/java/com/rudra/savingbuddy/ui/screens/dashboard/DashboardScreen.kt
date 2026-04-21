@@ -93,9 +93,32 @@ fun DashboardScreen(
                 // Net Balance Card - Hero Section
                 item {
                     NetBalanceCard(
-                        netBalance = uiState.monthlyIncome - uiState.monthlyExpenses,
+                        netBalance = uiState.mainBalance,
                         monthlyIncome = uiState.monthlyIncome
                     )
+                }
+
+                // Account Health Card
+                if (uiState.accountHealthList.isNotEmpty()) {
+                    item {
+                        AccountHealthCard(
+                            accountHealthList = uiState.accountHealthList,
+                            onAccountClick = { accountId ->
+                                navController?.navigate("account_detail/$accountId")
+                            }
+                        )
+                    }
+                }
+
+                // Net Worth Card (if different from net balance)
+                if (uiState.netWorth > 0 && uiState.netWorth != (uiState.monthlyIncome - uiState.monthlyExpenses)) {
+                    item {
+                        NetWorthCard(
+                            netWorth = uiState.netWorth,
+                            totalAssets = uiState.totalAssets,
+                            onClick = { navController?.navigate("fusion") }
+                        )
+                    }
                 }
 
                 // Quick Actions
@@ -366,6 +389,12 @@ private fun QuickActionsSection(navController: NavController?) {
                 label = "Calendar",
                 color = MaterialTheme.colorScheme.secondary,
                 onClick = { navController?.navigate("calendar") }
+            )
+            QuickActionItem(
+                icon = Icons.Outlined.JoinFull,
+                label = "Fusion",
+                color = Color(0xFF7C4DFF),
+                onClick = { navController?.navigate("fusion") }
             )
             QuickActionItem(
                 icon = Icons.Outlined.Receipt,

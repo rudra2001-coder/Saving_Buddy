@@ -8,9 +8,10 @@ data class Currency(
 )
 
 object SupportedCurrencies {
-    val DEFAULT = Currency("USD", "US Dollar", "$", 1.0)
+    val DEFAULT = Currency("BDT", "Bangladeshi Taka", "৳", 1.0)
     
     val ALL = listOf(
+        Currency("BDT", "Bangladeshi Taka", "৳", 1.0),
         Currency("USD", "US Dollar", "$", 1.0),
         Currency("EUR", "Euro", "€", 0.92),
         Currency("GBP", "British Pound", "£", 0.79),

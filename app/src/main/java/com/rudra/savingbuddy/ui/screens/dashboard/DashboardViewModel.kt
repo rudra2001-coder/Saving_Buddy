@@ -3,13 +3,16 @@ package com.rudra.savingbuddy.ui.screens.dashboard
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
+import com.rudra.savingbuddy.domain.model.AccountHealth
 import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.Goal
 import com.rudra.savingbuddy.domain.model.Income
+import com.rudra.savingbuddy.domain.model.NetWorthSummary
 import com.rudra.savingbuddy.domain.repository.BillReminderRepository
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
+import com.rudra.savingbuddy.domain.repository.FusionRepository
 import com.rudra.savingbuddy.domain.repository.GoalRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import com.rudra.savingbuddy.util.DateUtils
@@ -32,7 +35,11 @@ data class DashboardUiState(
     val insights: List<String> = emptyList(),
     val activeGoal: Goal? = null,
     val upcomingBills: List<BillReminder> = emptyList(),
-    val monthlyTrend: List<Double> = emptyList()
+    val monthlyTrend: List<Double> = emptyList(),
+    val mainBalance: Double = 0.0,
+    val netWorth: Double = 0.0,
+    val totalAssets: Double = 0.0,
+    val accountHealthList: List<AccountHealth> = emptyList()
 )
 
 data class TransactionItem(
@@ -50,7 +57,9 @@ class DashboardViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
     private val budgetRepository: BudgetRepository,
     private val goalRepository: GoalRepository,
-    private val billReminderRepository: BillReminderRepository
+    private val billReminderRepository: BillReminderRepository,
+    private val fusionRepository: FusionRepository,
+    private val accountRepository: com.rudra.savingbuddy.domain.repository.AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DashboardUiState())
@@ -58,6 +67,15 @@ class DashboardViewModel @Inject constructor(
 
     init {
         loadDashboardData()
+        loadMainBalance()
+    }
+
+    private fun loadMainBalance() {
+        viewModelScope.launch {
+            incomeRepository.getMainBalance().collect { balance ->
+                _uiState.update { it.copy(mainBalance = balance) }
+            }
+        }
     }
 
     private fun loadDashboardData() {
@@ -111,6 +129,26 @@ class DashboardViewModel @Inject constructor(
         loadRecentTransactions(startOfMonth, endOfMonth)
         loadGoalsAndBills()
         loadMonthlyTrend()
+        loadAccountHealth()
+    }
+
+    private fun loadAccountHealth() {
+        viewModelScope.launch {
+            fusionRepository.getNetWorthSummary().collect { netWorth ->
+                _uiState.update { 
+                    it.copy(
+                        netWorth = netWorth.netWorth,
+                        totalAssets = netWorth.totalAssets
+                    ) 
+                }
+            }
+        }
+        
+        viewModelScope.launch {
+            fusionRepository.getAccountHealthList().collect { healthList ->
+                _uiState.update { it.copy(accountHealthList = healthList) }
+            }
+        }
     }
 
     private fun loadGoalsAndBills() {

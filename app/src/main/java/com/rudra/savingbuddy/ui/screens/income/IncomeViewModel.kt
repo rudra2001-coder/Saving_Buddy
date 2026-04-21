@@ -2,9 +2,11 @@ package com.rudra.savingbuddy.ui.screens.income
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rudra.savingbuddy.domain.model.Account
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.model.IncomeCategory
 import com.rudra.savingbuddy.domain.model.RecurringInterval
+import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -24,11 +26,20 @@ data class IncomeUiState(
 
 @HiltViewModel
 class IncomeViewModel @Inject constructor(
-    private val incomeRepository: IncomeRepository
+    private val incomeRepository: IncomeRepository,
+    private val accountRepository: AccountRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(IncomeUiState())
     val uiState: StateFlow<IncomeUiState> = _uiState.asStateFlow()
+
+    fun loadAccountsForSelection(onAccountsLoaded: (List<Account>) -> Unit) {
+        viewModelScope.launch {
+            accountRepository.getAllAccounts().collect { accounts ->
+                onAccountsLoaded(accounts)
+            }
+        }
+    }
 
     companion object {
         private const val PAGE_SIZE = 100
@@ -103,7 +114,8 @@ class IncomeViewModel @Inject constructor(
         date: Long,
         isRecurring: Boolean,
         recurringInterval: RecurringInterval?,
-        notes: String?
+        notes: String?,
+        accountId: Long?
     ) {
         viewModelScope.launch {
             try {
@@ -115,13 +127,14 @@ class IncomeViewModel @Inject constructor(
                     date = date,
                     isRecurring = isRecurring,
                     recurringInterval = if (isRecurring) recurringInterval else null,
-                    notes = notes
+                    notes = notes,
+                    accountId = accountId
                 )
                 
                 if (_uiState.value.editingIncome != null) {
                     incomeRepository.updateIncome(income)
                 } else {
-                    incomeRepository.insertIncome(income)
+                    incomeRepository.insertIncome(income, addToWallet = accountId != null)
                 }
                 hideDialog()
             } catch (e: Exception) {
