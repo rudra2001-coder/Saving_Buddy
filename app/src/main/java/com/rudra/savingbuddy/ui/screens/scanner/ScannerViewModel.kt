@@ -32,32 +32,32 @@ class ScannerViewModel @Inject constructor(
     val uiState: StateFlow<ScannerUiState> = _uiState.asStateFlow()
 
     private val amountPatterns = listOf(
-        Pattern.compile("Rs\\.?\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("₹\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("INR\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("Total[:\\s]*Rs?\\.?\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("Amount[:\\s]*Rs?\\.?\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("Grand Total[:\\s]*Rs?\\.?\\s*([\\d,]+\\.?\\d*)"),
-        Pattern.compile("₹([\\d,]+\\.?\\d*)")
+        Pattern.compile("(?i)(?:Total|Amount|Grand Total|Net Amount|Payable| payable)[:\\s]*[Tk৳]\\s*([\\d,]+\\.?\\d*)"),
+        Pattern.compile("(?i)(?:Rs\\.?|INR)[:\\s]*([\\d,]+\\.?\\d*)"),
+        Pattern.compile("[Tk৳]\\s*([\\d,]+\\.?\\d*)"),
+        Pattern.compile("([\\d,]+\\.?\\d*)\\s*(?:Tk|৳)"),
+        Pattern.compile("(?i)(?:BDT)[:\\s]*([\\d,]+\\.?\\d*)")
     )
 
     private val datePatterns = listOf(
         Pattern.compile("(\\d{1,2})[/-](\\d{1,2})[/-](\\d{2,4})"),
-        Pattern.compile("(\\d{1,2})\\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\s+(\\d{2,4})", Pattern.CASE_INSENSITIVE)
+        Pattern.compile("(\\d{1,2})\\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\\s+(\\d{2,4})", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("(\\d{4})[/-](\\d{1,2})[/-](\\d{1,2})")
     )
 
     private val categoryKeywords = mapOf(
-        ExpenseCategory.FOOD to listOf("restaurant", "food", "pizza", "burger", "cafe", "coffee", "tea", "diner", "kitchen", "eatery", "mess"),
-        ExpenseCategory.TRANSPORT to listOf("uber", "ola", "taxi", "fuel", "petrol", "diesel", "gas", "station", "metro", "railway"),
-        ExpenseCategory.SHOPPING to listOf("mart", "store", "shop", "market", "mall", "retail", "commerce", "flipkart", "amazon", "supermarket"),
-        ExpenseCategory.BILLS to listOf("electricity", "water", "bill", "utility", "power", "gas", "phone", "internet", "recharge"),
-        ExpenseCategory.ENTERTAINMENT to listOf("movie", "cinema", "theatre", "netflix", "spotify", "game", "entertainment", "park", "museum"),
-        ExpenseCategory.HEALTH to listOf("pharmacy", "medicine", "hospital", "clinic", "doctor", "health", "medical", "diagnostic"),
-        ExpenseCategory.EDUCATION to listOf("book", "stationery", "tuition", "course", "school", "college", "education", "academy"),
-        ExpenseCategory.GIFTS to listOf("gift", "present", "flowers", "greeting"),
-        ExpenseCategory.TRAVEL to listOf("hotel", "travel", "airline", "flight", "booking", "resort", "tour"),
-        ExpenseCategory.SUBSCRIPTIONS to listOf("subscription", "membership", "subscription", "plan"),
-        ExpenseCategory.RENT to listOf("rent", "lease", "property", "flat", "apartment")
+        ExpenseCategory.FOOD to listOf("restaurant", "food", "pizza", "burger", "cafe", "coffee", "tea", "diner", "kitchen", "eatery", "mess", "biriyani", "polao", "kacchi", "fast food", "snacks", "bakery", "cake", " confectionery"),
+        ExpenseCategory.TRANSPORT to listOf("uber", "ola", "taxi", "fuel", "petrol", "diesel", "gas", "station", "metro", "railway", "bus", "cng", "rickshaw", "parking", "toll"),
+        ExpenseCategory.SHOPPING to listOf("mart", "store", "shop", "market", "mall", "retail", "commerce", "flipkart", "amazon", "supermarket", "grocery", "bazar", "department store"),
+        ExpenseCategory.BILLS to listOf("electricity", "water", "bill", "utility", "power", "gas", "phone", "internet", "recharge", "disconnection", " prepaid", "postpaid"),
+        ExpenseCategory.ENTERTAINMENT to listOf("movie", "cinema", "theatre", "netflix", "spotify", "game", "entertainment", "park", "museum", "zoo", "amusement"),
+        ExpenseCategory.HEALTH to listOf("pharmacy", "medicine", "hospital", "clinic", "doctor", "health", "medical", "diagnostic", "lab", "test", "prescription"),
+        ExpenseCategory.EDUCATION to listOf("book", "stationery", "tuition", "course", "school", "college", "education", "academy", "coaching", "training"),
+        ExpenseCategory.GIFTS to listOf("gift", "present", "flowers", "greeting", "card", "celebration"),
+        ExpenseCategory.TRAVEL to listOf("hotel", "travel", "airline", "flight", "booking", "resort", "tour", "ticket", "bus", "train", "launch"),
+        ExpenseCategory.SUBSCRIPTIONS to listOf("subscription", "membership", "subscription", "plan", "renewal", "prime", "netflix", "youtube"),
+        ExpenseCategory.RENT to listOf("rent", "lease", "property", "flat", "apartment", "house", "room", "deposit"),
+        ExpenseCategory.OTHERS to listOf("receipt", "invoice", "bill", "payment", "transaction")
     )
 
     fun processRecognizedText(text: String) {
@@ -81,18 +81,22 @@ class ScannerViewModel @Inject constructor(
 
     private fun extractAmount(text: String): Double {
         val cleanedText = text.replace(",", "").replace(" ", "")
-        
-        for (pattern in amountPatterns) {
-            val matcher = pattern.matcher(cleanedText)
-            if (matcher.find()) {
-                val amountStr = matcher.group(1)?.replace(",", "") ?: continue
-                try {
-                    val amount = amountStr.toDouble()
-                    if (amount > 0 && amount < 10000000) { // Reasonable max
-                        return amount
+        val lines = text.split("\n").reversed()
+
+        for (line in lines) {
+            val lineCleaned = line.replace(",", "").replace(" ", "")
+            for (pattern in amountPatterns) {
+                val matcher = pattern.matcher(lineCleaned)
+                if (matcher.find()) {
+                    val amountStr = matcher.group(1)?.replace(",", "") ?: continue
+                    try {
+                        val amount = amountStr.toDouble()
+                        if (amount > 0 && amount < 1000000) {
+                            return amount
+                        }
+                    } catch (e: NumberFormatException) {
+                        continue
                     }
-                } catch (e: NumberFormatException) {
-                    continue
                 }
             }
         }
@@ -111,23 +115,32 @@ class ScannerViewModel @Inject constructor(
 
     private fun detectCategory(text: String): ExpenseCategory? {
         val lowerText = text.lowercase()
-        
+        var bestMatch: ExpenseCategory? = null
+        var maxMatches = 0
+
         for ((category, keywords) in categoryKeywords) {
+            var matches = 0
             for (keyword in keywords) {
                 if (lowerText.contains(keyword)) {
-                    return category
+                    matches++
                 }
             }
+            if (matches > maxMatches) {
+                maxMatches = matches
+                bestMatch = category
+            }
         }
-        return ExpenseCategory.OTHERS
+        return bestMatch ?: ExpenseCategory.OTHERS
     }
 
     private fun extractStoreName(text: String): String {
         val lines = text.split("\n")
-        for (line in lines.take(3)) {
+        for (line in lines.take(5)) {
             val trimmed = line.trim()
-            if (trimmed.length >= 3 && trimmed.length <= 50 && !trimmed.matches(Regex(".*\\d.*"))) {
-                return trimmed
+            if (trimmed.length >= 3 && trimmed.length <= 50 && 
+                !trimmed.matches(Regex(".*\\d.*")) && 
+                !trimmed.matches(Regex("(?i)(receipt|invoice|total|amount|date)"))) {
+                return trimmed.replaceFirstChar { it.uppercase() }
             }
         }
         return ""
