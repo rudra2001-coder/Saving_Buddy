@@ -46,7 +46,9 @@ data class DashboardUiState(
     val selectedAccountId: Long? = null,
     val selectedAccountName: String = "Wallet",
     val selectedAccountBalance: Double = 0.0,
-    val availableAccounts: List<AccountSelection> = emptyList()
+    val availableAccounts: List<AccountSelection> = emptyList(),
+    val isLoading: Boolean = true,
+    val error: String? = null
 )
 
 data class TransactionItem(
@@ -97,6 +99,19 @@ class DashboardViewModel @Inject constructor(
                     )
                 }
                 
+                if (accountList.isEmpty()) {
+                    _uiState.update { state ->
+                        state.copy(
+                            availableAccounts = emptyList(),
+                            selectedAccountId = null,
+                            selectedAccountName = "Wallet",
+                            selectedAccountBalance = 0.0,
+                            mainBalance = 0.0
+                        )
+                    }
+                    return@collect
+                }
+                
                 val savedAccountId = prefs.getLong("dashboard_selected_account_id", -1L)
                 val selectedAccount = if (savedAccountId > 0) {
                     accounts.find { it.id == savedAccountId }
@@ -108,9 +123,9 @@ class DashboardViewModel @Inject constructor(
                     state.copy(
                         availableAccounts = accountList,
                         selectedAccountId = selectedAccount?.id,
-                        selectedAccountName = selectedAccount?.name ?: "Wallet",
-                        selectedAccountBalance = selectedAccount?.balance ?: state.mainBalance,
-                        mainBalance = selectedAccount?.balance ?: state.mainBalance
+                        selectedAccountName = selectedAccount?.name ?: accountList.firstOrNull()?.name ?: "Wallet",
+                        selectedAccountBalance = selectedAccount?.balance ?: 0.0,
+                        mainBalance = selectedAccount?.balance ?: accountList.firstOrNull()?.balance ?: 0.0
                     )
                 }
             }
@@ -138,6 +153,10 @@ class DashboardViewModel @Inject constructor(
     }
 
     private fun loadDashboardData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, error = null) }
+        }
+        
         val today = System.currentTimeMillis()
         val startOfToday = DateUtils.getStartOfDay(today)
         val endOfToday = DateUtils.getEndOfDay(today)
@@ -180,8 +199,22 @@ class DashboardViewModel @Inject constructor(
                     expensesByCategory = expensesByCategory,
                     insights = insights
                 )
-            }.collect { state ->
-                _uiState.value = state
+            }.collect { dashboardState ->
+                _uiState.update { currentState ->
+                    currentState.copy(
+                        todayIncome = dashboardState.todayIncome,
+                        todayExpenses = dashboardState.todayExpenses,
+                        todaySavings = dashboardState.todaySavings,
+                        monthlyIncome = dashboardState.monthlyIncome,
+                        monthlyExpenses = dashboardState.monthlyExpenses,
+                        monthlySavings = dashboardState.monthlySavings,
+                        budget = dashboardState.budget,
+                        budgetWarning = dashboardState.budgetWarning,
+                        expensesByCategory = dashboardState.expensesByCategory,
+                        insights = dashboardState.insights,
+                        isLoading = false
+                    )
+                }
             }
         }
 
@@ -312,6 +345,17 @@ class DashboardViewModel @Inject constructor(
     }
 
     fun refreshData() {
-        loadDashboardData()
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                loadDashboardData()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoading = false, error = e.message) }
+            }
+        }
+    }
+
+    fun clearError() {
+        _uiState.update { it.copy(error = null) }
     }
 }

@@ -98,4 +98,39 @@ object DateUtils {
         }
         return calendar.timeInMillis
     }
+
+    fun getDateGroup(timestamp: Long): String {
+        val now = Calendar.getInstance()
+        val date = Calendar.getInstance().apply { timeInMillis = timestamp }
+        
+        val today = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        val yesterday = Calendar.getInstance().apply {
+            add(Calendar.DAY_OF_YEAR, -1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        val startOfWeek = Calendar.getInstance().apply {
+            set(Calendar.DAY_OF_WEEK, firstDayOfWeek)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        
+        return when {
+            date.timeInMillis >= today.timeInMillis -> "Today"
+            date.timeInMillis >= yesterday.timeInMillis -> "Yesterday"
+            date.timeInMillis >= startOfWeek.timeInMillis -> "This Week"
+            else -> SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(timestamp))
+        }
+    }
 }

@@ -51,7 +51,6 @@ val allFeatures = listOf(
     FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Add", "add_income"),
     FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, Color(0xFFF44336), "Add", "add_expense"),
     FeatureItem("transfer", "Transfer Money", "Move between accounts", Icons.Default.SwapHoriz, Color(0xFFFF9800), "Add", "transfer"),
-    FeatureItem("scanner", "Scan QR", "Scan receipts/QR codes", Icons.Default.QrCodeScanner, Color(0xFF009688), "Add", "scanner"),
 
     // Accounts
     FeatureItem("accounts", "All Accounts", "Manage accounts", Icons.Default.AccountBalanceWallet, Color(0xFF2196F3), "Accounts", "accounts"),
@@ -60,7 +59,6 @@ val allFeatures = listOf(
     // History
     FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, Color(0xFF4CAF50), "History", "income"),
     FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, Color(0xFFF44336), "History", "expense"),
-    FeatureItem("transfers", "Transfer History", "View transfers", Icons.Default.SwapHoriz, Color(0xFFFF9800), "History", "transfers"),
 
     // Goals
     FeatureItem("goals", "Savings Goals", "Track your goals", Icons.Default.Flag, Color(0xFFE91E63), "Goals", "goals"),
@@ -68,7 +66,6 @@ val allFeatures = listOf(
 
     // Budget
     FeatureItem("budget", "Budget", "Monthly budget", Icons.Default.AccountBalance, Color(0xFF3F51B5), "Budget", "budget"),
-    FeatureItem("subscriptions", "Subscriptions", "Manage subscriptions", Icons.Default.Subscriptions, Color(0xFF9C27B0), "Budget", "subscriptions"),
 
     // Recurring
     FeatureItem("recurring", "Recurring", "Recurring transactions", Icons.Default.Repeat, Color(0xFF9C27B6), "Transactions", "recurring"),
@@ -87,7 +84,6 @@ val allFeatures = listOf(
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
     FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
     FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, Color(0xFF4CAF50), "Settings", "backup", isNew = true),
-    FeatureItem("about", "About", "App info & help", Icons.Default.Info, Color(0xFF424242), "Settings", "about"),
 )
 
 val featureCategories = listOf(

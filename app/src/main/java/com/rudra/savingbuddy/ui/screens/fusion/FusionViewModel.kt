@@ -17,9 +17,13 @@ data class FusionUiState(
     val insights: List<FusionInsight> = emptyList(),
     val goalSuggestions: List<GoalFundingSuggestion> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
+    val isLoadingMore: Boolean = false,
+    val hasMoreTransactions: Boolean = true,
     val error: String? = null,
     val showAllAccounts: Boolean = false,
-    val selectedAccountId: Long? = null
+    val selectedAccountId: Long? = null,
+    val currentPage: Int = 0
 )
 
 sealed class FusionEvent {
@@ -27,6 +31,7 @@ sealed class FusionEvent {
     data class SelectAccount(val accountId: Long?) : FusionEvent()
     data class AllocateToGoal(val goalId: Long, val amount: Double, val fromAccountId: Long) : FusionEvent()
     object Refresh : FusionEvent()
+    object LoadMore : FusionEvent()
     object ClearError : FusionEvent()
 }
 
@@ -40,6 +45,11 @@ class FusionViewModel @Inject constructor(
 
     private val _showAllAccounts = MutableStateFlow(false)
     private val _selectedAccountId = MutableStateFlow<Long?>(null)
+    private var allTransactionsCache = mutableListOf<UnifiedTransaction>()
+
+    companion object {
+        private const val PAGE_SIZE = 50
+    }
 
     init {
         loadFusionData()
@@ -48,7 +58,7 @@ class FusionViewModel @Inject constructor(
     private fun loadFusionData() {
         viewModelScope.launch {
             combine(
-                fusionRepository.getUnifiedTransactions(100),
+                fusionRepository.getUnifiedTransactions(PAGE_SIZE),
                 fusionRepository.getNetWorthSummary(),
                 fusionRepository.getAccountHealthList(),
                 fusionRepository.getTransferPatterns(),
@@ -58,8 +68,9 @@ class FusionViewModel @Inject constructor(
                 _selectedAccountId
             ) { values ->
                 @Suppress("UNCHECKED_CAST")
+                allTransactionsCache = (values[0] as List<UnifiedTransaction>).toMutableList()
                 FusionUiState(
-                    unifiedTransactions = values[0] as List<UnifiedTransaction>,
+                    unifiedTransactions = allTransactionsCache.take(PAGE_SIZE),
                     netWorthSummary = values[1] as NetWorthSummary,
                     accountHealthList = values[2] as List<AccountHealth>,
                     transferPatterns = values[3] as List<TransferPattern>,
@@ -67,7 +78,9 @@ class FusionViewModel @Inject constructor(
                     goalSuggestions = values[5] as List<GoalFundingSuggestion>,
                     showAllAccounts = values[6] as Boolean,
                     selectedAccountId = values[7] as Long?,
-                    isLoading = false
+                    isLoading = false,
+                    hasMoreTransactions = allTransactionsCache.size > PAGE_SIZE,
+                    currentPage = 1
                 )
             }.catch { e ->
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
@@ -93,8 +106,10 @@ class FusionViewModel @Inject constructor(
                 }
             }
             is FusionEvent.Refresh -> {
-                _uiState.update { it.copy(isLoading = true) }
-                loadFusionData()
+                refreshData()
+            }
+            is FusionEvent.LoadMore -> {
+                loadMoreTransactions()
             }
             is FusionEvent.ClearError -> {
                 _uiState.update { it.copy(error = null) }
@@ -102,16 +117,66 @@ class FusionViewModel @Inject constructor(
         }
     }
 
+    private fun refreshData() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isRefreshing = true) }
+            
+            try {
+                val newTransactions = fusionRepository.getUnifiedTransactions(PAGE_SIZE * (_uiState.value.currentPage + 1)).first()
+                allTransactionsCache = newTransactions.toMutableList()
+                
+                _uiState.update { state ->
+                    state.copy(
+                        unifiedTransactions = getFilteredTransactionsList(allTransactionsCache),
+                        isRefreshing = false,
+                        hasMoreTransactions = allTransactionsCache.size > PAGE_SIZE * state.currentPage
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isRefreshing = false, error = e.message) }
+            }
+        }
+    }
+
+    private fun loadMoreTransactions() {
+        if (_uiState.value.isLoadingMore || !_uiState.value.hasMoreTransactions) return
+        
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoadingMore = true) }
+            
+            try {
+                val nextPage = _uiState.value.currentPage + 1
+                val newTransactions = fusionRepository.getUnifiedTransactions(PAGE_SIZE * nextPage).first()
+                allTransactionsCache = newTransactions.toMutableList()
+                
+                _uiState.update { state ->
+                    state.copy(
+                        unifiedTransactions = getFilteredTransactionsList(allTransactionsCache),
+                        isLoadingMore = false,
+                        hasMoreTransactions = newTransactions.size > PAGE_SIZE * nextPage,
+                        currentPage = nextPage
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isLoadingMore = false) }
+            }
+        }
+    }
+
     fun getFilteredTransactions(): List<UnifiedTransaction> {
+        return getFilteredTransactionsList(allTransactionsCache)
+    }
+
+    private fun getFilteredTransactionsList(transactions: List<UnifiedTransaction>): List<UnifiedTransaction> {
         val state = _uiState.value
         return if (state.showAllAccounts) {
-            state.unifiedTransactions
+            transactions
         } else if (state.selectedAccountId != null) {
-            state.unifiedTransactions.filter { 
+            transactions.filter { 
                 it.accountId == state.selectedAccountId || it.relatedAccountId == state.selectedAccountId 
             }
         } else {
-            state.unifiedTransactions.take(20)
+            transactions.take(PAGE_SIZE)
         }
     }
 }

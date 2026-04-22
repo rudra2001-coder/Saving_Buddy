@@ -65,18 +65,46 @@ fun DashboardScreen(
         label = "fab_scale"
     )
 
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading && isRefreshing) {
+            isRefreshing = false
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { error ->
+            snackbarHostState.showSnackbar(error)
+            viewModel.clearError()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
-                isRefreshing = true
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                viewModel.refreshData()
-                isRefreshing = false
+                if (!isRefreshing) {
+                    isRefreshing = true
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    viewModel.refreshData()
+                }
             },
             state = pullToRefreshState,
             modifier = Modifier.fillMaxSize()
         ) {
+            if (uiState.isLoading && uiState.mainBalance == 0.0) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator()
+                }
+            } else {
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
@@ -200,12 +228,13 @@ fun DashboardScreen(
                                     navController?.navigate("expense_detail/${transaction.id}")
                                 }
                             },
-                            onSeeAll = { navController?.navigate("transactions") }
+                            onSeeAll = { navController?.navigate("transaction_history") }
                         )
                     }
                 }
 
                 item { Spacer(modifier = Modifier.height(100.dp)) }
+            }
             }
         }
 
@@ -236,7 +265,7 @@ fun DashboardScreen(
                 },
                 onAddGoal = {
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    navController?.navigate("add_goal")
+                    navController?.navigate("GoalsScreen")
                     showFabMenu = false
                 }
             )
@@ -272,6 +301,12 @@ private fun NetBalanceCard(
 ) {
     val isPositive = netBalance >= 0
     var showAccountPicker by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(showAccountPicker) {
+        if (showAccountPicker && availableAccounts.isEmpty()) {
+            showAccountPicker = false
+        }
+    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -367,51 +402,55 @@ private fun NetBalanceCard(
         }
     }
 
-    if (showAccountPicker) {
+    if (showAccountPicker && availableAccounts.isNotEmpty()) {
         AlertDialog(
             onDismissRequest = { showAccountPicker = false },
             title = { Text("Select Account", fontWeight = FontWeight.Bold) },
             text = {
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    items(availableAccounts.size) { index ->
-                        val account = availableAccounts[index]
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onAccountSelect(account.id)
-                                    showAccountPicker = false
-                                },
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (account.name == selectedAccountName) 
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                            )
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                if (availableAccounts.isEmpty()) {
+                    Text("No accounts available")
+                } else {
+                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(availableAccounts.size) { index ->
+                            val account = availableAccounts[index]
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        onAccountSelect(account.id)
+                                        showAccountPicker = false
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (account.name == selectedAccountName) 
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                                )
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = account.name,
-                                        style = MaterialTheme.typography.bodyLarge,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Text(
-                                        text = "Balance: ${CurrencyFormatter.format(account.balance)}",
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                }
-                                if (account.name == selectedAccountName) {
-                                    Icon(
-                                        Icons.Default.Check,
-                                        contentDescription = "Selected",
-                                        tint = MaterialTheme.colorScheme.primary
-                                    )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = account.name,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = "Balance: ${CurrencyFormatter.format(account.balance)}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (account.name == selectedAccountName) {
+                                        Icon(
+                                            Icons.Default.Check,
+                                            contentDescription = "Selected",
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -444,12 +483,7 @@ private fun QuickActionsSection(navController: NavController?) {
                 .padding(vertical = 16.dp, horizontal = 8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            QuickActionItem(
-                icon = Icons.Outlined.QrCodeScanner,
-                label = "Scan",
-                color = MaterialTheme.colorScheme.primary,
-                onClick = { navController?.navigate("scan") }
-            )
+            
             QuickActionItem(
                 icon = Icons.Outlined.PieChart,
                 label = "Budget",
@@ -480,7 +514,29 @@ private fun QuickActionsSection(navController: NavController?) {
                 color = ExpenseRed,
                 onClick = { navController?.navigate("bills") }
             )
+            QuickActionItem(
+                icon = Icons.Outlined.Calculate,
+                label = "Calculator",
+                color = Color(0xFF00BCD4),
+                onClick = { navController?.navigate("calculator") }
+            )
+            QuickActionItem(
+                icon = Icons.Outlined.FileDownload,
+                label = "Export",
+                color = Color(0xFF607D8B),
+                onClick = { navController?.navigate("export") }
+            )
         }
+    }
+}
+
+@Composable
+private fun SafeNavigation(
+    route: String,
+    navigation: NavController?
+) {
+    if (navigation != null && route.isNotEmpty()) {
+        navigation.navigate(route)
     }
 }
 
