@@ -109,11 +109,6 @@ dependencies {
     // DataStore
     implementation(libs.datastore)
 
-    // CameraX
-    implementation(libs.camera)
-    implementation(libs.camera.view)
-    implementation(libs.mlkit.text.recognition)
-
   //backup
     implementation("androidx.work:work-runtime-ktx:2.9.0")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
