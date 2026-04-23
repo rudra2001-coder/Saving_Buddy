@@ -84,6 +84,7 @@ val allFeatures = listOf(
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
     FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
     FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, Color(0xFF4CAF50), "Settings", "backup", isNew = true),
+    FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, Color(0xFF7C4DFF), "Settings", "advanced", isNew = true),
 )
 
 val featureCategories = listOf(

@@ -36,6 +36,19 @@ sealed class Screen(
     data object TransactionHistory : Screen("transaction_history", "Transaction History", Icons.Default.History)
     data object PrivacyPolicy : Screen("privacy_policy", "Privacy Policy", Icons.Default.Policy)
     data object TermsOfService : Screen("terms_of_service", "Terms of Service", Icons.Default.Description)
+    data object AdvancedFeatures : Screen("advanced_features", "Advanced", Icons.Default.AutoAwesome)
+    data object Gamification : Screen("gamification", "Achievements", Icons.Default.EmojiEvents)
+    data object SplitExpense : Screen("split_expense", "Split", Icons.Default.People)
+    data object LoanTracker : Screen("loan_tracker", "Loans", Icons.Default.AccountBalance)
+    data object CategoryBudgets : Screen("category_budgets", "Category Budgets", Icons.Default.Category)
+    data object SmartInsights : Screen("smart_insights", "Insights", Icons.Default.Insights)
+    data object SpendingPatterns : Screen("spending_patterns", "Patterns", Icons.Default.TrendingUp)
+    data object PDFExport : Screen("pdf_export", "PDF Report", Icons.Default.PictureAsPdf)
+    data object MonthlyReport : Screen("monthly_report", "Report", Icons.Default.Assessment)
+    data object SmartNotifications : Screen("smart_notifications", "Smart Alerts", Icons.Default.NotificationsActive)
+    data object AppLock : Screen("app_lock", "App Lock", Icons.Default.Lock)
+    data object AutoRecurring : Screen("auto_recurring", "Auto Add", Icons.Default.Loop)
+    data object AutoCategory : Screen("auto_category", "Auto Category", Icons.Default.AutoAwesome)
 }
 
 val bottomNavItems = listOf(

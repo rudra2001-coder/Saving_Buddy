@@ -1,6 +1,5 @@
 package com.rudra.savingbuddy.ui.navigation
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +18,7 @@ import com.rudra.savingbuddy.ui.screens.budget.BudgetScreen
 import com.rudra.savingbuddy.ui.screens.dashboard.DashboardScreen
 import com.rudra.savingbuddy.ui.screens.expense.ExpenseScreen
 import com.rudra.savingbuddy.ui.screens.features.FeaturesScreen
+import com.rudra.savingbuddy.ui.screens.features.AdvancedFeaturesScreen
 import com.rudra.savingbuddy.ui.screens.income.IncomeScreen
 import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.notifications.NotificationsScreen
@@ -37,6 +37,7 @@ import com.rudra.savingbuddy.ui.screens.calculator.CalculatorScreen
 import com.rudra.savingbuddy.ui.screens.export.ExportScreen
 import com.rudra.savingbuddy.ui.screens.reports.AnalyticsScreen
 import com.rudra.savingbuddy.ui.screens.transactionhistory.TransactionHistoryScreen
+import com.rudra.savingbuddy.ui.screens.gamification.GamificationScreen
 
 @Composable
 fun MainNavigation() {
@@ -151,11 +152,26 @@ fun MainNavigation() {
             composable(Screen.TermsOfService.route) {
                 TermsOfServiceScreen(onNavigateBack = { navController.popBackStack() })
             }
+            composable(Screen.Gamification.route) {
+                GamificationScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.AdvancedFeatures.route) {
+                AdvancedFeaturesScreen(
+                    navController = navController,
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
             composable("add_goal") {
                 GoalsScreen()
             }
             composable("subscriptions") {
                 BudgetScreen()
+            }
+            composable("advanced") {
+                AdvancedFeaturesScreen(
+                    navController = navController,
+                    onNavigateBack = { navController.popBackStack() }
+                )
             }
         }
     }
