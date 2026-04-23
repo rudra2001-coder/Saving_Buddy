@@ -88,12 +88,14 @@ fun AdvancedFeaturesScreen(
     var searchQuery by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf("All") }
     
-    val filteredFeatures = advancedFeatures.filter { feature ->
-        val matchesSearch = searchQuery.isBlank() || 
-            feature.title.contains(searchQuery, ignoreCase = true) ||
-            feature.description.contains(searchQuery, ignoreCase = true)
-        val matchesCategory = selectedCategory == "All" || feature.category == selectedCategory
-        matchesSearch && matchesCategory
+    val filteredFeatures = remember(searchQuery, selectedCategory, advancedFeatures) {
+        advancedFeatures.filter { feature ->
+            val matchesSearch = searchQuery.isBlank() || 
+                feature.title.contains(searchQuery, ignoreCase = true) ||
+                feature.description.contains(searchQuery, ignoreCase = true)
+            val matchesCategory = selectedCategory == "All" || feature.category == selectedCategory
+            matchesSearch && matchesCategory
+        }
     }
     
     Scaffold(
@@ -110,7 +112,9 @@ fun AdvancedFeaturesScreen(
                     }
                 },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = {
+                        try { onNavigateBack() } catch (e: Exception) { navController?.popBackStack() }
+                    }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
@@ -180,13 +184,22 @@ fun AdvancedFeaturesScreen(
                 AdvancedFeatureCard(
                     feature = feature,
                     onClick = {
-                        when (feature.id) {
-                            "category_budget" -> navController?.navigate("budget")
-                            "analytics_insights" -> navController?.navigate("reports")
-                            "smart_notify", "reminder_notify", "goal_alert" -> navController?.navigate("notifications")
-                            "achievements", "streaks", "levels" -> navController?.navigate("gamification")
-                            "app_lock", "local_encrypt" -> navController?.navigate("settings")
-                            else -> { /* Show coming soon */ }
+                        try {
+                            when (feature.id) {
+                                "category_budget" -> navController?.navigate("budget")
+                                "analytics_insights" -> navController?.navigate("reports")
+                                "smart_notify", "reminder_notify", "goal_alert" -> navController?.navigate("notifications")
+                                "achievements", "streaks", "levels" -> navController?.navigate("gamification")
+                                "app_lock", "local_encrypt" -> navController?.navigate("settings")
+                                "split_expense", "loan_tracker" -> navController?.navigate("features")
+                                "pdf_export", "excel_export" -> navController?.navigate("export")
+                                "monthly_report" -> navController?.navigate("reports")
+                                "auto_recurring", "salary_track" -> navController?.navigate("recurring")
+                                "auto_category" -> navController?.navigate("features")
+                                else -> { /* Coming soon */ }
+                            }
+                        } catch (e: Exception) {
+                            // Navigation failed, ignore
                         }
                     }
                 )
@@ -331,7 +344,7 @@ private fun AdvancedFeatureCard(
                     if (feature.isNew) {
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = IncomeGreen
+                            color = PrimaryGreen
                         ) {
                             Text(
                                 "NEW",
