@@ -14,15 +14,15 @@ class SettingsRepositoryImpl @Inject constructor(
 
     override fun getSettings(): Flow<UserSettings?> =
         userSettingsDao.getSetting("app_settings").map { entity ->
-            entity?.toDomain()
+            entity?.toDomainSettings()
         }
 
     override suspend fun updateSettings(settings: UserSettings) {
-        userSettingsDao.insertSettings(settings.toEntity())
+        userSettingsDao.insertSettings(settings.toSettingsEntity())
     }
 }
 
-fun UserSettingsEntity.toDomain(): UserSettings {
+fun UserSettingsEntity.toDomainSettings(): UserSettings {
     val map = value.split(";").associate {
         val parts = it.split("=")
         parts[0] to parts.getOrElse(1) { "" }
@@ -30,18 +30,39 @@ fun UserSettingsEntity.toDomain(): UserSettings {
     return UserSettings(
         id = 0,
         darkMode = map["darkMode"]?.toBoolean() ?: false,
+        currency = map["currency"] ?: "BDT",
+        startOfWeek = map["startOfWeek"] ?: "Saturday",
         dailyReminderEnabled = map["dailyReminder"]?.toBoolean() ?: true,
         dailyReminderTime = map["dailyTime"] ?: "20:00",
-        billReminderEnabled = map["billReminder"]?.toBoolean() ?: true
+        billReminderEnabled = map["billReminder"]?.toBoolean() ?: true,
+        budgetAlertEnabled = map["budgetAlert"]?.toBoolean() ?: true,
+        budgetAlertPercentage = map["budgetAlertPct"]?.toIntOrNull() ?: 80,
+        goalReminderEnabled = map["goalReminder"]?.toBoolean() ?: true,
+        pushNotificationEnabled = map["pushNotification"]?.toBoolean() ?: true,
+        weeklySummaryEnabled = map["weeklySummary"]?.toBoolean() ?: true,
+        goalProgressEnabled = map["goalProgress"]?.toBoolean() ?: false,
+        privacyModeEnabled = map["privacyMode"]?.toBoolean() ?: false,
+        biometricLockEnabled = map["biometricLock"]?.toBoolean() ?: false,
+        defaultAccountId = map["defaultAccountId"]?.toLongOrNull()
     )
 }
 
-fun UserSettings.toEntity(): UserSettingsEntity {
-    val valueStr = listOfNotNull(
-        "darkMode=${darkMode}".takeIf { true },
-        "dailyReminder=${dailyReminderEnabled}",
+fun UserSettings.toSettingsEntity(): UserSettingsEntity {
+    val valueStr = listOf(
+        "darkMode=$darkMode",
+        "currency=$currency",
+        "startOfWeek=$startOfWeek",
+        "dailyReminder=$dailyReminderEnabled",
         "dailyTime=$dailyReminderTime",
-        "billReminder=$billReminderEnabled"
+        "billReminder=$billReminderEnabled",
+        "budgetAlert=$budgetAlertEnabled",
+        "budgetAlertPct=$budgetAlertPercentage",
+        "goalReminder=$goalReminderEnabled",
+        "pushNotification=$pushNotificationEnabled",
+        "weeklySummary=$weeklySummaryEnabled",
+        "goalProgress=$goalProgressEnabled",
+        "privacyMode=$privacyModeEnabled",
+        "biometricLock=$biometricLockEnabled"
     ).joinToString(";")
     return UserSettingsEntity(
         key = "app_settings",

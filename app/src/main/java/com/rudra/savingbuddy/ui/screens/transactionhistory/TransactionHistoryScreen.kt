@@ -162,9 +162,9 @@ fun TransactionHistoryScreen(
                                     transaction = transaction,
                                     onClick = {
                                         if (transaction.type == "INCOME") {
-                                            navController?.navigate("income_detail/${transaction.id}")
+                                            navController?.navigate("income")
                                         } else {
-                                            navController?.navigate("expense_detail/${transaction.id}")
+                                            navController?.navigate("expense")
                                         }
                                     }
                                 )

@@ -49,6 +49,9 @@ enum class SettingsAction {
     None, Navigation, Toggle, Dialog
 }
 
+val currencies = listOf("BDT", "USD", "EUR", "GBP", "INR", "PKR")
+val weekDays = listOf("Saturday", "Sunday", "Monday")
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -59,19 +62,20 @@ fun SettingsScreen(
     var expandedSection by remember { mutableStateOf("Appearance") }
     var showBudgetDialog by remember { mutableStateOf(false) }
     var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showStartOfWeekDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
 
     val settingsSections = listOf(
         SettingsSection("Appearance", Icons.Outlined.Palette, listOf(
             SettingsItem("Theme", if (uiState.darkMode) "Dark" else "Light", Icons.Outlined.DarkMode, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.darkMode, onCheckedChange = { viewModel.setDarkMode(it) }) }),
-            SettingsItem("Currency", "BDT (৳)", Icons.Outlined.AttachMoney, Color(0xFF4CAF50), SettingsAction.Dialog),
-            SettingsItem("Start of Week", "Saturday", Icons.Outlined.CalendarViewWeek, Color(0xFFFF9800), SettingsAction.Dialog)
+            SettingsItem("Currency", "${uiState.currency} (৳)", Icons.Outlined.AttachMoney, Color(0xFF4CAF50), SettingsAction.Dialog),
+            SettingsItem("Start of Week", uiState.startOfWeek, Icons.Outlined.CalendarViewWeek, Color(0xFFFF9800), SettingsAction.Dialog)
         )),
         SettingsSection("Budget & Goals", Icons.Outlined.AccountBalance, listOf(
             SettingsItem("Monthly Budget", "৳${CurrencyFormatter.formatBDT(uiState.budget?.monthlyLimit ?: 0.0)}", Icons.Outlined.Wallet, Color(0xFF4CAF50), SettingsAction.Dialog),
-            SettingsItem("Budget Alerts", "Alert at 80%", Icons.Outlined.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = true, onCheckedChange = {}) }),
-            SettingsItem("Goal Reminders", "Weekly progress", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = true, onCheckedChange = {}) })
+            SettingsItem("Budget Alerts", "Alert at 80%", Icons.Outlined.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.budgetAlertEnabled, onCheckedChange = { viewModel.setBudgetAlert(it) }) }),
+            SettingsItem("Goal Reminders", "Weekly progress", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.goalReminderEnabled, onCheckedChange = { viewModel.setGoalReminder(it) }) })
         )),
         SettingsSection("Accounts", Icons.Outlined.AccountBalanceWallet, listOf(
             SettingsItem("Default Account", "All Accounts", Icons.Outlined.AccountBalanceWallet, Color(0xFF2196F3), SettingsAction.Navigation),
@@ -79,16 +83,16 @@ fun SettingsScreen(
             SettingsItem("Daily Transfer Limits", "Configure limits", Icons.Outlined.Timer, Color(0xFFFF9800), SettingsAction.Navigation)
         )),
         SettingsSection("Notifications", Icons.Outlined.Notifications, listOf(
-            SettingsItem("Push Notifications", "Receive alerts", Icons.Outlined.Notifications, Color(0xFFF44336), SettingsAction.Toggle, { Switch(checked = true, onCheckedChange = {}) }),
-            SettingsItem("Bill Reminders", "3 days before", Icons.Outlined.Receipt, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = true, onCheckedChange = {}) }),
-            SettingsItem("Weekly Summary", "Every Monday", Icons.Outlined.Summarize, Color(0xFF2196F3), SettingsAction.Toggle, { Switch(checked = true, onCheckedChange = {}) }),
-            SettingsItem("Goal Progress", "On completion", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = false, onCheckedChange = {}) })
+            SettingsItem("Push Notifications", "Receive alerts", Icons.Outlined.Notifications, Color(0xFFF44336), SettingsAction.Toggle, { Switch(checked = uiState.pushNotificationEnabled, onCheckedChange = { viewModel.setPushNotification(it) }) }),
+            SettingsItem("Bill Reminders", "3 days before", Icons.Outlined.Receipt, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.billReminderEnabled, onCheckedChange = { viewModel.setBillReminder(it) }) }),
+            SettingsItem("Weekly Summary", "Every Monday", Icons.Outlined.Summarize, Color(0xFF2196F3), SettingsAction.Toggle, { Switch(checked = uiState.weeklySummaryEnabled, onCheckedChange = { viewModel.setWeeklySummary(it) }) }),
+            SettingsItem("Goal Progress", "On completion", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.goalProgressEnabled, onCheckedChange = { viewModel.setGoalProgress(it) }) })
         )),
         SettingsSection("Data & Privacy", Icons.Outlined.Security, listOf(
             SettingsItem("Export Data", "CSV, PDF, JSON", Icons.Outlined.FileDownload, Color(0xFF607D8B), SettingsAction.Dialog),
             SettingsItem("Backup", "Local storage", Icons.Outlined.Backup, Color(0xFF607D8B), SettingsAction.Navigation),
-            SettingsItem("Privacy Mode", "Hide amounts", Icons.Outlined.VisibilityOff, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = false, onCheckedChange = {}) }),
-            SettingsItem("Biometric Lock", "Fingerprint unlock", Icons.Outlined.Fingerprint, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = false, onCheckedChange = {}) })
+            SettingsItem("Privacy Mode", "Hide amounts", Icons.Outlined.VisibilityOff, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.privacyModeEnabled, onCheckedChange = { viewModel.setPrivacyMode(it) }) }),
+            SettingsItem("Biometric Lock", "Fingerprint unlock", Icons.Outlined.Fingerprint, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.biometricLockEnabled, onCheckedChange = { viewModel.setBiometricLock(it) }) })
         )),
         SettingsSection("About & Support", Icons.Outlined.Info, listOf(
             SettingsItem("App Version", "1.0.0 (Build 1)", Icons.Outlined.Info, Color(0xFF607D8B), SettingsAction.None),
@@ -135,7 +139,21 @@ fun SettingsScreen(
             }
 
             items(settingsSections.filter { it.title == expandedSection }) { section ->
-                SettingsSectionCard(title = section.title, icon = section.icon, items = section.items, isExpanded = true, onToggle = {}, onItemClick = { item -> when (item.title) { "Monthly Budget" -> showBudgetDialog = true; "Currency" -> showCurrencyDialog = true; "Export Data" -> showExportDialog = true; "Theme" -> showThemeDialog = true } })
+                SettingsSectionCard(title = section.title, icon = section.icon, items = section.items, isExpanded = true, onToggle = {}, onItemClick = { item -> 
+                    when (item.title) {
+                        "Monthly Budget" -> showBudgetDialog = true
+                        "Currency" -> showCurrencyDialog = true
+                        "Export Data" -> showExportDialog = true
+                        "Theme" -> viewModel.setDarkMode(!uiState.darkMode)
+                        "Start of Week" -> showStartOfWeekDialog = true
+                        "Backup" -> navController?.navigate("backup")
+                        "Rate App" -> viewModel.rateApp()
+                        "Share App" -> viewModel.shareApp()
+                        "Contact Support" -> viewModel.contactSupport()
+                        "Privacy Policy" -> navController?.navigate("privacy_policy")
+                        "Terms of Service" -> navController?.navigate("terms_of_service")
+                    }
+                })
             }
 
             item {
@@ -147,8 +165,8 @@ fun SettingsScreen(
                         Text("Your Personal Finance Tracker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            AssistChip(onClick = {}, label = { Text("Privacy") }, leadingIcon = { Icon(Icons.Outlined.Security, null, modifier = Modifier.size(16.dp)) })
-                            AssistChip(onClick = {}, label = { Text("Terms") }, leadingIcon = { Icon(Icons.Outlined.Description, null, modifier = Modifier.size(16.dp)) })
+                            AssistChip(onClick = { navController?.navigate("privacy_policy") }, label = { Text("Privacy") }, leadingIcon = { Icon(Icons.Outlined.Security, null, modifier = Modifier.size(16.dp)) })
+                            AssistChip(onClick = { navController?.navigate("terms_of_service") }, label = { Text("Terms") }, leadingIcon = { Icon(Icons.Outlined.Description, null, modifier = Modifier.size(16.dp)) })
                         }
                     }
                 }
@@ -160,6 +178,14 @@ fun SettingsScreen(
 
     if (showBudgetDialog) {
         BudgetDialog(currentBudget = uiState.budget?.monthlyLimit, onDismiss = { showBudgetDialog = false }, onSave = { viewModel.setBudget(it); showBudgetDialog = false })
+    }
+
+    if (showCurrencyDialog) {
+        SelectionDialog(title = "Select Currency", options = currencies, selectedOption = uiState.currency, onDismiss = { showCurrencyDialog = false }, onSelect = { viewModel.setCurrency(it); showCurrencyDialog = false })
+    }
+
+    if (showStartOfWeekDialog) {
+        SelectionDialog(title = "Start of Week", options = weekDays, selectedOption = uiState.startOfWeek, onDismiss = { showStartOfWeekDialog = false }, onSelect = { viewModel.setStartOfWeek(it); showStartOfWeekDialog = false })
     }
 }
 
@@ -226,4 +252,27 @@ private fun BudgetDialog(currentBudget: Double?, onDismiss: () -> Unit, onSave: 
             OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Budget Amount") }, leadingIcon = { Text("৳", style = MaterialTheme.typography.titleMedium) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
         }
     }, confirmButton = { Button(onClick = { amount.toDoubleOrNull()?.let { onSave(it) } }, shape = RoundedCornerShape(12.dp)) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+@Composable
+private fun SelectionDialog(title: String, options: List<String>, selectedOption: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(title, fontWeight = FontWeight.Bold) }, text = {
+        Column {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(option) }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(option, style = MaterialTheme.typography.bodyLarge)
+                    if (option == selectedOption) {
+                        Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+    }, confirmButton = {}, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }

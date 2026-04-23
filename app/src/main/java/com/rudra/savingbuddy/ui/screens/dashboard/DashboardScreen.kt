@@ -203,7 +203,7 @@ fun DashboardScreen(
                         CategoryBreakdownCard(
                             categories = uiState.expensesByCategory,
                             onCategoryClick = { category ->
-                                navController?.navigate("category/$category")
+                                navController?.navigate("transaction_history")
                             }
                         )
                     }
@@ -222,11 +222,7 @@ fun DashboardScreen(
                         RecentTransactionsCard(
                             transactions = uiState.recentTransactions,
                             onTransactionClick = { transaction ->
-                                if (transaction.type == "INCOME") {
-                                    navController?.navigate("income_detail/${transaction.id}")
-                                } else {
-                                    navController?.navigate("expense_detail/${transaction.id}")
-                                }
+                                navController?.navigate("transaction_history")
                             },
                             onSeeAll = { navController?.navigate("transaction_history") }
                         )
@@ -263,9 +259,9 @@ fun DashboardScreen(
                     navController?.navigate("add_expense")
                     showFabMenu = false
                 },
-                onAddGoal = {
+                onAddAccount = {
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    navController?.navigate("GoalsScreen")
+                    navController?.navigate("add_account")
                     showFabMenu = false
                 }
             )
@@ -275,17 +271,30 @@ fun DashboardScreen(
 
 @Composable
 private fun DashboardHeader() {
-    Column {
-        Text(
-            text = "Dashboard",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = DateUtils.formatDate(System.currentTimeMillis()),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Dashboard",
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = DateUtils.formatDate(System.currentTimeMillis()),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        // Added sync/refresh indicator
+        Icon(
+            imageVector = Icons.Default.Sync,
+            contentDescription = "Sync",
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(24.dp)
         )
     }
 }
@@ -985,7 +994,7 @@ private fun AnimatedFabMenu(
     onFabClick: () -> Unit,
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit,
-    onAddGoal: () -> Unit
+    onAddAccount: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.End,
@@ -1000,12 +1009,12 @@ private fun AnimatedFabMenu(
                 horizontalAlignment = Alignment.End,
                 modifier = Modifier.padding(bottom = 12.dp)
             ) {
-                // Add Goal
+                // Add Account
                 FabMenuItem(
-                    text = "Add Goal",
-                    icon = Icons.Outlined.Savings,
-                    color = SavingsBlue,
-                    onClick = onAddGoal
+                    text = "Add Account",
+                    icon = Icons.Default.AccountBalanceWallet,
+                    color = Color(0xFF2196F3),
+                    onClick = onAddAccount
                 )
                 Spacer(modifier = Modifier.height(8.dp))
 

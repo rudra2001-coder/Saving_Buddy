@@ -34,6 +34,8 @@ sealed class Screen(
     data object Export : Screen("export", "Export", Icons.Default.FileDownload)
     data object Analytics : Screen("analytics", "Analytics", Icons.Default.Insights)
     data object TransactionHistory : Screen("transaction_history", "Transaction History", Icons.Default.History)
+    data object PrivacyPolicy : Screen("privacy_policy", "Privacy Policy", Icons.Default.Policy)
+    data object TermsOfService : Screen("terms_of_service", "Terms of Service", Icons.Default.Description)
 }
 
 val bottomNavItems = listOf(

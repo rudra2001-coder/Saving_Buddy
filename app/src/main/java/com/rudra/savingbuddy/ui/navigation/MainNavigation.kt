@@ -24,6 +24,8 @@ import com.rudra.savingbuddy.ui.screens.goals.GoalsScreen
 import com.rudra.savingbuddy.ui.screens.notifications.NotificationsScreen
 import com.rudra.savingbuddy.ui.screens.reports.ReportsScreen
 import com.rudra.savingbuddy.ui.screens.settings.SettingsScreen
+import com.rudra.savingbuddy.ui.screens.settings.PrivacyPolicyScreen
+import com.rudra.savingbuddy.ui.screens.settings.TermsOfServiceScreen
 import com.rudra.savingbuddy.ui.screens.calendar.CalendarScreen
 import com.rudra.savingbuddy.ui.screens.accounts.AccountsScreen
 import com.rudra.savingbuddy.ui.screens.accounts.TransferScreen
@@ -142,6 +144,12 @@ fun MainNavigation() {
             }
             composable(Screen.TransactionHistory.route) {
                 TransactionHistoryScreen(navController = navController)
+            }
+            composable(Screen.PrivacyPolicy.route) {
+                PrivacyPolicyScreen(onNavigateBack = { navController.popBackStack() })
+            }
+            composable(Screen.TermsOfService.route) {
+                TermsOfServiceScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable("add_goal") {
                 GoalsScreen()
