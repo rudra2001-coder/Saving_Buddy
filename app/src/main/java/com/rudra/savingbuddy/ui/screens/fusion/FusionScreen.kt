@@ -79,6 +79,8 @@ fun FusionScreen(
         }
     }
 
+    val isDarkMode = !MaterialTheme.colorScheme.background.luminance().let { it > 0.5f }
+
     Box(modifier = Modifier.fillMaxSize()) {
         SnackbarHost(
             hostState = snackbarHostState,
@@ -91,23 +93,32 @@ fun FusionScreen(
                     title = { 
                         Text(
                             "Fusion Analytics", 
-                            fontWeight = FontWeight.Bold 
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         ) 
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                            Icon(
+                                Icons.Default.ArrowBack, 
+                                contentDescription = "Back",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                        containerColor = Color.Transparent
                     ),
                     actions = {
                         IconButton(onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
                             viewModel.onEvent(FusionEvent.Refresh)
                         }) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                            Icon(
+                                Icons.Default.Refresh, 
+                                contentDescription = "Refresh",
+                                tint = MaterialTheme.colorScheme.onSurface
+                            )
                         }
                     }
                 )
@@ -126,7 +137,7 @@ fun FusionScreen(
                         CircularProgressIndicator()
                     }
                 } else {
-                    FusionTabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+                    ModernFusionTabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it }, isDarkMode = isDarkMode)
 
                     PullToRefreshBox(
                         isRefreshing = isRefreshing,
@@ -148,16 +159,18 @@ fun FusionScreen(
                             when (tab) {
                                 0 -> UnifiedTimelineTab(
                                     uiState = uiState,
-                                    viewModel = viewModel
+                                    viewModel = viewModel,
+                                    isDarkMode = isDarkMode
                                 )
-                                1 -> NetWorthTab(netWorthSummary = uiState.netWorthSummary)
+                                1 -> NetWorthTab(netWorthSummary = uiState.netWorthSummary, isDarkMode = isDarkMode)
                                 2 -> InsightsTab(
                                     insights = uiState.insights,
                                     goalSuggestions = uiState.goalSuggestions,
                                     transferPatterns = uiState.transferPatterns,
                                     onAllocateToGoal = { goalId, amount, accountId ->
                                         viewModel.onEvent(FusionEvent.AllocateToGoal(goalId, amount, accountId))
-                                    }
+                                    },
+                                    isDarkMode = isDarkMode
                                 )
                             }
                         }
@@ -169,40 +182,75 @@ fun FusionScreen(
 }
 
 @Composable
-private fun FusionTabRow(
+private fun ModernFusionTabRow(
     selectedTab: Int,
-    onTabSelected: (Int) -> Unit
+    onTabSelected: (Int) -> Unit,
+    isDarkMode: Boolean
 ) {
     TabRow(
         selectedTabIndex = selectedTab,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.primary
+        containerColor = Color.Transparent,
+        contentColor = MaterialTheme.colorScheme.primary,
+        divider = {}
     ) {
-        Tab(
+        ModernTab(
             selected = selectedTab == 0,
             onClick = { onTabSelected(0) },
-            text = { Text("Timeline", fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Normal) },
-            icon = { Icon(Icons.Default.Timeline, contentDescription = null) }
+            text = "Timeline",
+            icon = Icons.Default.Timeline
         )
-        Tab(
+        ModernTab(
             selected = selectedTab == 1,
             onClick = { onTabSelected(1) },
-            text = { Text("Net Worth", fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Normal) },
-            icon = { Icon(Icons.Default.AccountBalance, contentDescription = null) }
+            text = "Net Worth",
+            icon = Icons.Default.AccountBalance
         )
-        Tab(
+        ModernTab(
             selected = selectedTab == 2,
             onClick = { onTabSelected(2) },
-            text = { Text("Insights", fontWeight = if (selectedTab == 2) FontWeight.Bold else FontWeight.Normal) },
-            icon = { Icon(Icons.Default.Lightbulb, contentDescription = null) }
+            text = "Insights",
+            icon = Icons.Default.Lightbulb
         )
+    }
+}
+
+@Composable
+private fun ModernTab(
+    selected: Boolean,
+    onClick: () -> Unit,
+    text: String,
+    icon: ImageVector
+) {
+    Tab(
+        selected = selected,
+        onClick = onClick,
+        selectedContentColor = MaterialTheme.colorScheme.primary,
+        unselectedContentColor = MaterialTheme.colorScheme.onSurfaceVariant
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(vertical = 8.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = text,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
+            )
+        }
     }
 }
 
 @Composable
 private fun UnifiedTimelineTab(
     uiState: FusionUiState,
-    viewModel: FusionViewModel
+    viewModel: FusionViewModel,
+    isDarkMode: Boolean
 ) {
     val transactions = viewModel.getFilteredTransactions()
 
@@ -212,16 +260,17 @@ private fun UnifiedTimelineTab(
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            EnhancedAllAccountsCard(
+            ModernAllAccountsCard(
                 showAllAccounts = uiState.showAllAccounts,
                 showAllSelected = uiState.selectedAccountId == null,
-                onToggleAllAccounts = { viewModel.onEvent(FusionEvent.ToggleAllAccounts(it)) }
+                onToggleAllAccounts = { viewModel.onEvent(FusionEvent.ToggleAllAccounts(it)) },
+                isDarkMode = isDarkMode
             )
         }
 
         if (uiState.showAllAccounts && uiState.accountHealthList.isNotEmpty()) {
             item {
-                AccountHealthCards(
+                ModernAccountHealthCards(
                     accountHealthList = uiState.accountHealthList,
                     selectedAccountId = uiState.selectedAccountId,
                     onSelectAccount = { viewModel.onEvent(FusionEvent.SelectAccount(it)) }
@@ -233,13 +282,14 @@ private fun UnifiedTimelineTab(
             Text(
                 text = if (uiState.showAllAccounts) "All Account Activity" else "Recent Transactions",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
         if (transactions.isEmpty()) {
             item {
-                EmptyHistoryCard()
+                ModernEmptyHistoryCard(isDarkMode = isDarkMode)
             }
         } else {
             val groupedByDate = transactions.groupBy { 
@@ -248,16 +298,17 @@ private fun UnifiedTimelineTab(
 
             groupedByDate.forEach { (date, dayTransactions) ->
                 item(key = "header_$date") {
-                    DateSectionHeader(date = date, transactionCount = dayTransactions.size)
+                    ModernDateSectionHeader(date = date, transactionCount = dayTransactions.size, isDarkMode = isDarkMode)
                 }
                 
                 items(dayTransactions.size, key = { index -> 
                     dayTransactions[index].id 
                 }) { index ->
-                    EnhancedTransactionCard(
+                    ModernTransactionCard(
                         transaction = dayTransactions[index],
                         isFirst = index == 0,
-                        isLast = index == dayTransactions.lastIndex
+                        isLast = index == dayTransactions.lastIndex,
+                        isDarkMode = isDarkMode
                     )
                 }
             }
@@ -286,17 +337,21 @@ private fun UnifiedTimelineTab(
 }
 
 @Composable
-private fun EnhancedAllAccountsCard(
+private fun ModernAllAccountsCard(
     showAllAccounts: Boolean,
     showAllSelected: Boolean,
-    onToggleAllAccounts: (Boolean) -> Unit
+    onToggleAllAccounts: (Boolean) -> Unit,
+    isDarkMode: Boolean
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            } else {
+                MaterialTheme.colorScheme.surfaceVariant
+            }
         )
     ) {
         Row(
@@ -306,35 +361,34 @@ private fun EnhancedAllAccountsCard(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (showAllAccounts) Icons.Default.AccountBalanceWallet else Icons.Default.Wallet,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column {
-                        Text(
-                            text = if (showAllAccounts) "All Accounts" else "Quick View",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = if (showAllAccounts) "View complete transaction history" else "Show recent activity only",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = if (showAllAccounts) Icons.Default.AccountBalanceWallet else Icons.Default.Wallet,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(14.dp))
+                Column {
+                    Text(
+                        text = if (showAllAccounts) "All Accounts" else "Quick View",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = if (showAllAccounts) "View complete transaction history" else "Show recent activity only",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
             Switch(
@@ -350,7 +404,7 @@ private fun EnhancedAllAccountsCard(
 }
 
 @Composable
-private fun AccountHealthCards(
+private fun ModernAccountHealthCards(
     accountHealthList: List<AccountHealth>,
     selectedAccountId: Long?,
     onSelectAccount: (Long?) -> Unit
@@ -359,7 +413,7 @@ private fun AccountHealthCards(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         item {
-            AccountHealthChip(
+            ModernAccountHealthChip(
                 accountName = "All",
                 health = if (selectedAccountId == null) HealthStatus.GOOD else null,
                 isSelected = selectedAccountId == null,
@@ -368,7 +422,7 @@ private fun AccountHealthCards(
         }
         
         items(accountHealthList) { health ->
-            AccountHealthChip(
+            ModernAccountHealthChip(
                 accountName = health.accountName,
                 health = health.status,
                 isSelected = selectedAccountId == health.accountId,
@@ -379,7 +433,7 @@ private fun AccountHealthCards(
 }
 
 @Composable
-private fun AccountHealthChip(
+private fun ModernAccountHealthChip(
     accountName: String,
     health: HealthStatus?,
     isSelected: Boolean,
@@ -425,7 +479,7 @@ private fun AccountHealthChip(
 }
 
 @Composable
-private fun DateSectionHeader(date: Long, transactionCount: Int) {
+private fun ModernDateSectionHeader(date: Long, transactionCount: Int, isDarkMode: Boolean) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -464,10 +518,11 @@ private fun DateSectionHeader(date: Long, transactionCount: Int) {
 }
 
 @Composable
-private fun EnhancedTransactionCard(
+private fun ModernTransactionCard(
     transaction: UnifiedTransaction,
     isFirst: Boolean,
-    isLast: Boolean
+    isLast: Boolean,
+    isDarkMode: Boolean
 ) {
     val isIncome = transaction.type in listOf(TransactionType.INCOME, TransactionType.TRANSFER_IN)
     val isTransfer = transaction.type in listOf(TransactionType.TRANSFER_OUT, TransactionType.TRANSFER_IN)
@@ -484,9 +539,13 @@ private fun EnhancedTransactionCard(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         )
     ) {
         Row(
@@ -519,7 +578,8 @@ private fun EnhancedTransactionCard(
                     Text(
                         text = transaction.category,
                         style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Surface(
                         color = backgroundLight,
@@ -596,10 +656,10 @@ private fun EnhancedTransactionCard(
 }
 
 @Composable
-private fun EmptyHistoryCard() {
+private fun ModernEmptyHistoryCard(isDarkMode: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
@@ -628,7 +688,8 @@ private fun EmptyHistoryCard() {
             Text(
                 text = "No Transactions Yet",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -641,7 +702,7 @@ private fun EmptyHistoryCard() {
 }
 
 @Composable
-private fun NetWorthTab(netWorthSummary: NetWorthSummary?) {
+private fun NetWorthTab(netWorthSummary: NetWorthSummary?, isDarkMode: Boolean) {
     if (netWorthSummary == null) {
         Box(
             modifier = Modifier.fillMaxSize(),
@@ -658,11 +719,11 @@ private fun NetWorthTab(netWorthSummary: NetWorthSummary?) {
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         item {
-            EnhancedNetWorthCard(netWorthSummary = netWorthSummary)
+            ModernNetWorthCard(netWorthSummary = netWorthSummary, isDarkMode = isDarkMode)
         }
 
         item {
-            NetWorthBreakdownCard(netWorthSummary = netWorthSummary)
+            ModernNetWorthBreakdownCard(netWorthSummary = netWorthSummary, isDarkMode = isDarkMode)
         }
 
         if (netWorthSummary.assetsByType.isNotEmpty()) {
@@ -670,16 +731,18 @@ private fun NetWorthTab(netWorthSummary: NetWorthSummary?) {
                 Text(
                     text = "Assets Breakdown",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
             items(netWorthSummary.assetsByType.toList()) { (type, amount) ->
-                AssetLiabilityItem(
+                ModernAssetLiabilityItem(
                     type = type.displayName,
                     amount = amount,
                     isAsset = true,
-                    totalAmount = netWorthSummary.totalAssets
+                    totalAmount = netWorthSummary.totalAssets,
+                    isDarkMode = isDarkMode
                 )
             }
         }
@@ -690,16 +753,18 @@ private fun NetWorthTab(netWorthSummary: NetWorthSummary?) {
                     text = "Liabilities",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
             items(netWorthSummary.liabilitiesByType.toList()) { (type, amount) ->
-                AssetLiabilityItem(
+                ModernAssetLiabilityItem(
                     type = type.displayName,
                     amount = amount,
                     isAsset = false,
-                    totalAmount = netWorthSummary.totalLiabilities
+                    totalAmount = netWorthSummary.totalLiabilities,
+                    isDarkMode = isDarkMode
                 )
             }
         }
@@ -711,7 +776,7 @@ private fun NetWorthTab(netWorthSummary: NetWorthSummary?) {
 }
 
 @Composable
-private fun EnhancedNetWorthCard(netWorthSummary: NetWorthSummary) {
+private fun ModernNetWorthCard(netWorthSummary: NetWorthSummary, isDarkMode: Boolean) {
     val animatedNetWorth by animateFloatAsState(
         targetValue = netWorthSummary.netWorth.toFloat(),
         animationSpec = tween(1500),
@@ -728,11 +793,15 @@ private fun EnhancedNetWorthCard(netWorthSummary: NetWorthSummary) {
                 .fillMaxWidth()
                 .background(
                     Brush.linearGradient(
-                        colors = listOf(
-                            MaterialTheme.colorScheme.primary,
-                            MaterialTheme.colorScheme.tertiary,
-                            MaterialTheme.colorScheme.primary
-                        )
+                        colors = if (isDarkMode) {
+                            listOf(
+                                MaterialTheme.colorScheme.primary,
+                                MaterialTheme.colorScheme.tertiary,
+                                MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            listOf(PrimaryGreen, AccentTeal, PrimaryGreen)
+                        }
                     )
                 )
                 .padding(28.dp)
@@ -763,63 +832,18 @@ private fun EnhancedNetWorthCard(netWorthSummary: NetWorthSummary) {
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(IncomeGreen.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TrendingUp,
-                                contentDescription = null,
-                                tint = IncomeGreen,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Assets",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = CurrencyFormatter.formatCompact(netWorthSummary.totalAssets),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = IncomeGreen
-                        )
-                    }
-                    
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(ExpenseRed.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TrendingDown,
-                                contentDescription = null,
-                                tint = ExpenseRed,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Liabilities",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                        Text(
-                            text = CurrencyFormatter.formatCompact(netWorthSummary.totalLiabilities),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = ExpenseRed
-                        )
-                    }
+                    ModernNetWorthStatBox(
+                        icon = Icons.Default.TrendingUp,
+                        label = "Assets",
+                        value = CurrencyFormatter.formatCompact(netWorthSummary.totalAssets),
+                        color = IncomeGreen
+                    )
+                    ModernNetWorthStatBox(
+                        icon = Icons.Default.TrendingDown,
+                        label = "Liabilities",
+                        value = CurrencyFormatter.formatCompact(netWorthSummary.totalLiabilities),
+                        color = ExpenseRed
+                    )
                 }
             }
         }
@@ -827,7 +851,44 @@ private fun EnhancedNetWorthCard(netWorthSummary: NetWorthSummary) {
 }
 
 @Composable
-private fun NetWorthBreakdownCard(netWorthSummary: NetWorthSummary) {
+private fun ModernNetWorthStatBox(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    color: Color
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(CircleShape)
+                .background(color.copy(alpha = 0.2f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = Color.White.copy(alpha = 0.7f)
+        )
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
+        )
+    }
+}
+
+@Composable
+private fun ModernNetWorthBreakdownCard(netWorthSummary: NetWorthSummary, isDarkMode: Boolean) {
     val assetsPercent = if (netWorthSummary.totalAssets > 0) {
         (netWorthSummary.totalAssets / (netWorthSummary.totalAssets + netWorthSummary.totalLiabilities) * 100).toInt()
     } else 100
@@ -838,7 +899,11 @@ private fun NetWorthBreakdownCard(netWorthSummary: NetWorthSummary) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -848,7 +913,8 @@ private fun NetWorthBreakdownCard(netWorthSummary: NetWorthSummary) {
             Text(
                 text = "Financial Overview",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             
             Spacer(modifier = Modifier.height(16.dp))
@@ -862,7 +928,7 @@ private fun NetWorthBreakdownCard(netWorthSummary: NetWorthSummary) {
                         .weight(1f)
                         .height(12.dp)
                         .clip(RoundedCornerShape(6.dp))
-                        .background(ExpenseRed.copy(alpha = 0.3f))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
                 ) {
                     Box(
                         modifier = Modifier
@@ -918,11 +984,12 @@ private fun NetWorthBreakdownCard(netWorthSummary: NetWorthSummary) {
 }
 
 @Composable
-private fun AssetLiabilityItem(
+private fun ModernAssetLiabilityItem(
     type: String,
     amount: Double,
     isAsset: Boolean,
-    totalAmount: Double
+    totalAmount: Double,
+    isDarkMode: Boolean
 ) {
     val percentage = if (totalAmount > 0) (amount / totalAmount).toFloat() else 0f
     
@@ -932,7 +999,7 @@ private fun AssetLiabilityItem(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = color.copy(alpha = 0.05f)
+            containerColor = color.copy(alpha = if (isDarkMode) 0.08f else 0.05f)
         )
     ) {
         Row(
@@ -950,7 +1017,8 @@ private fun AssetLiabilityItem(
                     Text(
                         text = type,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = CurrencyFormatter.format(amount),
@@ -981,7 +1049,8 @@ private fun InsightsTab(
     insights: List<FusionInsight>,
     goalSuggestions: List<GoalFundingSuggestion>,
     transferPatterns: List<TransferPattern>,
-    onAllocateToGoal: (Long, Double, Long) -> Unit
+    onAllocateToGoal: (Long, Double, Long) -> Unit,
+    isDarkMode: Boolean
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -990,15 +1059,16 @@ private fun InsightsTab(
     ) {
         if (goalSuggestions.isNotEmpty()) {
             item {
-                SectionHeader(
+                ModernSectionHeader(
                     title = "Goal Funding",
                     subtitle = "Fund your goals faster",
-                    icon = Icons.Default.Flag
+                    icon = Icons.Default.Flag,
+                    isDarkMode = isDarkMode
                 )
             }
 
             items(goalSuggestions) { suggestion ->
-                EnhancedGoalCard(
+                ModernGoalCard(
                     suggestion = suggestion,
                     onAllocate = { 
                         onAllocateToGoal(
@@ -1006,44 +1076,47 @@ private fun InsightsTab(
                             suggestion.suggestedAmount, 
                             suggestion.fromAccountId 
                         ) 
-                    }
+                    },
+                    isDarkMode = isDarkMode
                 )
             }
         }
 
         if (insights.isNotEmpty()) {
             item {
-                SectionHeader(
+                ModernSectionHeader(
                     title = "Smart Insights",
                     subtitle = "AI-powered recommendations",
                     icon = Icons.Default.Psychology,
+                    isDarkMode = isDarkMode,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
             items(insights) { insight ->
-                EnhancedInsightCard(insight = insight)
+                ModernInsightCard(insight = insight, isDarkMode = isDarkMode)
             }
         }
 
         if (transferPatterns.isNotEmpty()) {
             item {
-                SectionHeader(
+                ModernSectionHeader(
                     title = "Transfer Patterns",
                     subtitle = "Track your money movement",
                     icon = Icons.Default.SwapHoriz,
+                    isDarkMode = isDarkMode,
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
 
             items(transferPatterns.take(5)) { pattern ->
-                EnhancedTransferPatternCard(pattern = pattern)
+                ModernTransferPatternCard(pattern = pattern, isDarkMode = isDarkMode)
             }
         }
 
         if (insights.isEmpty() && goalSuggestions.isEmpty() && transferPatterns.isEmpty()) {
             item {
-                EmptyInsightsCard()
+                ModernEmptyInsightsCard(isDarkMode = isDarkMode)
             }
         }
 
@@ -1054,10 +1127,11 @@ private fun InsightsTab(
 }
 
 @Composable
-private fun SectionHeader(
+private fun ModernSectionHeader(
     title: String,
     subtitle: String,
     icon: ImageVector,
+    isDarkMode: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -1083,7 +1157,8 @@ private fun SectionHeader(
             Text(
                 text = title,
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Text(
                 text = subtitle,
@@ -1095,9 +1170,10 @@ private fun SectionHeader(
 }
 
 @Composable
-private fun EnhancedGoalCard(
+private fun ModernGoalCard(
     suggestion: GoalFundingSuggestion,
-    onAllocate: () -> Unit
+    onAllocate: () -> Unit,
+    isDarkMode: Boolean
 ) {
     val progress by animateFloatAsState(
         targetValue = (suggestion.currentAmount / suggestion.targetAmount).toFloat(),
@@ -1109,7 +1185,7 @@ private fun EnhancedGoalCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = SavingsBlue.copy(alpha = 0.08f)
+            containerColor = SavingsBlue.copy(alpha = if (isDarkMode) 0.1f else 0.08f)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -1141,7 +1217,8 @@ private fun EnhancedGoalCard(
                         Text(
                             text = suggestion.goalName,
                             style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "${CurrencyFormatter.formatCompact(suggestion.currentAmount)} / ${CurrencyFormatter.formatCompact(suggestion.targetAmount)}",
@@ -1208,7 +1285,7 @@ private fun EnhancedGoalCard(
 }
 
 @Composable
-private fun EnhancedInsightCard(insight: FusionInsight) {
+private fun ModernInsightCard(insight: FusionInsight, isDarkMode: Boolean) {
     val (icon, color, backgroundColor) = getInsightColors(insight.type)
 
     Card(
@@ -1242,7 +1319,8 @@ private fun EnhancedInsightCard(insight: FusionInsight) {
                 Text(
                     text = insight.title,
                     style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
@@ -1260,24 +1338,17 @@ private fun EnhancedInsightCard(insight: FusionInsight) {
     }
 }
 
-private fun getInsightColors(type: InsightType): Triple<ImageVector, Color, Color> {
-    return when (type) {
-        InsightType.SPENDING_WARNING -> Triple(Icons.Default.Warning, ExpenseRed, ExpenseRed.copy(alpha = 0.1f))
-        InsightType.SAVING_OPPORTUNITY -> Triple(Icons.Default.Savings, SavingsBlue, SavingsBlue.copy(alpha = 0.1f))
-        InsightType.TRANSFER_HABIT -> Triple(Icons.Default.SwapHoriz, Color(0xFFFF9800), Color(0xFFFF9800).copy(alpha = 0.1f))
-        InsightType.GOAL_SUGGESTION -> Triple(Icons.Default.Flag, Color(0xFF9C27B0), Color(0xFF9C27B0).copy(alpha = 0.1f))
-        InsightType.BALANCE_ALERT -> Triple(Icons.Default.AccountBalance, Color(0xFFFFC107), Color(0xFFFFC107).copy(alpha = 0.1f))
-        InsightType.TREND_INFO -> Triple(Icons.Default.TrendingUp, IncomeGreen, IncomeGreen.copy(alpha = 0.1f))
-    }
-}
-
 @Composable
-private fun EnhancedTransferPatternCard(pattern: TransferPattern) {
+private fun ModernTransferPatternCard(pattern: TransferPattern, isDarkMode: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
+            containerColor = if (isDarkMode) {
+                MaterialTheme.colorScheme.surface
+            } else {
+                MaterialTheme.colorScheme.surface
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -1294,7 +1365,8 @@ private fun EnhancedTransferPatternCard(pattern: TransferPattern) {
                     Text(
                         text = pattern.fromAccountName,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Icon(
@@ -1307,7 +1379,8 @@ private fun EnhancedTransferPatternCard(pattern: TransferPattern) {
                     Text(
                         text = pattern.toAccountName,
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
                 Spacer(modifier = Modifier.height(4.dp))
@@ -1344,10 +1417,10 @@ private fun EnhancedTransferPatternCard(pattern: TransferPattern) {
 }
 
 @Composable
-private fun EmptyInsightsCard() {
+private fun ModernEmptyInsightsCard(isDarkMode: Boolean) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
@@ -1376,7 +1449,8 @@ private fun EmptyInsightsCard() {
             Text(
                 text = "No Insights Yet",
                 style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(modifier = Modifier.height(4.dp))
             Text(
@@ -1386,4 +1460,22 @@ private fun EmptyInsightsCard() {
             )
         }
     }
+}
+
+private fun getInsightColors(type: InsightType): Triple<ImageVector, Color, Color> {
+    return when (type) {
+        InsightType.SPENDING_WARNING -> Triple(Icons.Default.Warning, ExpenseRed, ExpenseRed.copy(alpha = 0.1f))
+        InsightType.SAVING_OPPORTUNITY -> Triple(Icons.Default.Savings, SavingsBlue, SavingsBlue.copy(alpha = 0.1f))
+        InsightType.TRANSFER_HABIT -> Triple(Icons.Default.SwapHoriz, Color(0xFFFF9800), Color(0xFFFF9800).copy(alpha = 0.1f))
+        InsightType.GOAL_SUGGESTION -> Triple(Icons.Default.Flag, Color(0xFF9C27B0), Color(0xFF9C27B0).copy(alpha = 0.1f))
+        InsightType.BALANCE_ALERT -> Triple(Icons.Default.AccountBalance, Color(0xFFFFC107), Color(0xFFFFC107).copy(alpha = 0.1f))
+        InsightType.TREND_INFO -> Triple(Icons.Default.TrendingUp, IncomeGreen, IncomeGreen.copy(alpha = 0.1f))
+    }
+}
+
+private fun Color.luminance(): Float {
+    val red = this.red
+    val green = this.green
+    val blue = this.blue
+    return 0.299f * red + 0.587f * green + 0.114f * blue
 }

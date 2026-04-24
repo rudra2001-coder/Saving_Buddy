@@ -51,17 +51,28 @@ private val PremiumLightColorScheme = lightColorScheme(
     onPrimaryContainer = Color.White,
     secondary = AccentTeal,
     onSecondary = Color.White,
+    secondaryContainer = AccentTeal.copy(alpha = 0.2f),
+    onSecondaryContainer = AccentTeal,
     tertiary = AccentPurple,
     onTertiary = Color.White,
+    tertiaryContainer = AccentPurple.copy(alpha = 0.2f),
+    onTertiaryContainer = AccentPurple,
     error = ExpenseRed,
     onError = Color.White,
-    background = Color(0xFFF8FAFC),
-    onBackground = BackgroundMain,
-    surface = Color.White,
-    onSurface = BackgroundMain,
-    surfaceVariant = Color(0xFFF1F5F9),
-    onSurfaceVariant = SurfaceMedium,
-    outline = BorderLight
+    errorContainer = ExpenseRed.copy(alpha = 0.1f),
+    onErrorContainer = ExpenseRed,
+    background = LightBackground,
+    onBackground = LightOnSurface,
+    surface = LightSurface,
+    onSurface = LightOnSurface,
+    surfaceVariant = LightSurfaceVariant,
+    onSurfaceVariant = LightOnSurfaceVariant,
+    outline = LightOutline,
+    outlineVariant = LightOutline,
+    inverseSurface = BackgroundMain,
+    inverseOnSurface = TextPrimary,
+    inversePrimary = PrimaryGreenDark,
+    surfaceTint = PrimaryGreen
 )
 
 @Composable
@@ -70,16 +81,23 @@ fun SavingBuddyTheme(
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = PremiumDarkColorScheme
+    val colorScheme = if (darkTheme) PremiumDarkColorScheme else PremiumLightColorScheme
     
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = BackgroundMain.toArgb()
-            window.navigationBarColor = BackgroundMain.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-            WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            if (darkTheme) {
+                window.statusBarColor = BackgroundMain.toArgb()
+                window.navigationBarColor = BackgroundMain.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = false
+            } else {
+                window.statusBarColor = Color.White.toArgb()
+                window.navigationBarColor = Color.White.toArgb()
+                WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
+                WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = true
+            }
         }
     }
 

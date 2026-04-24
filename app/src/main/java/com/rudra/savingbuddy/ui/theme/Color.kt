@@ -87,6 +87,14 @@ val CashColor = Color(0xFF22C55E)
 // THEME EXTENSIONS
 // ============================================
 
+// Light Mode Colors
+val LightBackground = Color(0xFFF8FAFC)
+val LightSurface = Color(0xFFFFFFFF)
+val LightSurfaceVariant = Color(0xFFF1F5F9)
+val LightOnSurface = Color(0xFF0F172A)
+val LightOnSurfaceVariant = Color(0xFF64748B)
+val LightOutline = Color(0xFFCBD5E1)
+
 val Color.glass: Color
     get() = this.copy(alpha = 0.7f)
 
