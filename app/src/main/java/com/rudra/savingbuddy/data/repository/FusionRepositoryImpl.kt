@@ -37,15 +37,15 @@ class FusionRepositoryImpl @Inject constructor(
             val transactions = mutableListOf<UnifiedTransaction>()
             
             incomes.forEach { income ->
-                val account = accountMap[income.id]
+                val account = accountMap[income.accountId ?: 0]
                 transactions.add(
                     UnifiedTransaction(
                         id = income.id,
                         type = TransactionType.INCOME,
                         amount = income.amount,
                         category = income.category,
-                        accountId = 0,
-                        accountName = "Income",
+                        accountId = income.accountId ?: 0,
+                        accountName = account?.name ?: "Income",
                         accountProvider = income.source,
                         note = income.notes,
                         timestamp = income.date,
@@ -56,15 +56,16 @@ class FusionRepositoryImpl @Inject constructor(
             }
             
             expenses.forEach { expense ->
+                val account = accountMap[expense.accountId ?: 0]
                 transactions.add(
                     UnifiedTransaction(
                         id = expense.id,
                         type = TransactionType.EXPENSE,
                         amount = expense.amount,
                         category = expense.category,
-                        accountId = 0,
-                        accountName = "Expense",
-                        accountProvider = "Expense",
+                        accountId = expense.accountId ?: 0,
+                        accountName = account?.name ?: "Expense",
+                        accountProvider = expense.paymentMethod ?: "Expense",
                         note = expense.notes,
                         timestamp = expense.date,
                         icon = getCategoryIcon(expense.category),
@@ -187,9 +188,10 @@ class FusionRepositoryImpl @Inject constructor(
             val accountMap = accounts.associateBy { it.id }
             
             transfers.groupBy { "${it.fromAccountId}_${it.toAccountId}" }
-                .map { (key, group) ->
-                    val fromId = group.first().fromAccountId
-                    val toId = group.first().toAccountId
+                .mapNotNull { (key, group) ->
+                    val firstTransfer = group.firstOrNull() ?: return@mapNotNull null
+                    val fromId = firstTransfer.fromAccountId
+                    val toId = firstTransfer.toAccountId
                     val fromAccount = accountMap[fromId]
                     val toAccount = accountMap[toId]
                     
@@ -328,10 +330,10 @@ class FusionRepositoryImpl @Inject constructor(
             }
             
             // 7. GOAL PROGRESS
-            val activeGoals = goals.filter { !it.isCompleted }
+            val activeGoals = goals.filter { !it.isCompleted && it.targetAmount > 0 }
             activeGoals.forEach { goal ->
                 val remaining = goal.targetAmount - goal.currentAmount
-                val progress = (goal.currentAmount / goal.targetAmount) * 100
+                val progress = if (goal.targetAmount > 0) (goal.currentAmount / goal.targetAmount) * 100 else 0.0
                 
                 if (progress >= 75 && remaining > 0) {
                     insights.add(
@@ -363,8 +365,9 @@ class FusionRepositoryImpl @Inject constructor(
                     .maxByOrNull { it.value.size }
                 
                 if (mostUsedRoute != null && mostUsedRoute.value.size >= 2) {
-                    val fromAcc = accounts.find { it.id == todayTransfers.first().fromAccountId }
-                    val toAcc = accounts.find { it.id == todayTransfers.first().toAccountId }
+                    val firstTransfer = mostUsedRoute.value.firstOrNull() ?: return@combine emptyList()
+                    val fromAcc = accounts.find { it.id == firstTransfer.fromAccountId }
+                    val toAcc = accounts.find { it.id == firstTransfer.toAccountId }
                     if (fromAcc != null && toAcc != null) {
                         insights.add(
                             FusionInsight(
@@ -396,12 +399,12 @@ class FusionRepositoryImpl @Inject constructor(
             goalDao.getAllGoals(),
             accountDao.getAllAccounts()
         ) { goals, accounts ->
-            goals.filter { !it.isCompleted && it.currentAmount < it.targetAmount }
+            goals.filter { !it.isCompleted && it.currentAmount < it.targetAmount && it.targetAmount > 0 }
                 .mapNotNull { goal ->
                     val accountsWithBalance = accounts.filter { it.balance > 100 }
                     if (accountsWithBalance.isEmpty()) return@mapNotNull null
                     
-                    val sourceAccount = accountsWithBalance.maxByOrNull { it.balance }!!
+                    val sourceAccount = accountsWithBalance.maxByOrNull { it.balance } ?: return@mapNotNull null
                     val suggestedAmount = minOf(500.0, sourceAccount.balance, goal.targetAmount - goal.currentAmount)
                     
                     GoalFundingSuggestion(
