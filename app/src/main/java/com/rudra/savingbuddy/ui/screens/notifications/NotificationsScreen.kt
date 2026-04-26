@@ -338,6 +338,7 @@ fun NotificationCard(
 fun getNotificationIcon(type: NotificationType) = when (type) {
     NotificationType.BUDGET_ALERT -> Icons.Default.Warning
     NotificationType.BILL_REMINDER -> Icons.Default.Receipt
+    NotificationType.SUBSCRIPTION_REMINDER -> Icons.Default.Subscriptions
     NotificationType.GOAL_COMPLETE -> Icons.Default.Flag
     NotificationType.SAVINGS_STREAK -> Icons.Default.LocalFireDepartment
     NotificationType.ACHIEVEMENT -> Icons.Default.EmojiEvents
@@ -348,6 +349,7 @@ fun getNotificationIcon(type: NotificationType) = when (type) {
 fun getNotificationColor(type: NotificationType): Color = when (type) {
     NotificationType.BUDGET_ALERT -> Color(0xFFFF9800)
     NotificationType.BILL_REMINDER -> Color(0xFFF44336)
+    NotificationType.SUBSCRIPTION_REMINDER -> Color(0xFF9C27B0)
     NotificationType.GOAL_COMPLETE -> Color(0xFF4CAF50)
     NotificationType.SAVINGS_STREAK -> Color(0xFFFF5722)
     NotificationType.ACHIEVEMENT -> Color(0xFFFFD700)

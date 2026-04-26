@@ -11,6 +11,7 @@ import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import dagger.Module
@@ -54,6 +55,9 @@ object DatabaseModule {
 
     @Provides
     fun provideBillReminderDao(database: SavingBuddyDatabase): BillReminderDao = database.billReminderDao()
+
+    @Provides
+    fun provideSubscriptionDao(database: SavingBuddyDatabase): SubscriptionDao = database.subscriptionDao()
 
     @Provides
     fun provideAccountDao(database: SavingBuddyDatabase): AccountDao = database.accountDao()

@@ -5,6 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.Account
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
+import com.rudra.savingbuddy.domain.model.Income
+import com.rudra.savingbuddy.domain.model.RecurringInterval
+import com.rudra.savingbuddy.domain.model.RecurringStatus
+import com.rudra.savingbuddy.domain.model.EndCondition
 import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.util.DateUtils
@@ -129,7 +133,9 @@ class ExpenseViewModel @Inject constructor(
         category: ExpenseCategory,
         date: Long,
         notes: String?,
-        accountId: Long?
+        accountId: Long?,
+        isRecurring: Boolean = false,
+        recurringInterval: RecurringInterval? = null
     ) {
         viewModelScope.launch {
             try {
@@ -139,7 +145,9 @@ class ExpenseViewModel @Inject constructor(
                     category = category,
                     date = date,
                     notes = notes,
-                    accountId = accountId
+                    accountId = accountId,
+                    isRecurring = isRecurring,
+                    recurringInterval = if (isRecurring) recurringInterval else null
                 )
                 
                 if (_uiState.value.editingExpense != null) {

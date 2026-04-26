@@ -1,5 +1,6 @@
 package com.rudra.savingbuddy.ui.screens.reports
 
+import android.content.Intent
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -20,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -27,30 +29,57 @@ import com.rudra.savingbuddy.ui.components.BarChart
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+import com.rudra.savingbuddy.util.ExportFormat
+import com.rudra.savingbuddy.util.ExportManager
+import com.rudra.savingbuddy.util.ExportType
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReportsScreen(
     viewModel: ReportsViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     var showFilterSheet by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var showCustomDatePicker by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.loadTransactionLogs()
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview") }, icon = { Icon(Icons.Outlined.PieChart, null, modifier = Modifier.size(18.dp)) })
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Logs (${uiState.logCount})") }, icon = { Icon(Icons.Outlined.Receipt, null, modifier = Modifier.size(18.dp)) })
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Reports", fontWeight = FontWeight.Bold) },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                actions = {
+                    IconButton(onClick = { showFilterSheet = true }) {
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
+                    }
+                    IconButton(onClick = { showExportDialog = true }) {
+                        Icon(Icons.Default.FileDownload, contentDescription = "Export")
+                    }
+                }
+            )
         }
+    ) { padding ->
+        Column(modifier = Modifier.fillMaxSize().padding(padding)) {
+            TabRow(selectedTabIndex = selectedTab) {
+                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview") }, icon = { Icon(Icons.Outlined.PieChart, null, modifier = Modifier.size(18.dp)) })
+                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Logs (${uiState.logCount})") }, icon = { Icon(Icons.Outlined.Receipt, null, modifier = Modifier.size(18.dp)) })
+            }
 
-        when (selectedTab) {
-            0 -> ReportsOverview(viewModel = viewModel, uiState = uiState, onFilterClick = { showFilterSheet = true })
-            1 -> TransactionLogsView(viewModel = viewModel, uiState = uiState, showFilterSheet = showFilterSheet, onFilterClick = { showFilterSheet = true }, onClearFilter = { viewModel.clearFilters() })
+            when (selectedTab) {
+                0 -> ReportsOverview(viewModel = viewModel, uiState = uiState, onFilterClick = { showFilterSheet = true }, onCustomDateClick = { showCustomDatePicker = true })
+                1 -> TransactionLogsView(viewModel = viewModel, uiState = uiState, showFilterSheet = showFilterSheet, onFilterClick = { showFilterSheet = true }, onClearFilter = { viewModel.clearFilters() })
+            }
         }
     }
 
@@ -78,10 +107,28 @@ fun ReportsScreen(
             }
         )
     }
+
+    if (showCustomDatePicker) {
+        CustomDateRangePicker(
+            onDismiss = { showCustomDatePicker = false },
+            onApply = { startDate, endDate ->
+                viewModel.applyDateRangeToOverview(startDate, endDate)
+                showCustomDatePicker = false
+            }
+        )
+    }
+
+    if (showExportDialog) {
+        ExportDialog(
+            incomes = uiState.filteredIncomes,
+            expenses = uiState.filteredExpenses,
+            onDismiss = { showExportDialog = false }
+        )
+    }
 }
 
 @Composable
-fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilterClick: () -> Unit) {
+fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilterClick: () -> Unit, onCustomDateClick: () -> Unit) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
 
@@ -91,7 +138,7 @@ fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilt
                 DatePresetChip(label = "This Week", isSelected = uiState.isThisWeek, onClick = { viewModel.selectDatePreset("week") })
                 DatePresetChip(label = "This Month", isSelected = uiState.isThisMonth, onClick = { viewModel.selectDatePreset("month") })
                 DatePresetChip(label = "This Year", isSelected = uiState.isThisYear, onClick = { viewModel.selectDatePreset("year") })
-                AssistChip(onClick = onFilterClick, label = { Text("Custom") }, leadingIcon = { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp)) })
+                AssistChip(onClick = onCustomDateClick, label = { Text("Custom") }, leadingIcon = { Icon(Icons.Default.DateRange, null, modifier = Modifier.size(16.dp)) })
             }
         }
 
@@ -287,7 +334,10 @@ fun FilterBottomSheet(onDismiss: () -> Unit, onApply: (Long?, Long?, String?) ->
     var selectedType by remember { mutableStateOf<String?>(null) }
     var startDate by remember { mutableStateOf<Long?>(null) }
     var endDate by remember { mutableStateOf<Long?>(null) }
+    var showStartDatePicker by remember { mutableStateOf(false) }
+    var showEndDatePicker by remember { mutableStateOf(false) }
     val now = System.currentTimeMillis()
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -317,6 +367,25 @@ fun FilterBottomSheet(onDismiss: () -> Unit, onApply: (Long?, Long?, String?) ->
                 FilterChip(selected = startDate == yearStart, onClick = { startDate = yearStart; endDate = now }, label = { Text("Year") })
             }
 
+            Spacer(modifier = Modifier.height(16.dp))
+            Text("Custom Date Range", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Medium)
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { showStartDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(startDate?.let { dateFormat.format(it) } ?: "Start Date")
+                }
+                Text("to", modifier = Modifier.align(Alignment.CenterVertically))
+                OutlinedButton(
+                    onClick = { showEndDatePicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(endDate?.let { dateFormat.format(it) } ?: "End Date")
+                }
+            }
+
             if (startDate != null && endDate != null) {
                 Spacer(modifier = Modifier.height(12.dp))
                 Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)), shape = RoundedCornerShape(12.dp)) {
@@ -335,6 +404,22 @@ fun FilterBottomSheet(onDismiss: () -> Unit, onApply: (Long?, Long?, String?) ->
             Spacer(modifier = Modifier.height(32.dp))
         }
     }
+
+    if (showStartDatePicker) {
+        DatePickerDialog(
+            onDismiss = { showStartDatePicker = false },
+            onDateSelected = { startDate = it },
+            initialDate = startDate
+        )
+    }
+
+    if (showEndDatePicker) {
+        DatePickerDialog(
+            onDismiss = { showEndDatePicker = false },
+            onDateSelected = { endDate = it },
+            initialDate = endDate
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -342,17 +427,253 @@ fun FilterBottomSheet(onDismiss: () -> Unit, onApply: (Long?, Long?, String?) ->
 fun DateRangePickerDialog(onDismiss: () -> Unit, onApply: (Long, Long) -> Unit) {
     var startDateMillis by remember { mutableStateOf(System.currentTimeMillis() - 30L * 24 * 60 * 60 * 1000) }
     var endDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
 
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Select Date Range", fontWeight = FontWeight.Bold) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(dateFormat.format(startDateMillis))
+                }
+                Text("to", modifier = Modifier.align(Alignment.CenterVertically))
+                OutlinedButton(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(dateFormat.format(endDateMillis))
+                }
+            }
             Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant), shape = RoundedCornerShape(12.dp)) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Start: ${DateUtils.formatDate(startDateMillis)}", style = MaterialTheme.typography.bodyMedium)
-                    Slider(value = 0f, onValueChange = {}, enabled = false)
                     Text("End: ${DateUtils.formatDate(endDateMillis)}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
-            Text("Use the filter sheet for custom date selection", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }, confirmButton = { Button(onClick = { onApply(startDateMillis, endDateMillis) }) { Text("Apply") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+
+    if (showStartPicker) {
+        DatePickerDialog(
+            onDismiss = { showStartPicker = false },
+            onDateSelected = { startDateMillis = it },
+            initialDate = startDateMillis
+        )
+    }
+
+    if (showEndPicker) {
+        DatePickerDialog(
+            onDismiss = { showEndPicker = false },
+            onDateSelected = { endDateMillis = it },
+            initialDate = endDateMillis
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DatePickerDialog(onDismiss: () -> Unit, onDateSelected: (Long) -> Unit, initialDate: Long? = null) {
+    val datePickerState = rememberDatePickerState(
+        initialSelectedDateMillis = initialDate ?: System.currentTimeMillis()
+    )
+    DatePickerDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = {
+                datePickerState.selectedDateMillis?.let { onDateSelected(it) }
+            }) {
+                Text("OK")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    ) {
+        DatePicker(state = datePickerState)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomDateRangePicker(onDismiss: () -> Unit, onApply: (Long, Long) -> Unit) {
+    var startDateMillis by remember { mutableStateOf(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000) }
+    var endDateMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    var showStartPicker by remember { mutableStateOf(false) }
+    var showEndPicker by remember { mutableStateOf(false) }
+    val dateFormat = remember { SimpleDateFormat("MMM dd, yyyy", Locale.getDefault()) }
+
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Custom Date Range", fontWeight = FontWeight.Bold) }, text = {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("Select start and end dates to filter your reports", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { showStartPicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(dateFormat.format(startDateMillis))
+                }
+            }
+            
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                OutlinedButton(
+                    onClick = { showEndPicker = true },
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(dateFormat.format(endDateMillis))
+                }
+            }
+            
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)), shape = RoundedCornerShape(12.dp)) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("From: ${DateUtils.formatDate(startDateMillis)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                    Text("To: ${DateUtils.formatDate(endDateMillis)}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                }
+            }
+        }
+    }, confirmButton = { Button(onClick = { onApply(startDateMillis, endDateMillis) }) { Text("Apply") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+
+    if (showStartPicker) {
+        DatePickerDialog(
+            onDismiss = { showStartPicker = false },
+            onDateSelected = { startDateMillis = it },
+            initialDate = startDateMillis
+        )
+    }
+
+    if (showEndPicker) {
+        DatePickerDialog(
+            onDismiss = { showEndPicker = false },
+            onDateSelected = { endDateMillis = it },
+            initialDate = endDateMillis
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ExportDialog(
+    incomes: List<com.rudra.savingbuddy.domain.model.Income>,
+    expenses: List<com.rudra.savingbuddy.domain.model.Expense>,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    var selectedFormat by remember { mutableStateOf(ExportFormat.CSV) }
+    var selectedDataType by remember { mutableStateOf(ExportType.ALL) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Export Data", fontWeight = FontWeight.Bold) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text(
+                    text = "Export filtered data from your current view",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${incomes.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                            Text("Income", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${expenses.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ExpenseRed)
+                            Text("Expenses", style = MaterialTheme.typography.labelSmall)
+                        }
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("${incomes.size + expenses.size}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                            Text("Total", style = MaterialTheme.typography.labelSmall)
+                        }
+                    }
+                }
+
+                Text(
+                    text = "Select Data Type",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = selectedDataType == ExportType.ALL,
+                        onClick = { selectedDataType = ExportType.ALL },
+                        label = { Text("All") }
+                    )
+                    FilterChip(
+                        selected = selectedDataType == ExportType.INCOME,
+                        onClick = { selectedDataType = ExportType.INCOME },
+                        label = { Text("Income") }
+                    )
+                    FilterChip(
+                        selected = selectedDataType == ExportType.EXPENSE,
+                        onClick = { selectedDataType = ExportType.EXPENSE },
+                        label = { Text("Expenses") }
+                    )
+                }
+
+                Text(
+                    text = "Select Format",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Medium
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = selectedFormat == ExportFormat.CSV,
+                        onClick = { selectedFormat = ExportFormat.CSV },
+                        label = { Text("CSV") },
+                        leadingIcon = if (selectedFormat == ExportFormat.CSV) {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }} else null
+                    )
+                    FilterChip(
+                        selected = selectedFormat == ExportFormat.TEXT,
+                        onClick = { selectedFormat = ExportFormat.TEXT },
+                        label = { Text("Text") },
+                        leadingIcon = if (selectedFormat == ExportFormat.TEXT) {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }} else null
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val intent = ExportManager.exportData(
+                        context = context,
+                        incomes = incomes,
+                        expenses = expenses,
+                        format = selectedFormat,
+                        dataType = selectedDataType
+                    )
+                    if (intent != null) {
+                        context.startActivity(Intent.createChooser(intent, "Export Data"))
+                    }
+                    onDismiss()
+                }
+            ) {
+                Icon(Icons.Default.FileDownload, null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Export")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

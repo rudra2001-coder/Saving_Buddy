@@ -13,6 +13,7 @@ data class AppNotification(
 enum class NotificationType {
     BUDGET_ALERT,
     BILL_REMINDER,
+    SUBSCRIPTION_REMINDER,
     GOAL_COMPLETE,
     SAVINGS_STREAK,
     ACHIEVEMENT,

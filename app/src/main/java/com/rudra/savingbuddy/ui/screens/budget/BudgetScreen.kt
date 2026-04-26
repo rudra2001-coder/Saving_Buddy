@@ -6,13 +6,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -24,9 +22,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -43,7 +38,6 @@ import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 import kotlin.math.abs
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BudgetScreen(
     viewModel: BudgetViewModel = hiltViewModel()
@@ -55,7 +49,7 @@ fun BudgetScreen(
         targetValue = if (uiState.totalBudget > 0)
             (uiState.spent / uiState.totalBudget).toFloat().coerceIn(0f, 1f)
         else 0f,
-        animationSpec = tween(1200),
+        animationSpec = tween(800),
         label = "budgetProgress"
     )
 
@@ -63,9 +57,11 @@ fun BudgetScreen(
     val tabIcons = listOf(Icons.Outlined.PieChart, Icons.Outlined.Subscriptions, Icons.Outlined.Notifications)
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        topBar = {
+            SimpleTopBar()
+        },
         floatingActionButton = {
-            AnimatedFloatingActionButton(
+            SimpleFab(
                 selectedTab = selectedTab,
                 onBudgetClick = { viewModel.showBudgetDialog() },
                 onSubscriptionClick = { viewModel.showAddSubscriptionDialog() }
@@ -77,16 +73,15 @@ fun BudgetScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Spacer(modifier = Modifier.height(8.dp))
-                HeaderSection()
+                Spacer(modifier = Modifier.height(4.dp))
             }
 
             item {
-                EnhancedTabRow(
+                SimpleTabRow(
                     selectedTab = selectedTab,
                     tabs = tabs,
                     tabIcons = tabIcons,
@@ -95,18 +90,17 @@ fun BudgetScreen(
             }
 
             when (selectedTab) {
-                0 -> renderEnhancedBudgetOverview(uiState, animatedProgress)
-                1 -> renderEnhancedSubscriptionsList(viewModel, uiState)
-                2 -> renderEnhancedRemindersList(viewModel, uiState)
+                0 -> renderBudgetOverview(uiState, animatedProgress)
+                1 -> renderSubscriptionsList(viewModel, uiState)
+                2 -> renderRemindersList(viewModel, uiState)
             }
 
             item { Spacer(modifier = Modifier.height(80.dp)) }
         }
     }
 
-    // Dialogs
     if (uiState.showEditBudgetDialog) {
-        EnhancedBudgetDialog(
+        SimpleBudgetDialog(
             currentBudget = uiState.totalBudget,
             currentThreshold = uiState.alertThreshold,
             onDismiss = { viewModel.hideBudgetDialog() },
@@ -117,7 +111,7 @@ fun BudgetScreen(
     }
 
     if (uiState.showAddSubscriptionDialog) {
-        EnhancedSubscriptionDialog(
+        SimpleSubscriptionDialog(
             subscription = uiState.editingSubscription,
             onDismiss = { viewModel.hideSubscriptionDialog() },
             onSave = { name, amount, cycle, date, category, isActive ->
@@ -125,56 +119,43 @@ fun BudgetScreen(
             }
         )
     }
-}
 
-@Composable
-private fun HeaderSection() {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column {
-            Text(
-                "Budget &",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Text(
-                "Subscriptions",
-                style = MaterialTheme.typography.headlineLarge,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        Card(
-            modifier = Modifier
-                .size(48.dp)
-                .shadow(8.dp, CircleShape),
-            shape = CircleShape,
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.primaryContainer
-            )
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Outlined.AccountBalanceWallet,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary
-                )
-            }
-        }
+    uiState.subscriptionToDelete?.let { subscription ->
+        DeleteConfirmationDialog(
+            title = "Delete Subscription",
+            message = "Are you sure you want to delete \"${subscription.name}\"? This action cannot be undone.",
+            onConfirm = { viewModel.confirmDelete() },
+            onDismiss = { viewModel.hideDeleteConfirmation() }
+        )
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EnhancedTabRow(
+private fun SimpleTopBar() {
+    TopAppBar(
+        title = {
+            Column {
+                Text(
+                    "Budget",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    "& Subscriptions",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        )
+    )
+}
+
+@Composable
+private fun SimpleTabRow(
     selectedTab: Int,
     tabs: List<String>,
     tabIcons: List<ImageVector>,
@@ -182,7 +163,7 @@ private fun EnhancedTabRow(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         )
@@ -194,7 +175,7 @@ private fun EnhancedTabRow(
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             tabs.forEachIndexed { index, title ->
-                TabItem(
+                TabButton(
                     title = title,
                     icon = tabIcons[index],
                     isSelected = selectedTab == index,
@@ -207,7 +188,7 @@ private fun EnhancedTabRow(
 }
 
 @Composable
-private fun TabItem(
+private fun TabButton(
     title: String,
     icon: ImageVector,
     isSelected: Boolean,
@@ -216,18 +197,15 @@ private fun TabItem(
 ) {
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(20.dp))
             .clickable(onClick = onClick),
-        color = if (isSelected)
-            MaterialTheme.colorScheme.primary
-        else
-            Color.Transparent,
-        shape = RoundedCornerShape(16.dp)
+        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+        shape = RoundedCornerShape(20.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 12.dp),
+                .padding(vertical = 10.dp, horizontal = 8.dp),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -235,94 +213,52 @@ private fun TabItem(
                 icon,
                 contentDescription = null,
                 modifier = Modifier.size(18.dp),
-                tint = if (isSelected)
-                    MaterialTheme.colorScheme.onPrimary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant
+                tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
             )
-            Spacer(modifier = Modifier.width(6.dp))
+            Spacer(modifier = Modifier.width(4.dp))
             Text(
                 title,
-                style = MaterialTheme.typography.labelLarge,
-                color = if (isSelected)
-                    MaterialTheme.colorScheme.onPrimary
-                else
-                    MaterialTheme.colorScheme.onSurfaceVariant,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                style = MaterialTheme.typography.labelMedium,
+                color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                maxLines = 1
             )
         }
     }
 }
 
 @Composable
-private fun AnimatedFloatingActionButton(
+private fun SimpleFab(
     selectedTab: Int,
     onBudgetClick: () -> Unit,
     onSubscriptionClick: () -> Unit
 ) {
-    val onClick = when (selectedTab) {
-        0 -> onBudgetClick
-        else -> onSubscriptionClick
-    }
-
-    val icon = when (selectedTab) {
-        0 -> Icons.Default.Edit
-        else -> Icons.Default.Add
-    }
-
     FloatingActionButton(
-        onClick = onClick,
+        onClick = if (selectedTab == 0) onBudgetClick else onSubscriptionClick,
         containerColor = MaterialTheme.colorScheme.primary,
-        shape = RoundedCornerShape(20.dp),
-        modifier = Modifier
-            .size(64.dp)
-            .shadow(12.dp, RoundedCornerShape(20.dp)),
-        elevation = FloatingActionButtonDefaults.elevation(8.dp)
+        shape = RoundedCornerShape(20.dp)
     ) {
         Icon(
-            icon,
-            contentDescription = when (selectedTab) {
-                0 -> "Edit Budget"
-                else -> "Add Subscription"
-            },
-            modifier = Modifier.size(28.dp)
+            if (selectedTab == 0) Icons.Default.Edit else Icons.Default.Add,
+            contentDescription = if (selectedTab == 0) "Edit Budget" else "Add Subscription"
         )
     }
 }
 
-private fun LazyListScope.renderEnhancedBudgetOverview(
-    uiState: BudgetUiState,
-    animatedProgress: Float
-) {
+private fun LazyListScope.renderBudgetOverview(uiState: BudgetUiState, animatedProgress: Float) {
     val progressPercentage = (animatedProgress * 100).toInt()
     val isOverBudget = uiState.spent > uiState.totalBudget
     val isNearThreshold = progressPercentage >= uiState.alertThreshold && uiState.totalBudget > 0
 
     item {
-        EnhancedBudgetCard(
+        SimpleBudgetCard(
             totalBudget = uiState.totalBudget,
             spent = uiState.spent,
             remaining = uiState.remaining,
-            progress = animatedProgress,
             progressPercentage = progressPercentage,
             isOverBudget = isOverBudget,
-            isNearThreshold = isNearThreshold
-        )
-    }
-
-    item {
-        AlertThresholdCard(
-            threshold = uiState.alertThreshold,
-            currentPercentage = progressPercentage,
-            isNearThreshold = isNearThreshold
-        )
-    }
-
-    item {
-        QuickStatsCard(
-            spent = uiState.spent,
-            remaining = uiState.remaining,
-            totalBudget = uiState.totalBudget
+            isNearThreshold = isNearThreshold,
+            animatedProgress = animatedProgress
         )
     }
 
@@ -334,338 +270,113 @@ private fun LazyListScope.renderEnhancedBudgetOverview(
 }
 
 @Composable
-private fun EnhancedBudgetCard(
+private fun SimpleBudgetCard(
     totalBudget: Double,
     spent: Double,
     remaining: Double,
-    progress: Float,
     progressPercentage: Int,
     isOverBudget: Boolean,
-    isNearThreshold: Boolean
+    isNearThreshold: Boolean,
+    animatedProgress: Float
 ) {
-    val gradientColors = when {
-        isOverBudget -> listOf(ExpenseRed, ExpenseRed.copy(alpha = 0.7f))
-        isNearThreshold -> listOf(Color(0xFFFF9800), Color(0xFFFFB74D))
-        else -> listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.tertiary)
+    val accentColor = when {
+        isOverBudget -> ExpenseRed
+        isNearThreshold -> Color(0xFFFF9800)
+        else -> MaterialTheme.colorScheme.primary
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(28.dp)),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(8.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = gradientColors,
-                        start = Offset(0f, 0f),
-                        end = Offset(1000f, 1000f)
-                    )
-                )
-                .padding(28.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        "Monthly Budget",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.95f)
-                    )
-
-                    if (isOverBudget) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color.White.copy(alpha = 0.2f)
-                        ) {
-                            Text(
-                                "OVER BUDGET",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(
-                    CurrencyFormatter.format(totalBudget),
-                    style = MaterialTheme.typography.displayMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 48.sp,
-                    textAlign = TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                EnhancedProgressIndicator(
-                    progress = progress,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(16.dp)
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text(
-                            "Spent",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            CurrencyFormatter.format(spent),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            "Remaining",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = Color.White.copy(alpha = 0.8f)
-                        )
-                        Text(
-                            CurrencyFormatter.format(remaining),
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    "$progressPercentage% of budget used",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.9f),
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EnhancedProgressIndicator(
-    progress: Float,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.3f))
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(progress)
-                .background(
-                    Brush.horizontalGradient(
-                        colors = listOf(Color.White, Color.White.copy(alpha = 0.9f))
-                    )
-                )
-                .clip(RoundedCornerShape(8.dp))
-        )
-    }
-}
-
-@Composable
-private fun AlertThresholdCard(
-    threshold: Int,
-    currentPercentage: Int,
-    isNearThreshold: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isNearThreshold)
-                Color(0xFFFF9800).copy(alpha = 0.1f)
-            else
-                MaterialTheme.colorScheme.surface
-        ),
-        border = if (isNearThreshold)
-            BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.3f))
-        else
-            null
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = Color(0xFFFF9800).copy(alpha = 0.15f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Outlined.NotificationsActive,
-                            contentDescription = null,
-                            tint = Color(0xFFFF9800),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
-                    Text(
-                        "Alert Threshold",
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        "Get notified at ${threshold}%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    "$threshold%",
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isNearThreshold) Color(0xFFFF9800) else MaterialTheme.colorScheme.primary
-                )
-
-                if (isNearThreshold) {
-                    Text(
-                        "Approaching!",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color(0xFFFF9800)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickStatsCard(
-    spent: Double,
-    remaining: Double,
-    totalBudget: Double
-) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
+            modifier = Modifier.padding(24.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Monthly Budget",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        if (isOverBudget) "Over Budget" else "$progressPercentage% used",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = accentColor
+                    )
+                }
+                if (isOverBudget) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = ExpenseRed.copy(alpha = 0.1f)
+                    ) {
+                        Text(
+                            "OVER",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = ExpenseRed,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             Text(
-                "Quick Stats",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.padding(bottom = 12.dp)
+                CurrencyFormatter.format(totalBudget),
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.Bold,
+                color = accentColor
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            LinearProgressIndicator(
+                progress = { animatedProgress.coerceIn(0f, 1f) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(10.dp)
+                    .clip(RoundedCornerShape(5.dp)),
+                color = accentColor,
+                trackColor = accentColor.copy(alpha = 0.2f),
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                StatItem(
-                    icon = Icons.Outlined.TrendingDown,
-                    label = "Daily Average",
-                    value = if (totalBudget > 0)
-                        CurrencyFormatter.format(spent / 30)
-                    else
-                        "₹0",
-                    color = ExpenseRed
-                )
-
-                StatItem(
-                    icon = Icons.Outlined.TrendingUp,
-                    label = "Monthly Goal",
-                    value = CurrencyFormatter.format(totalBudget),
-                    color = IncomeGreen
-                )
-
-                StatItem(
-                    icon = Icons.Outlined.Savings,
-                    label = "Saved",
-                    value = CurrencyFormatter.format(abs(remaining).coerceAtMost(totalBudget)),
-                    color = SavingsBlue
-                )
+                StatColumn(label = "Spent", value = CurrencyFormatter.formatCompact(spent), color = ExpenseRed)
+                StatColumn(label = "Remaining", value = CurrencyFormatter.formatCompact(remaining), color = IncomeGreen)
             }
         }
     }
 }
 
 @Composable
-private fun StatItem(
-    icon: ImageVector,
-    label: String,
-    value: String,
-    color: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(
-            modifier = Modifier.size(36.dp),
-            shape = CircleShape,
-            color = color.copy(alpha = 0.1f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            value,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold
-        )
-
+private fun StatColumn(label: String, value: String, color: Color) {
+    Column {
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = color
         )
     }
 }
@@ -676,118 +387,60 @@ private fun UpcomingRenewalsCard(renewals: List<Subscription>) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = ExpenseRed.copy(alpha = 0.08f)
+            containerColor = Color(0xFFFF9800).copy(alpha = 0.1f)
         ),
-        border = BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.2f))
+        border = BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.2f))
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(bottom = 16.dp)
-            ) {
-                Surface(
-                    modifier = Modifier.size(36.dp),
-                    shape = CircleShape,
-                    color = ExpenseRed.copy(alpha = 0.15f)
+        Column(modifier = Modifier.padding(20.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFFF9800),
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Upcoming Renewals",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFFFF9800)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Text(
+                    "${renewals.size}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF9800)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            renewals.take(3).forEach { subscription ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = ExpenseRed,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column {
                     Text(
-                        "Upcoming Renewals",
-                        style = MaterialTheme.typography.titleMedium,
+                        subscription.name,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Text(
+                        CurrencyFormatter.format(subscription.amount),
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = ExpenseRed
                     )
-                    Text(
-                        "${renewals.size} subscription${if (renewals.size > 1) "s" else ""} renewing soon",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
                 }
-            }
-
-            renewals.forEach { subscription ->
-                RenewalItem(subscription = subscription)
-                if (subscription != renewals.last()) {
-                    Divider(
-                        modifier = Modifier.padding(vertical = 8.dp),
-                        color = ExpenseRed.copy(alpha = 0.1f)
-                    )
-                }
+                Spacer(modifier = Modifier.height(8.dp))
             }
         }
     }
 }
 
-@Composable
-private fun RenewalItem(subscription: Subscription) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.weight(1f)
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(
-                        ExpenseRed.copy(alpha = 0.1f),
-                        CircleShape
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    subscription.name.take(1).uppercase(),
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = ExpenseRed
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column {
-                Text(
-                    subscription.name,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    subscription.billingCycle.displayName,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Text(
-            CurrencyFormatter.format(subscription.amount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = ExpenseRed
-        )
-    }
-}
-
-private fun LazyListScope.renderEnhancedSubscriptionsList(
+private fun LazyListScope.renderSubscriptionsList(
     viewModel: BudgetViewModel,
     uiState: BudgetUiState
 ) {
@@ -804,37 +457,26 @@ private fun LazyListScope.renderEnhancedSubscriptionsList(
     }
 
     item {
-        SubscriptionsSummaryCard(
+        SubscriptionSummaryCard(
             activeCount = activeSubscriptions.size,
-            totalMonthly = totalMonthly,
-            inactiveCount = inactiveSubscriptions.size
+            totalMonthly = totalMonthly
         )
     }
 
     if (uiState.subscriptions.isEmpty()) {
         item {
-            EmptyStateCard(
-                icon = Icons.Outlined.Subscriptions,
-                title = "No Subscriptions",
-                message = "Add your first subscription to track recurring payments",
-                actionText = "Add Subscription",
-                onAction = { viewModel.showAddSubscriptionDialog() }
-            )
+            EmptySubscriptionsCard(onAddClick = { viewModel.showAddSubscriptionDialog() })
         }
     } else {
         if (activeSubscriptions.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "Active Subscriptions",
-                    count = activeSubscriptions.size
-                )
+                SectionHeader(title = "Active", count = activeSubscriptions.size)
             }
-
             items(activeSubscriptions, key = { it.id }) { subscription ->
-                EnhancedSubscriptionCard(
+                SubscriptionCard(
                     subscription = subscription,
                     onEdit = { viewModel.showEditSubscriptionDialog(subscription) },
-                    onDelete = { viewModel.deleteSubscription(subscription) },
+                    onDelete = { viewModel.showDeleteConfirmation(subscription) },
                     onToggle = { viewModel.toggleSubscriptionActive(subscription) }
                 )
             }
@@ -842,17 +484,13 @@ private fun LazyListScope.renderEnhancedSubscriptionsList(
 
         if (inactiveSubscriptions.isNotEmpty()) {
             item {
-                SectionHeader(
-                    title = "Paused Subscriptions",
-                    count = inactiveSubscriptions.size
-                )
+                SectionHeader(title = "Paused", count = inactiveSubscriptions.size)
             }
-
             items(inactiveSubscriptions, key = { it.id }) { subscription ->
-                EnhancedSubscriptionCard(
+                SubscriptionCard(
                     subscription = subscription,
                     onEdit = { viewModel.showEditSubscriptionDialog(subscription) },
-                    onDelete = { viewModel.deleteSubscription(subscription) },
+                    onDelete = { viewModel.showDeleteConfirmation(subscription) },
                     onToggle = { viewModel.toggleSubscriptionActive(subscription) }
                 )
             }
@@ -861,94 +499,75 @@ private fun LazyListScope.renderEnhancedSubscriptionsList(
 }
 
 @Composable
-private fun SubscriptionsSummaryCard(
-    activeCount: Int,
-    totalMonthly: Double,
-    inactiveCount: Int
-) {
+private fun SubscriptionSummaryCard(activeCount: Int, totalMonthly: Double) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = SavingsBlue
-        )
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(24.dp)
+                .padding(20.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        "Monthly Total",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White.copy(alpha = 0.9f)
-                    )
-                    Text(
-                        "$activeCount active • $inactiveCount paused",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = Color.White.copy(alpha = 0.7f)
-                    )
-                }
-
+            Column {
                 Text(
-                    CurrencyFormatter.format(totalMonthly),
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    fontSize = 36.sp
+                    "Monthly Total",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Color.White.copy(alpha = 0.8f)
+                )
+                Text(
+                    "$activeCount active",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.6f)
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun SectionHeader(
-    title: String,
-    count: Int
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
-
-        Surface(
-            shape = CircleShape,
-            color = MaterialTheme.colorScheme.primaryContainer
-        ) {
             Text(
-                "$count",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                CurrencyFormatter.format(totalMonthly),
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
             )
         }
     }
 }
 
 @Composable
-private fun EmptyStateCard(
-    icon: ImageVector,
-    title: String,
-    message: String,
-    actionText: String? = null,
-    onAction: (() -> Unit)? = null
-) {
+private fun SectionHeader(title: String, count: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.SemiBold
+        )
+        Surface(
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
+        ) {
+            Text(
+                "$count",
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptySubscriptionsCard(onAddClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -959,61 +578,41 @@ private fun EmptyStateCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(48.dp),
+                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Surface(
-                modifier = Modifier.size(80.dp),
-                shape = CircleShape,
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+            Icon(
+                Icons.Outlined.Subscriptions,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "No Subscriptions",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                "Add your first subscription",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Button(
+                onClick = onAddClick,
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        modifier = Modifier.size(40.dp),
-                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            Text(
-                title,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                message,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center
-            )
-
-            if (actionText != null && onAction != null) {
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Button(
-                    onClick = onAction,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    )
-                ) {
-                    Text(actionText)
-                }
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Add Subscription")
             }
         }
     }
 }
 
 @Composable
-private fun EnhancedSubscriptionCard(
+private fun SubscriptionCard(
     subscription: Subscription,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
@@ -1023,27 +622,26 @@ private fun EnhancedSubscriptionCard(
     val isExpiringSoon = daysUntil in 0..3 && subscription.isActive
     val isExpired = daysUntil < 0 && subscription.isActive
 
+    val accentColor = when {
+        !subscription.isActive -> Color.Gray
+        isExpired -> ExpenseRed
+        isExpiringSoon -> Color(0xFFFF9800)
+        else -> SavingsBlue
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onEdit),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = when {
-                !subscription.isActive -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                isExpired -> ExpenseRed.copy(alpha = 0.05f)
-                isExpiringSoon -> Color(0xFFFF9800).copy(alpha = 0.08f)
-                else -> MaterialTheme.colorScheme.surface
-            }
+            containerColor = if (!subscription.isActive) MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.surface
         ),
-        border = when {
-            isExpired -> BorderStroke(1.dp, ExpenseRed.copy(alpha = 0.3f))
-            isExpiringSoon -> BorderStroke(1.dp, Color(0xFFFF9800).copy(alpha = 0.3f))
-            else -> null
-        },
         elevation = CardDefaults.cardElevation(
-            defaultElevation = if (!subscription.isActive) 0.dp else 2.dp
-        )
+            defaultElevation = if (!subscription.isActive) 0.dp else 4.dp
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
@@ -1051,174 +649,70 @@ private fun EnhancedSubscriptionCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Icon/Avatar
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .background(
-                        when {
-                            !subscription.isActive -> Color.Gray.copy(alpha = 0.15f)
-                            isExpired -> ExpenseRed.copy(alpha = 0.15f)
-                            isExpiringSoon -> Color(0xFFFF9800).copy(alpha = 0.15f)
-                            else -> SavingsBlue.copy(alpha = 0.15f)
-                        },
-                        CircleShape
-                    ),
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.15f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = subscription.name.take(2).uppercase(),
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = when {
-                        !subscription.isActive -> Color.Gray
-                        isExpired -> ExpenseRed
-                        isExpiringSoon -> Color(0xFFFF9800)
-                        else -> SavingsBlue
-                    },
-                    fontSize = 18.sp
+                    color = accentColor
                 )
             }
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Content
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         subscription.name,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = MaterialTheme.typography.bodyMedium,
                         fontWeight = FontWeight.SemiBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-
                     if (!subscription.isActive) {
-                        Surface(
-                            color = Color.Gray.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                "Paused",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.Gray,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
-                    if (isExpired && subscription.isActive) {
-                        Surface(
-                            color = ExpenseRed.copy(alpha = 0.15f),
-                            shape = RoundedCornerShape(6.dp)
-                        ) {
-                            Text(
-                                "Expired",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = ExpenseRed,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        subscription.billingCycle.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .background(
-                                MaterialTheme.colorScheme.onSurfaceVariant,
-                                CircleShape
-                            )
-                    )
-
-                    Text(
-                        subscription.category,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                if (subscription.isActive) {
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            Icons.Outlined.CalendarToday,
-                            contentDescription = null,
-                            modifier = Modifier.size(14.dp),
-                            tint = when {
-                                isExpired -> ExpenseRed
-                                daysUntil <= 3 -> ExpenseRed
-                                daysUntil <= 7 -> Color(0xFFFF9800)
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        )
-
+                        Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = when {
-                                daysUntil < 0 -> "Expired ${-daysUntil} days ago"
-                                daysUntil == 0 -> "Expires today!"
-                                daysUntil == 1 -> "Expires tomorrow"
-                                daysUntil <= 7 -> "Expires in $daysUntil days"
-                                else -> "Next: ${DateUtils.formatDate(subscription.nextBillingDate)}"
-                            },
+                            "Paused",
                             style = MaterialTheme.typography.labelSmall,
-                            color = when {
-                                isExpired -> ExpenseRed
-                                daysUntil <= 3 -> ExpenseRed
-                                daysUntil <= 7 -> Color(0xFFFF9800)
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
+                            color = Color.Gray
                         )
                     }
+                }
+                Text(
+                    "${subscription.billingCycle.displayName} • ${subscription.category}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (subscription.isActive) {
+                    val daysText = when {
+                        daysUntil < 0 -> "Overdue"
+                        daysUntil == 0 -> "Today"
+                        daysUntil == 1 -> "Tomorrow"
+                        else -> "in $daysUntil days"
+                    }
+                    Text(
+                        "Next: $daysText",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = accentColor
+                    )
                 }
             }
 
-            // Amount and Actions
-            Column(
-                horizontalAlignment = Alignment.End
-            ) {
+            Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    text = CurrencyFormatter.format(subscription.amount),
-                    style = MaterialTheme.typography.titleMedium,
+                    CurrencyFormatter.format(subscription.amount),
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = when {
-                        !subscription.isActive -> Color.Gray
-                        isExpired -> ExpenseRed
-                        isExpiringSoon -> Color(0xFFFF9800)
-                        else -> MaterialTheme.colorScheme.onSurface
-                    }
+                    color = accentColor
                 )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    ) {
+                Row {
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                         Icon(
                             Icons.Outlined.Delete,
                             contentDescription = "Delete",
@@ -1226,17 +720,10 @@ private fun EnhancedSubscriptionCard(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-
                     Switch(
                         checked = subscription.isActive,
                         onCheckedChange = { onToggle() },
-                        modifier = Modifier.height(24.dp),
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = MaterialTheme.colorScheme.primary,
-                            checkedTrackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            uncheckedThumbColor = Color.Gray,
-                            uncheckedTrackColor = Color.Gray.copy(alpha = 0.3f)
-                        )
+                        modifier = Modifier.height(24.dp)
                     )
                 }
             }
@@ -1244,53 +731,40 @@ private fun EnhancedSubscriptionCard(
     }
 }
 
-private fun LazyListScope.renderEnhancedRemindersList(
+private fun LazyListScope.renderRemindersList(
     viewModel: BudgetViewModel,
     uiState: BudgetUiState
 ) {
     val reminders = viewModel.getSubscriptionReminders()
 
     item {
-        RemindersHeader(reminderCount = reminders.size)
+        RemindersHeader(count = reminders.size)
     }
 
     if (reminders.isEmpty()) {
         item {
-            EmptyStateCard(
-                icon = Icons.Outlined.NotificationsOff,
-                title = "All Clear!",
-                message = "No upcoming reminders. You're all caught up!"
-            )
+            EmptyRemindersCard()
         }
     } else {
-        itemsIndexed(reminders) { index, pair ->
+        itemsIndexed(reminders) { _, pair ->
             val (subscription, daysLeft) = pair
-            EnhancedReminderCard(
-                subscription = subscription,
-                daysLeft = daysLeft,
-                index = index
-            )
+            ReminderCard(subscription = subscription, daysLeft = daysLeft)
         }
     }
 }
 
 @Composable
-private fun RemindersHeader(reminderCount: Int) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp)
-    ) {
+private fun RemindersHeader(count: Int) {
+    Column {
         Text(
             "Upcoming Reminders",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold
         )
-
-        if (reminderCount > 0) {
+        if (count > 0) {
             Text(
-                "$reminderCount subscription${if (reminderCount > 1) "s" else ""} need attention",
-                style = MaterialTheme.typography.bodyMedium,
+                "$count subscription${if (count > 1) "s" else ""} need attention",
+                style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
@@ -1298,11 +772,45 @@ private fun RemindersHeader(reminderCount: Int) {
 }
 
 @Composable
-private fun EnhancedReminderCard(
-    subscription: Subscription,
-    daysLeft: Int,
-    index: Int
-) {
+private fun EmptyRemindersCard() {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = IncomeGreen.copy(alpha = 0.1f)
+        ),
+        border = BorderStroke(1.dp, IncomeGreen.copy(alpha = 0.2f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.CheckCircle,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = IncomeGreen
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                "All Clear!",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = IncomeGreen
+            )
+            Text(
+                "No upcoming reminders",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReminderCard(subscription: Subscription, daysLeft: Int) {
     val reminderColor = when {
         daysLeft <= 0 -> ExpenseRed
         daysLeft <= 3 -> Color(0xFFFF9800)
@@ -1310,25 +818,14 @@ private fun EnhancedReminderCard(
     }
 
     val statusText = when (daysLeft) {
-        0 -> "Expires today!"
-        1 -> "Renews tomorrow"
-        2 -> "Renews in 2 days"
-        3 -> "Renews in 3 days"
-        in 4..7 -> "Renews in $daysLeft days"
-        else -> "Renews in $daysLeft days"
-    }
-
-    val icon = when {
-        daysLeft <= 0 -> Icons.Default.Warning
-        daysLeft <= 3 -> Icons.Default.Schedule
-        else -> Icons.Default.Notifications
+        0 -> "Due today!"
+        1 -> "Due tomorrow"
+        else -> "Due in $daysLeft days"
     }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
             containerColor = reminderColor.copy(alpha = 0.08f)
         ),
@@ -1340,83 +837,44 @@ private fun EnhancedReminderCard(
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Left indicator
             Box(
                 modifier = Modifier
-                    .width(4.dp)
-                    .height(50.dp)
-                    .background(
-                        reminderColor,
-                        RoundedCornerShape(2.dp)
-                    )
-            )
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            // Icon
-            Surface(
-                modifier = Modifier.size(48.dp),
-                shape = CircleShape,
-                color = reminderColor.copy(alpha = 0.15f)
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(reminderColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = reminderColor,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
+                Icon(
+                    if (daysLeft <= 0) Icons.Default.Warning else Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = reminderColor,
+                    modifier = Modifier.size(22.dp)
+                )
             }
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Content
-            Column(
-                modifier = Modifier.weight(1f)
-            ) {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     subscription.name,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold
                 )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        statusText,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = reminderColor,
-                        fontWeight = FontWeight.Medium
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .size(3.dp)
-                            .background(reminderColor, CircleShape)
-                    )
-
-                    Text(
-                        subscription.billingCycle.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    statusText,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = reminderColor,
+                    fontWeight = FontWeight.Medium
+                )
             }
 
-            // Amount
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     CurrencyFormatter.format(subscription.amount),
-                    style = MaterialTheme.typography.titleLarge,
+                    style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = reminderColor
                 )
-
                 if (daysLeft <= 0) {
                     Surface(
                         shape = RoundedCornerShape(6.dp),
@@ -1435,9 +893,43 @@ private fun EnhancedReminderCard(
     }
 }
 
+@Composable
+private fun DeleteConfirmationDialog(
+    title: String,
+    message: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Delete,
+                contentDescription = null,
+                tint = ExpenseRed
+            )
+        },
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = { Text(message) },
+        confirmButton = {
+            TextButton(
+                onClick = onConfirm,
+                colors = ButtonDefaults.textButtonColors(contentColor = ExpenseRed)
+            ) {
+                Text("Delete")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EnhancedBudgetDialog(
+private fun SimpleBudgetDialog(
     currentBudget: Double,
     currentThreshold: Int,
     onDismiss: () -> Unit,
@@ -1451,328 +943,59 @@ fun EnhancedBudgetDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Outlined.Edit,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    "Set Budget",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-            }
+            Text("Set Budget", fontWeight = FontWeight.Bold)
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                // Budget Amount Input
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
                     label = { Text("Monthly Budget") },
-                    placeholder = { Text("Enter amount") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Outlined.AttachMoney,
-                            contentDescription = null
-                        )
-                    },
+                    leadingIcon = { Icon(Icons.Outlined.AttachMoney, null) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary,
-                        focusedLeadingIconColor = MaterialTheme.colorScheme.primary
-                    )
+                    shape = RoundedCornerShape(16.dp)
                 )
 
-                // Quick Amount Suggestions
+                Text("Alert at $threshold%", style = MaterialTheme.typography.labelMedium)
+                Slider(
+                    value = threshold.toFloat(),
+                    onValueChange = { threshold = it.toInt() },
+                    valueRange = 50f..100f,
+                    steps = 9,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    listOf(5000.0, 10000.0, 20000.0, 50000.0).forEach { suggestion ->
-                        SuggestionChip(
-                            amount = suggestion,
-                            isSelected = budgetAmount == suggestion,
-                            onClick = { amount = suggestion.toString() }
-                        )
-                    }
-                }
-
-                // Alert Threshold
-                Column {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Outlined.NotificationsActive,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp),
-                                tint = Color(0xFFFF9800)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                "Alert Threshold",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFFF9800).copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                "$threshold%",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFFF9800),
-                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Slider(
-                        value = threshold.toFloat(),
-                        onValueChange = { threshold = it.toInt() },
-                        valueRange = 50f..100f,
-                        steps = 9,
-                        colors = SliderDefaults.colors(
-                            thumbColor = Color(0xFFFF9800),
-                            activeTrackColor = Color(0xFFFF9800),
-                            inactiveTrackColor = Color(0xFFFF9800).copy(alpha = 0.2f)
-                        ),
-                        modifier = Modifier.fillMaxWidth()
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text("50%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("75%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text("100%", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
-
-                // Rollover Option
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                modifier = Modifier.size(36.dp),
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        Icons.Outlined.Refresh,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            Column {
-                                Text(
-                                    "Enable Rollover",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    "Carry over remaining budget to next month",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-
-                        Switch(
-                            checked = enableRollover,
-                            onCheckedChange = { enableRollover = it }
-                        )
-                    }
-                }
-
-                // Preview
-                if (budgetAmount > 0) {
-                    BudgetPreviewCard(
-                        amount = budgetAmount,
-                        threshold = threshold
-                    )
+                    Text("Enable Rollover", style = MaterialTheme.typography.bodyMedium)
+                    Switch(checked = enableRollover, onCheckedChange = { enableRollover = it })
                 }
             }
         },
         confirmButton = {
             Button(
-                onClick = {
-                    amount.toDoubleOrNull()?.let {
-                        onSave(it, threshold, enableRollover)
-                    }
-                },
+                onClick = { amount.toDoubleOrNull()?.let { onSave(it, threshold, enableRollover) } },
                 enabled = budgetAmount > 0,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .height(52.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    "Save Budget",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text("Save")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }
 
-@Composable
-private fun SuggestionChip(
-    amount: Double,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    Surface(
-        modifier = Modifier
-            .height(52.dp)
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected)
-            MaterialTheme.colorScheme.primary
-        else
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
-    ) {
-        Text(
-            CurrencyFormatter.format(amount),
-            style = MaterialTheme.typography.bodyMedium,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected)
-                MaterialTheme.colorScheme.onPrimary
-            else
-                MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(vertical = 10.dp)
-        )
-    }
-}
-
-@Composable
-private fun BudgetPreviewCard(
-    amount: Double,
-    threshold: Int
-) {
-    Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        )
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            Text(
-                "Preview",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column {
-                    Text(
-                        "Alert at",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        CurrencyFormatter.format(amount * threshold / 100),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFF9800)
-                    )
-                }
-
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        "Monthly Budget",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        CurrencyFormatter.format(amount),
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                }
-            }
-        }
-    }
-}
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun EnhancedSubscriptionDialog(
+private fun SimpleSubscriptionDialog(
     subscription: Subscription?,
     onDismiss: () -> Unit,
     onSave: (String, Double, BillingCycle, Long, String, Boolean) -> Unit
@@ -1785,89 +1008,39 @@ fun EnhancedSubscriptionDialog(
     var isActive by remember { mutableStateOf(subscription?.isActive ?: true) }
     var showCyclePicker by remember { mutableStateOf(false) }
 
-    val categories = listOf(
-        "Entertainment",
-        "Productivity",
-        "Health & Fitness",
-        "Education",
-        "Music",
-        "Cloud Storage",
-        "Shopping",
-        "Other"
-    )
+    val categories = listOf("Entertainment", "Productivity", "Health & Fitness", "Education", "Music", "Cloud Storage", "Shopping", "Other")
     var showCategoryPicker by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = MaterialTheme.colorScheme.surface,
-        shape = RoundedCornerShape(28.dp),
+        shape = RoundedCornerShape(24.dp),
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    modifier = Modifier.size(40.dp),
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            if (subscription == null) Icons.Outlined.Add else Icons.Outlined.Edit,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    }
-                }
-                Spacer(modifier = Modifier.width(12.dp))
-                Text(
-                    if (subscription == null) "Add Subscription" else "Edit Subscription",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 24.sp
-                )
-            }
+            Text(
+                if (subscription == null) "Add Subscription" else "Edit Subscription",
+                fontWeight = FontWeight.Bold
+            )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                // Name
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Subscription Name") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Outlined.Subscriptions,
-                            contentDescription = null
-                        )
-                    },
+                    label = { Text("Name") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary
-                    )
+                    singleLine = true
                 )
 
-                // Amount
                 OutlinedTextField(
                     value = amount,
                     onValueChange = { amount = it },
                     label = { Text("Amount") },
-                    leadingIcon = {
-                        Icon(
-                            Icons.Outlined.AttachMoney,
-                            contentDescription = null
-                        )
-                    },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = MaterialTheme.colorScheme.primary
-                    )
+                    singleLine = true
                 )
 
-                // Billing Cycle
                 ExposedDropdownMenuBox(
                     expanded = showCyclePicker,
                     onExpandedChange = { showCyclePicker = !showCyclePicker }
@@ -1877,24 +1050,10 @@ fun EnhancedSubscriptionDialog(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Billing Cycle") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Outlined.Repeat,
-                                contentDescription = null
-                            )
-                        },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCyclePicker)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary
-                        )
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCyclePicker) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        shape = RoundedCornerShape(16.dp)
                     )
-
                     ExposedDropdownMenu(
                         expanded = showCyclePicker,
                         onDismissRequest = { showCyclePicker = false }
@@ -1911,7 +1070,6 @@ fun EnhancedSubscriptionDialog(
                     }
                 }
 
-                // Category
                 ExposedDropdownMenuBox(
                     expanded = showCategoryPicker,
                     onExpandedChange = { showCategoryPicker = !showCategoryPicker }
@@ -1921,24 +1079,10 @@ fun EnhancedSubscriptionDialog(
                         onValueChange = {},
                         readOnly = true,
                         label = { Text("Category") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Outlined.Category,
-                                contentDescription = null
-                            )
-                        },
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryPicker)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = MaterialTheme.colorScheme.primary
-                        )
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showCategoryPicker) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        shape = RoundedCornerShape(16.dp)
                     )
-
                     ExposedDropdownMenu(
                         expanded = showCategoryPicker,
                         onDismissRequest = { showCategoryPicker = false }
@@ -1955,41 +1099,13 @@ fun EnhancedSubscriptionDialog(
                     }
                 }
 
-                // Active Toggle
-                Card(
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                if (isActive) Icons.Outlined.CheckCircle else Icons.Outlined.PauseCircle,
-                                contentDescription = null,
-                                tint = if (isActive) IncomeGreen else Color.Gray
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text(
-                                "Active",
-                                style = MaterialTheme.typography.bodyLarge,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-
-                        Switch(
-                            checked = isActive,
-                            onCheckedChange = { isActive = it }
-                        )
-                    }
+                    Text("Active", style = MaterialTheme.typography.bodyMedium)
+                    Switch(checked = isActive, onCheckedChange = { isActive = it })
                 }
             }
         },
@@ -2001,32 +1117,13 @@ fun EnhancedSubscriptionDialog(
                     }
                 },
                 enabled = name.isNotBlank() && amount.toDoubleOrNull() != null,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 8.dp)
-                    .height(52.dp)
+                shape = RoundedCornerShape(12.dp)
             ) {
-                Text(
-                    if (subscription == null) "Add Subscription" else "Save Changes",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Text(if (subscription == null) "Add" else "Save")
             }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(
-                    "Cancel",
-                    style = MaterialTheme.typography.titleMedium
-                )
-            }
+            TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
 }

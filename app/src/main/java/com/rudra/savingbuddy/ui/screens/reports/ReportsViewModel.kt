@@ -34,7 +34,9 @@ data class ReportsUiState(
     val isToday: Boolean = false,
     val isThisWeek: Boolean = false,
     val isThisMonth: Boolean = true,
-    val isThisYear: Boolean = false
+    val isThisYear: Boolean = false,
+    val filteredIncomes: List<Income> = emptyList(),
+    val filteredExpenses: List<Expense> = emptyList()
 )
 
 data class TransactionLog(
@@ -235,27 +237,35 @@ class ReportsViewModel @Inject constructor(
                 expenseRepository.getExpensesPaginated(1000, 0)
             ) { incomeList, expenseList ->
                 val allTransactions = mutableListOf<TransactionLog>()
+                val filteredIncomes = mutableListOf<Income>()
+                val filteredExpenses = mutableListOf<Expense>()
                 
-                incomeList.forEach { income ->
+                val incomeFiltered = if (startDate != null) incomeList.filter { it.date >= startDate } else incomeList
+                val incomeFinal = if (endDate != null) incomeFiltered.filter { it.date <= endDate } else incomeFiltered
+                incomeFinal.forEach { income ->
+                    filteredIncomes.add(income)
                     allTransactions.add(TransactionLog(id = income.id, type = "Income", description = income.source, amount = income.amount, category = income.category.displayName, date = income.date, notes = income.notes))
                 }
                 
-                expenseList.forEach { expense ->
+                val expenseFiltered = if (startDate != null) expenseList.filter { it.date >= startDate } else expenseList
+                val expenseFinal = if (endDate != null) expenseFiltered.filter { it.date <= endDate } else expenseFiltered
+                expenseFinal.forEach { expense ->
+                    filteredExpenses.add(expense)
                     allTransactions.add(TransactionLog(id = expense.id, type = "Expense", description = expense.category.displayName, amount = expense.amount, category = expense.category.displayName, date = expense.date, notes = expense.notes))
                 }
                 
-                allTransactions.sortedByDescending { it.date }
-            }.first().let { logs ->
+                Triple(allTransactions.sortedByDescending { it.date }, filteredIncomes, filteredExpenses)
+            }.first().let { (logs, incomes, expenses) ->
                 var filtered = logs
                 
-                if (startDate != null) filtered = filtered.filter { it.date >= startDate }
-                if (endDate != null) filtered = filtered.filter { it.date <= endDate }
                 if (type != null) filtered = filtered.filter { it.type == type }
                 
                 _uiState.update { 
                     it.copy(
                         transactionLogs = filtered.take(500),
                         logCount = filtered.size,
+                        filteredIncomes = incomes,
+                        filteredExpenses = expenses,
                         isLoading = false
                     ) 
                 }

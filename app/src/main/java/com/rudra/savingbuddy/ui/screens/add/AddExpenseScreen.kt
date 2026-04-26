@@ -419,44 +419,81 @@ fun AddExpenseScreen(
                         containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
                     )
                 ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Repeat,
-                                contentDescription = null,
-                                tint = if (isRecurring) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant
+                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Repeat,
+                                    contentDescription = null,
+                                    tint = if (isRecurring) selectedColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        "Recurring Expense",
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        if (isRecurring) selectedInterval.displayName else "Set up recurring",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            Switch(
+                                checked = isRecurring,
+                                onCheckedChange = {
+                                    isRecurring = it
+                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = selectedColor,
+                                    checkedTrackColor = selectedColor.copy(alpha = 0.3f)
+                                )
                             )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    "Recurring Expense",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    if (isRecurring) selectedInterval.displayName else "Set up recurring",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                        }
+
+                        if (isRecurring) {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                "Repeat Interval",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                RecurringInterval.entries.filter { it != RecurringInterval.LAST_DAY_OF_MONTH && it != RecurringInterval.LAST_WEEKDAY_OF_MONTH }.take(4).forEach { interval ->
+                                    FilterChip(
+                                        selected = selectedInterval == interval,
+                                        onClick = { selectedInterval = interval },
+                                        label = { Text(interval.displayName, style = MaterialTheme.typography.labelSmall) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                RecurringInterval.entries.filter { it != RecurringInterval.LAST_DAY_OF_MONTH && it != RecurringInterval.LAST_WEEKDAY_OF_MONTH }.drop(4).take(4).forEach { interval ->
+                                    FilterChip(
+                                        selected = selectedInterval == interval,
+                                        onClick = { selectedInterval = interval },
+                                        label = { Text(interval.displayName, style = MaterialTheme.typography.labelSmall) },
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                }
                             }
                         }
-                        Switch(
-                            checked = isRecurring,
-                            onCheckedChange = {
-                                isRecurring = it
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                            },
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = selectedColor,
-                                checkedTrackColor = selectedColor.copy(alpha = 0.3f)
-                            )
-                        )
                     }
                 }
 
@@ -537,7 +574,9 @@ fun AddExpenseScreen(
                             category = selectedCategory,
                             date = selectedDate,
                             notes = notes.ifBlank { null },
-                            accountId = selectedAccount?.id
+                            accountId = selectedAccount?.id,
+                            isRecurring = isRecurring,
+                            recurringInterval = if (isRecurring) selectedInterval else null
                         )
                         navController.popBackStack()
                     },

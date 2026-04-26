@@ -391,7 +391,13 @@ class RecurringViewModel @Inject constructor(
                 amount = amount,
                 category = category,
                 date = System.currentTimeMillis(),
-                notes = notes
+                notes = notes,
+                isRecurring = true,
+                recurringInterval = interval,
+                status = RecurringStatus.ACTIVE,
+                endCondition = endCondition,
+                endDate = endDate,
+                occurrencesRemaining = occurrencesRemaining
             )
             expenseRepository.insertExpense(expense)
             hideAddDialog()

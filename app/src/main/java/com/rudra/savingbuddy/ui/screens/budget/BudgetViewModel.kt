@@ -8,6 +8,7 @@ import com.rudra.savingbuddy.domain.model.BillingCycle
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
 import com.rudra.savingbuddy.domain.model.Subscription
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
+import com.rudra.savingbuddy.domain.repository.SubscriptionRepository
 import com.rudra.savingbuddy.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -24,6 +25,7 @@ data class BudgetUiState(
     val showAddSubscriptionDialog: Boolean = false,
     val showEditBudgetDialog: Boolean = false,
     val editingSubscription: Subscription? = null,
+    val subscriptionToDelete: Subscription? = null,
     val totalBudget: Double = 0.0,
     val spent: Double = 0.0,
     val remaining: Double = 0.0,
@@ -32,7 +34,8 @@ data class BudgetUiState(
 
 @HiltViewModel
 class BudgetViewModel @Inject constructor(
-    private val budgetRepository: BudgetRepository
+    private val budgetRepository: BudgetRepository,
+    private val subscriptionRepository: SubscriptionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(BudgetUiState())
@@ -40,6 +43,7 @@ class BudgetViewModel @Inject constructor(
 
     init {
         loadBudget()
+        loadSubscriptions()
     }
 
     private fun loadBudget() {
@@ -62,62 +66,24 @@ class BudgetViewModel @Inject constructor(
                 }
             }
         }
-
-        loadSubscriptions()
     }
 
     private fun loadSubscriptions() {
         viewModelScope.launch {
-            val subscriptions = mutableListOf<Subscription>()
-            val now = System.currentTimeMillis()
-            val threeDays = now + (3 * 24 * 60 * 60 * 1000L)
-            val sevenDays = now + (7 * 24 * 60 * 60 * 1000L)
+            subscriptionRepository.getAllSubscriptions().collect { subscriptions ->
+                val now = System.currentTimeMillis()
+                val sevenDays = now + (7 * 24 * 60 * 60 * 1000L)
 
-            val sampleSubscriptions = listOf(
-                Subscription(
-                    id = 1,
-                    name = "Netflix",
-                    amount = 499.0,
-                    billingCycle = BillingCycle.MONTHLY,
-                    nextBillingDate = now + (2 * 24 * 60 * 60 * 1000L),
-                    category = "Entertainment"
-                ),
-                Subscription(
-                    id = 2,
-                    name = "Spotify",
-                    amount = 199.0,
-                    billingCycle = BillingCycle.MONTHLY,
-                    nextBillingDate = now + (5 * 24 * 60 * 60 * 1000L),
-                    category = "Music"
-                ),
-                Subscription(
-                    id = 3,
-                    name = "Amazon Prime",
-                    amount = 1499.0,
-                    billingCycle = BillingCycle.YEARLY,
-                    nextBillingDate = now + (30 * 24 * 60 * 60 * 1000L),
-                    category = "Shopping"
-                ),
-                Subscription(
-                    id = 4,
-                    name = "Hotstar",
-                    amount = 1499.0,
-                    billingCycle = BillingCycle.YEARLY,
-                    nextBillingDate = now - (10 * 24 * 60 * 60 * 1000L),
-                    category = "Entertainment",
-                    isActive = false
-                )
-            )
+                val upcomingRenewals = subscriptions.filter {
+                    it.isActive && it.nextBillingDate in now..sevenDays
+                }
 
-            val upcomingRenewals = sampleSubscriptions.filter {
-                it.isActive && it.nextBillingDate in now..sevenDays
-            }
-
-            _uiState.update {
-                it.copy(
-                    subscriptions = sampleSubscriptions,
-                    upcomingRenewals = upcomingRenewals
-                )
+                _uiState.update {
+                    it.copy(
+                        subscriptions = subscriptions,
+                        upcomingRenewals = upcomingRenewals
+                    )
+                }
             }
         }
     }
@@ -134,6 +100,14 @@ class BudgetViewModel @Inject constructor(
         _uiState.update { it.copy(showAddSubscriptionDialog = false, editingSubscription = null) }
     }
 
+    fun showDeleteConfirmation(subscription: Subscription) {
+        _uiState.update { it.copy(subscriptionToDelete = subscription) }
+    }
+
+    fun hideDeleteConfirmation() {
+        _uiState.update { it.copy(subscriptionToDelete = null) }
+    }
+
     fun saveSubscription(
         name: String,
         amount: Double,
@@ -144,7 +118,7 @@ class BudgetViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             val subscription = Subscription(
-                id = _uiState.value.editingSubscription?.id ?: System.currentTimeMillis(),
+                id = _uiState.value.editingSubscription?.id ?: 0,
                 name = name,
                 amount = amount,
                 billingCycle = billingCycle,
@@ -153,42 +127,37 @@ class BudgetViewModel @Inject constructor(
                 isActive = isActive
             )
 
-            val currentList = _uiState.value.subscriptions.toMutableList()
-            val existingIndex = currentList.indexOfFirst { it.id == subscription.id }
-
-            if (existingIndex >= 0) {
-                currentList[existingIndex] = subscription
+            if (_uiState.value.editingSubscription != null) {
+                subscriptionRepository.updateSubscription(subscription)
             } else {
-                currentList.add(subscription)
+                subscriptionRepository.insertSubscription(subscription)
             }
 
             _uiState.update {
                 it.copy(
-                    subscriptions = currentList,
                     showAddSubscriptionDialog = false,
                     editingSubscription = null
                 )
             }
-
-            loadSubscriptions()
         }
     }
 
     fun deleteSubscription(subscription: Subscription) {
         viewModelScope.launch {
-            val updatedList = _uiState.value.subscriptions.filter { it.id != subscription.id }
-            _uiState.update { it.copy(subscriptions = updatedList) }
-            loadSubscriptions()
+            subscriptionRepository.deleteSubscription(subscription.id)
+            _uiState.update { it.copy(subscriptionToDelete = null) }
+        }
+    }
+
+    fun confirmDelete() {
+        _uiState.value.subscriptionToDelete?.let { subscription ->
+            deleteSubscription(subscription)
         }
     }
 
     fun toggleSubscriptionActive(subscription: Subscription) {
         viewModelScope.launch {
-            val updatedList = _uiState.value.subscriptions.map {
-                if (it.id == subscription.id) it.copy(isActive = !it.isActive) else it
-            }
-            _uiState.update { it.copy(subscriptions = updatedList) }
-            loadSubscriptions()
+            subscriptionRepository.updateSubscriptionActiveStatus(subscription.id, !subscription.isActive)
         }
     }
 
@@ -235,5 +204,6 @@ class BudgetViewModel @Inject constructor(
 
     fun refreshData() {
         loadBudget()
+        loadSubscriptions()
     }
 }

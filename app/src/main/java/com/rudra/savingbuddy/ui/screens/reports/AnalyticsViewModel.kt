@@ -2,8 +2,9 @@ package com.rudra.savingbuddy.ui.screens.reports
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.rudra.savingbuddy.data.local.dao.CategoryTotal
 import com.rudra.savingbuddy.domain.model.Expense
-import com.rudra.savingbuddy.domain.model.ExpenseCategory
+import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import com.rudra.savingbuddy.domain.repository.SettingsRepository
@@ -25,6 +26,9 @@ data class AnalyticsUiState(
     val expensesByCategory: List<AnalyticsCategoryBreakdown> = emptyList(),
     val dailySpending: List<DailySpending> = emptyList(),
     val yearOverYear: List<YearComparison> = emptyList(),
+    val allIncomes: List<Income> = emptyList(),
+    val allExpenses: List<Expense> = emptyList(),
+    val totalTransactionCount: Int = 0,
     val isLoading: Boolean = false
 )
 
@@ -53,7 +57,7 @@ enum class DateRange(val displayName: String, val getDates: () -> Pair<Long, Lon
         }
         Pair(DateUtils.getStartOfMonth(calendar.timeInMillis), DateUtils.getEndOfMonth(calendar.timeInMillis))
     }),
-    LAST_3_MONTHS("Last 3 Months", {
+    LAST_3_MONTHS("3 Months", {
         val calendar = Calendar.getInstance().apply {
             add(Calendar.MONTH, -3)
         }
@@ -64,6 +68,9 @@ enum class DateRange(val displayName: String, val getDates: () -> Pair<Long, Lon
         calendar.set(Calendar.MONTH, Calendar.JANUARY)
         calendar.set(Calendar.DAY_OF_MONTH, 1)
         Pair(calendar.timeInMillis, System.currentTimeMillis())
+    }),
+    ALL_TIME("All Time", {
+        0L to System.currentTimeMillis()
     }),
     CUSTOM("Custom", { 
         Pair(DateUtils.getStartOfMonth(), DateUtils.getEndOfMonth())
@@ -128,34 +135,38 @@ class AnalyticsViewModel @Inject constructor(
             combine(
                 incomeRepository.getTotalIncomeByDateRange(start, end),
                 expenseRepository.getTotalExpensesByDateRange(start, end),
-                expenseRepository.getExpensesByCategoryGrouped(start, end)
-            ) { income, expenses, categories ->
-                Triple(income ?: 0.0, expenses ?: 0.0, categories)
-            }.collect { (income, expenses, categories) ->
-                val savings = income - expenses
-                val savingsRate = if (income > 0) (savings / income) * 100 else 0.0
+                expenseRepository.getExpensesByCategoryGrouped(start, end),
+                incomeRepository.getIncomeByDateRange(start, end),
+                expenseRepository.getExpensesByDateRange(start, end)
+            ) { income, expenses, categories, incomesList, expensesList ->
+                AnalyticsData(income ?: 0.0, expenses ?: 0.0, categories, incomesList, expensesList)
+            }.collect { data ->
+                val savings = data.income - data.expenses
+                val savingsRate = if (data.income > 0) (savings / data.income) * 100 else 0.0
 
-                val breakdown = categories.map { cat ->
+                val breakdown = data.categories.map { cat ->
                     AnalyticsCategoryBreakdown(
                         category = cat.category,
                         amount = cat.total,
-                        percentage = if (expenses > 0) (cat.total / expenses) * 100 else 0.0
+                        percentage = if (data.expenses > 0) (cat.total / data.expenses) * 100 else 0.0
                     )
                 }.sortedByDescending { it.amount }
 
                 _uiState.update { it.copy(
-                    totalIncome = income,
-                    totalExpenses = expenses,
+                    totalIncome = data.income,
+                    totalExpenses = data.expenses,
                     savings = savings,
                     savingsRate = savingsRate,
                     expensesByCategory = breakdown,
+                    allIncomes = data.incomes,
+                    allExpenses = data.expensesList,
+                    totalTransactionCount = data.incomes.size + data.expensesList.size,
                     isLoading = false
                 ) }
             }
         }
 
         loadDailySpending()
-        loadYearOverYear()
     }
 
     private fun loadDailySpending() {
@@ -175,31 +186,15 @@ class AnalyticsViewModel @Inject constructor(
         }
     }
 
-    private fun loadYearOverYear() {
-        viewModelScope.launch {
-            val comparisons = mutableListOf<YearComparison>()
-            val calendar = Calendar.getInstance()
-
-            for (i in 0 until 12) {
-                calendar.timeInMillis = System.currentTimeMillis()
-                calendar.add(Calendar.MONTH, -i)
-                
-                val monthName = DateUtils.formatMonthYear(calendar.timeInMillis).split(" ").first()
-                val start = DateUtils.getStartOfMonth(calendar.timeInMillis)
-                val end = DateUtils.getEndOfMonth(calendar.timeInMillis)
-
-                // Current year
-                combine(
-                    incomeRepository.getTotalIncomeByDateRange(start, end),
-                    expenseRepository.getTotalExpensesByDateRange(start, end)
-                ) { income, expenses ->
-                    (income ?: 0.0) - (expenses ?: 0.0)
-                }.first().let { savings ->
-                    comparisons.add(YearComparison(monthName, savings, 0.0, 0.0))
-                }
-            }
-
-            _uiState.update { it.copy(yearOverYear = comparisons) }
-        }
+    fun refreshAnalytics() {
+        loadAnalytics()
     }
 }
+
+private data class AnalyticsData(
+    val income: Double,
+    val expenses: Double,
+    val categories: List<CategoryTotal>,
+    val incomes: List<Income>,
+    val expensesList: List<Expense>
+)

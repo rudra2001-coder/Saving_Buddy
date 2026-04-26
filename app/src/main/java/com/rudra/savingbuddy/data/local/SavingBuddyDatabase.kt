@@ -13,6 +13,7 @@ import com.rudra.savingbuddy.data.local.dao.BudgetDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import com.rudra.savingbuddy.data.local.entity.AccountBalanceHistoryEntity
@@ -22,6 +23,7 @@ import com.rudra.savingbuddy.data.local.entity.BudgetEntity
 import com.rudra.savingbuddy.data.local.entity.ExpenseEntity
 import com.rudra.savingbuddy.data.local.entity.GoalEntity
 import com.rudra.savingbuddy.data.local.entity.IncomeEntity
+import com.rudra.savingbuddy.data.local.entity.SubscriptionEntity
 import com.rudra.savingbuddy.data.local.entity.TransferEntity
 import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
 
@@ -33,11 +35,12 @@ import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
         UserSettingsEntity::class,
         GoalEntity::class,
         BillReminderEntity::class,
+        SubscriptionEntity::class,
         AccountEntity::class,
         TransferEntity::class,
         AccountBalanceHistoryEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class SavingBuddyDatabase : RoomDatabase() {
@@ -47,6 +50,7 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
     abstract fun userSettingsDao(): UserSettingsDao
     abstract fun goalDao(): GoalDao
     abstract fun billReminderDao(): BillReminderDao
+    abstract fun subscriptionDao(): SubscriptionDao
     abstract fun accountDao(): AccountDao
     abstract fun transferDao(): TransferDao
     abstract fun accountBalanceHistoryDao(): AccountBalanceHistoryDao
@@ -111,11 +115,34 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `subscriptions` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `billingCycle` TEXT NOT NULL,
+                        `nextBillingDate` INTEGER NOT NULL,
+                        `category` TEXT NOT NULL,
+                        `isActive` INTEGER NOT NULL DEFAULT 1,
+                        `notifyDaysBefore` INTEGER NOT NULL DEFAULT 3,
+                        `notes` TEXT,
+                        `accountId` INTEGER,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_subscriptions_nextBillingDate` ON `subscriptions` (`nextBillingDate`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_subscriptions_isActive` ON `subscriptions` (`isActive`)")
+            }
+        }
+
         fun getMigrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
-            MIGRATION_4_5
+            MIGRATION_4_5,
+            MIGRATION_5_6
         )
     }
 }

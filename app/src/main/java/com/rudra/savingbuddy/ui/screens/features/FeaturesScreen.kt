@@ -4,6 +4,7 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,6 +28,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 
@@ -43,44 +45,34 @@ data class FeatureItem(
 )
 
 val allFeatures = listOf(
-    // Main
     FeatureItem("dashboard", "Dashboard", "Overview & summary", Icons.Default.Dashboard, Color(0xFF4CAF50), "Main", "dashboard"),
     FeatureItem("fusion", "Fusion Timeline", "Unified transactions", Icons.Default.JoinInner, Color(0xFF7C4DFF), "Main", "fusion", isNew = true),
     
-    // Add Transactions
     FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Add", "add_income"),
     FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, Color(0xFFF44336), "Add", "add_expense"),
     FeatureItem("transfer", "Transfer Money", "Move between accounts", Icons.Default.SwapHoriz, Color(0xFFFF9800), "Add", "transfer"),
 
-    // Accounts
     FeatureItem("accounts", "All Accounts", "Manage accounts", Icons.Default.AccountBalanceWallet, Color(0xFF2196F3), "Accounts", "accounts"),
     FeatureItem("add_account", "Add Account", "Add new account", Icons.Default.AddCircle, Color(0xFF2196F3), "Accounts", "add_account"),
 
-    // History
     FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, Color(0xFF4CAF50), "History", "income"),
     FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, Color(0xFFF44336), "History", "expense"),
 
-    // Goals
     FeatureItem("goals", "Savings Goals", "Track your goals", Icons.Default.Flag, Color(0xFFE91E63), "Goals", "goals"),
     FeatureItem("add_goal", "Add New Goal", "Create a goal", Icons.Default.AddLocationAlt, Color(0xFFE91E63), "Goals", "add_goal"),
 
-    // Budget
     FeatureItem("budget", "Budget", "Monthly budget", Icons.Default.AccountBalance, Color(0xFF3F51B5), "Budget", "budget"),
 
-    // Recurring
-    FeatureItem("recurring", "Recurring", "Recurring transactions", Icons.Default.Repeat, Color(0xFF9C27B6), "Transactions", "recurring"),
+    FeatureItem("recurring", "Recurring", "Recurring transactions", Icons.Default.Repeat, Color(0xFF9C27B0), "Transactions", "recurring"),
     FeatureItem("bills", "Bill Reminders", "Upcoming bills", Icons.Default.Receipt, Color(0xFFFF9800), "Transactions", "bills"),
 
-    // Tools
     FeatureItem("calendar", "Calendar", "View by date", Icons.Default.CalendarMonth, Color(0xFF673AB7), "Tools", "calendar"),
     FeatureItem("export", "Export Data", "Export to CSV/PDF", Icons.Default.FileDownload, Color(0xFF607D8B), "Tools", "export"),
-    FeatureItem("calculator", "Calculator", "Financial calculator", Icons.Default.Calculate, Color(0xFF607D8B), "Tools", "calculator"),
+    FeatureItem("calculator", "Calculator", "Financial calculator", Icons.Default.Calculate, Color(0xFF00BCD4), "Tools", "calculator"),
 
-    // Reports
     FeatureItem("reports", "Reports", "Analytics & insights", Icons.Default.Analytics, Color(0xFF2196F3), "Reports", "reports"),
     FeatureItem("analytics", "Analytics", "Detailed analytics", Icons.Default.Insights, Color(0xFF2196F3), "Reports", "analytics"),
 
-    // Settings
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
     FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
     FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, Color(0xFF4CAF50), "Settings", "backup", isNew = true),
@@ -151,7 +143,6 @@ fun FeaturesScreen(navController: NavController?) {
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // Category Chips - Scrollable Row
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -166,21 +157,23 @@ fun FeaturesScreen(navController: NavController?) {
                         onClick = { selectedCategory = category },
                         label = { Text(category) },
                         colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF6200EE),
-                            selectedLabelColor = Color.White
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                         )
                     )
                 }
             }
 
-            // Quick Stats Card
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
-                )
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             ) {
                 Row(
                     modifier = Modifier
@@ -188,37 +181,38 @@ fun FeaturesScreen(navController: NavController?) {
                         .padding(16.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${allFeatures.size}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("Features", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${featureCategories.size - 1}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                        Text("Categories", style = MaterialTheme.typography.bodySmall)
-                    }
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${allFeatures.count { it.isNew }}", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-                        Text("New", style = MaterialTheme.typography.bodySmall)
-                    }
+                    FeatureStatColumn(
+                        value = allFeatures.size.toString(),
+                        label = "Features",
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    FeatureStatColumn(
+                        value = (featureCategories.size - 1).toString(),
+                        label = "Categories",
+                        color = MaterialTheme.colorScheme.secondary
+                    )
+                    FeatureStatColumn(
+                        value = allFeatures.count { it.isNew }.toString(),
+                        label = "New",
+                        color = Color(0xFF4CAF50)
+                    )
                 }
             }
 
-            // Features Grid or List
             if (showGrid) {
                 LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
+                    columns = GridCells.Fixed(3),
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(filteredFeatures) { feature ->
                         ModernFeatureCard(
                             feature = feature,
-                            onClick = {
-                                navController?.navigate(feature.route)
-                            }
+                            onClick = { navController?.navigate(feature.route) }
                         )
                     }
                 }
@@ -231,9 +225,7 @@ fun FeaturesScreen(navController: NavController?) {
                     items(filteredFeatures) { feature ->
                         ModernFeatureListItem(
                             feature = feature,
-                            onClick = {
-                                navController?.navigate(feature.route)
-                            }
+                            onClick = { navController?.navigate(feature.route) }
                         )
                     }
                 }
@@ -243,82 +235,131 @@ fun FeaturesScreen(navController: NavController?) {
 }
 
 @Composable
+private fun FeatureStatColumn(value: String, label: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            value, 
+            style = MaterialTheme.typography.headlineSmall, 
+            fontWeight = FontWeight.Bold, 
+            color = color
+        )
+        Text(
+            label, 
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
+}
+
+@Composable
 fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
     val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(200), label = "scale")
-    val backgroundColor by animateColorAsState(
-        targetValue = feature.color.copy(alpha = 0.1f),
-        animationSpec = tween(300),
-        label = "bg_color"
-    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .aspectRatio(1.05f)
+            .aspectRatio(0.95f)
             .scale(scale)
-            .clip(RoundedCornerShape(20.dp))
             .clickable { onClick() },
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp),
+                    .padding(12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
+                        .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .background(feature.color.copy(alpha = 0.2f)),
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    feature.color.copy(alpha = 0.3f),
+                                    feature.color.copy(alpha = 0.1f)
+                                )
+                            )
+                        )
+                        .border(
+                            width = 1.dp,
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    feature.color.copy(alpha = 0.5f),
+                                    feature.color.copy(alpha = 0.2f)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = feature.icon,
                         contentDescription = null,
                         tint = feature.color,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(26.dp)
                     )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
                     text = feature.title,
-                    style = MaterialTheme.typography.bodyLarge,
+                    style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
-                    maxLines = 1
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
 
                 Text(
                     text = feature.description,
-                    style = MaterialTheme.typography.bodySmall,
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
-                    maxLines = 2
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            // Badges
             if (feature.isNew || feature.isBeta) {
                 Row(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(8.dp),
+                        .padding(6.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     if (feature.isNew) {
-                        Badge(containerColor = Color(0xFF4CAF50)) {
-                            Text("NEW", style = MaterialTheme.typography.labelSmall)
+                        Surface(
+                            color = Color(0xFF4CAF50),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "NEW",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
                     if (feature.isBeta) {
-                        Badge(containerColor = Color(0xFFFF9800)) {
-                            Text("BETA", style = MaterialTheme.typography.labelSmall)
+                        Surface(
+                            color = Color(0xFFFF9800),
+                            shape = RoundedCornerShape(6.dp)
+                        ) {
+                            Text(
+                                "BETA",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
                         }
                     }
                 }
@@ -332,8 +373,14 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable { onClick() }
+            .clip(RoundedCornerShape(20.dp))
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
         Row(
             modifier = Modifier
@@ -344,8 +391,20 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(feature.color.copy(alpha = 0.15f)),
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        Brush.linearGradient(
+                            colors = listOf(
+                                feature.color.copy(alpha = 0.25f),
+                                feature.color.copy(alpha = 0.1f)
+                            )
+                        )
+                    )
+                    .border(
+                        width = 1.dp,
+                        color = feature.color.copy(alpha = 0.3f),
+                        shape = RoundedCornerShape(14.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -372,8 +431,16 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
             }
 
             if (feature.isNew) {
-                Badge(containerColor = Color(0xFF4CAF50)) {
-                    Text("NEW", style = MaterialTheme.typography.labelSmall)
+                Surface(
+                    color = Color(0xFF4CAF50),
+                    shape = RoundedCornerShape(6.dp)
+                ) {
+                    Text(
+                        "NEW",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
                 }
             }
 
