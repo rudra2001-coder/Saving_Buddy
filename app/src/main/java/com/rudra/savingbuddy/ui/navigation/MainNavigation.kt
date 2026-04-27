@@ -38,6 +38,7 @@ import com.rudra.savingbuddy.ui.screens.export.ExportScreen
 import com.rudra.savingbuddy.ui.screens.reports.AnalyticsScreen
 import com.rudra.savingbuddy.ui.screens.transactionhistory.TransactionHistoryScreen
 import com.rudra.savingbuddy.ui.screens.gamification.GamificationScreen
+import com.rudra.savingbuddy.ui.screens.expense.ExpenseDetailScreen
 
 @Composable
 fun MainNavigation() {
@@ -172,6 +173,13 @@ fun MainNavigation() {
                     navController = navController,
                     onNavigateBack = { navController.popBackStack() }
                 )
+            }
+            composable(Screen.Transactions.route) {
+                TransactionHistoryScreen(navController = navController)
+            }
+            composable(Screen.ExpenseDetail.route + "/{expenseId}") { backStackEntry ->
+                val expenseId = backStackEntry.arguments?.getString("expenseId")?.toLongOrNull() ?: 0L
+                ExpenseDetailScreen(navController = navController, expenseId = expenseId)
             }
         }
     }

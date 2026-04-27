@@ -109,7 +109,6 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE bill_reminders ADD COLUMN accountId INTEGER")
                 db.execSQL("ALTER TABLE bill_reminders ADD COLUMN autoPay INTEGER DEFAULT 0")
                 db.execSQL("ALTER TABLE bill_reminders ADD COLUMN remindDaysBefore INTEGER DEFAULT 3")
-                db.execSQL("ALTER TABLE bill_reminders ADD COLUMN notes TEXT")
                 db.execSQL("ALTER TABLE budgets ADD COLUMN rollover INTEGER DEFAULT 0")
                 db.execSQL("ALTER TABLE budgets ADD COLUMN alertThreshold REAL DEFAULT 0.8")
             }

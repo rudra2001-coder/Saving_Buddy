@@ -217,4 +217,17 @@ class ExpenseViewModel @Inject constructor(
             }
         }
     }
+
+    fun loadExpenseById(expenseId: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                expenseRepository.getExpenseById(expenseId)?.let { expense ->
+                    _uiState.update { it.copy(editingExpense = expense, isLoading = false) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message, isLoading = false) }
+            }
+        }
+    }
 }

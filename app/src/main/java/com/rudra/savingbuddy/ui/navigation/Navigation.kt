@@ -49,6 +49,8 @@ sealed class Screen(
     data object AppLock : Screen("app_lock", "App Lock", Icons.Default.Lock)
     data object AutoRecurring : Screen("auto_recurring", "Auto Add", Icons.Default.Loop)
     data object AutoCategory : Screen("auto_category", "Auto Category", Icons.Default.AutoAwesome)
+    data object ExpenseDetail : Screen("expense_detail", "Expense Detail", Icons.Default.Receipt)
+    data object Transactions : Screen("transactions", "Transactions", Icons.Default.SwapHoriz)
 }
 
 val bottomNavItems = listOf(

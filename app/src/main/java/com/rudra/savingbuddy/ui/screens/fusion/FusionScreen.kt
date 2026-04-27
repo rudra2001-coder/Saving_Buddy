@@ -237,10 +237,10 @@ private fun TimelineTab(
                     SimpleDateHeader(date = date, count = dayTransactions.size)
                 }
 
-                items(dayTransactions.size, key = { index ->
-                    dayTransactions[index].id
-                }) { index ->
-                    SimpleTransactionCard(transaction = dayTransactions[index])
+                dayTransactions.forEachIndexed { index, transaction ->
+                    item(key = "tx_${date}_${index}_${transaction.id}") {
+                        SimpleTransactionCard(transaction = transaction)
+                    }
                 }
             }
 

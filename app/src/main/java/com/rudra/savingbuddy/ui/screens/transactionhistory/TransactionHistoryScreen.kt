@@ -157,17 +157,19 @@ fun TransactionHistoryScreen(
                                 DateHeader(dateGroup = dateGroup)
                             }
                             
-                            items(transactions, key = { "${it.type}_${it.id}" }) { transaction ->
-                                TransactionCard(
-                                    transaction = transaction,
-                                    onClick = {
-                                        if (transaction.type == "INCOME") {
-                                            navController?.navigate("income")
-                                        } else {
-                                            navController?.navigate("expense")
+                            transactions.forEachIndexed { index, transaction ->
+                                item(key = "th_${dateGroup}_${index}_${transaction.id}") {
+                                    TransactionCard(
+                                        transaction = transaction,
+                                        onClick = {
+                                            if (transaction.type == "INCOME") {
+                                                navController?.navigate("income")
+                                            } else {
+                                                navController?.navigate("expense")
+                                            }
                                         }
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
