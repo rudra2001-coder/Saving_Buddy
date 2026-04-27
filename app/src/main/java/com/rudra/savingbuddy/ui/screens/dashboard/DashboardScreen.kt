@@ -13,6 +13,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -30,10 +33,13 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.ui.theme.*
@@ -50,7 +56,20 @@ fun DashboardScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     val view = LocalView.current
-
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    
+    val horizontalPadding = when {
+        screenWidth < 360 -> 8.dp
+        screenWidth < 400 -> 12.dp
+        else -> 16.dp
+    }
+    
+    val spacing = when {
+        screenWidth < 360 -> 12.dp
+        else -> 20.dp
+    }
+    
     val pullToRefreshState = rememberPullToRefreshState()
 
     val fabRotation by animateFloatAsState(
@@ -108,8 +127,8 @@ fun DashboardScreen(
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
+                    .padding(horizontal = horizontalPadding),
+                verticalArrangement = Arrangement.spacedBy(spacing)
             ) {
                 item { Spacer(modifier = Modifier.height(8.dp)) }
 
@@ -482,6 +501,24 @@ private fun NetBalanceCard(
 
 @Composable
 private fun QuickActionsSection(navController: NavController?) {
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    
+    val isCompactScreen = screenWidth < 360
+    val horizontalPadding = if (screenWidth < 360) 8.dp else 16.dp
+    
+    val quickActions = listOf(
+        QuickActionData("Budget", Icons.Outlined.PieChart, MaterialTheme.colorScheme.tertiary, "budget"),
+        QuickActionData("Goals", Icons.Outlined.Flag, SavingsBlue, "goals"),
+        QuickActionData("Calendar", Icons.Outlined.CalendarMonth, MaterialTheme.colorScheme.secondary, "calendar"),
+        QuickActionData("Fusion", Icons.Outlined.JoinFull, Color(0xFF7C4DFF), "fusion"),
+        QuickActionData("Bills", Icons.Outlined.Receipt, ExpenseRed, "bills"),
+        QuickActionData("Calculator", Icons.Outlined.Calculate, Color(0xFF00BCD4), "calculator"),
+        QuickActionData("Export", Icons.Outlined.FileDownload, Color(0xFF607D8B), "export")
+    )
+    
+    val visibleActions = if (isCompactScreen) quickActions.take(5) else quickActions
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
@@ -491,58 +528,51 @@ private fun QuickActionsSection(navController: NavController?) {
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            
-            QuickActionItem(
-                icon = Icons.Outlined.PieChart,
-                label = "Budget",
-                color = MaterialTheme.colorScheme.tertiary,
-                onClick = { navController?.navigate("budget") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.Flag,
-                label = "Goals",
-                color = SavingsBlue,
-                onClick = { navController?.navigate("goals") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.CalendarMonth,
-                label = "Calendar",
-                color = MaterialTheme.colorScheme.secondary,
-                onClick = { navController?.navigate("calendar") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.JoinFull,
-                label = "Fusion",
-                color = Color(0xFF7C4DFF),
-                onClick = { navController?.navigate("fusion") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.Receipt,
-                label = "Bills",
-                color = ExpenseRed,
-                onClick = { navController?.navigate("bills") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.Calculate,
-                label = "Calculator",
-                color = Color(0xFF00BCD4),
-                onClick = { navController?.navigate("calculator") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.FileDownload,
-                label = "Export",
-                color = Color(0xFF607D8B),
-                onClick = { navController?.navigate("export") }
-            )
+        if (isCompactScreen) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = horizontalPadding)
+            ) {
+                items(quickActions) { action ->
+                    QuickActionItem(
+                        icon = action.icon,
+                        label = action.label,
+                        color = action.color,
+                        onClick = { navController?.navigate(action.route) },
+                        isCompact = true
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 16.dp, horizontal = horizontalPadding),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                visibleActions.forEach { action ->
+                    QuickActionItem(
+                        icon = action.icon,
+                        label = action.label,
+                        color = action.color,
+                        onClick = { navController?.navigate(action.route) },
+                        isCompact = false
+                    )
+                }
+            }
         }
     }
 }
+
+private data class QuickActionData(
+    val label: String,
+    val icon: ImageVector,
+    val color: Color,
+    val route: String
+)
 
 @Composable
 private fun SafeNavigation(
@@ -559,15 +589,27 @@ private fun QuickActionItem(
     icon: ImageVector,
     label: String,
     color: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    isCompact: Boolean = false
 ) {
+    val iconSize = if (isCompact) 40.dp else 48.dp
+    val iconInnerSize = if (isCompact) 20.dp else 24.dp
+    val labelStyle = if (isCompact) {
+        MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp)
+    } else {
+        MaterialTheme.typography.labelSmall
+    }
+    
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(if (isCompact) 4.dp else 8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(iconSize)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.12f)),
             contentAlignment = Alignment.Center
@@ -576,14 +618,17 @@ private fun QuickActionItem(
                 imageVector = icon,
                 contentDescription = label,
                 tint = color,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(iconInnerSize)
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            style = labelStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
         )
     }
 }
