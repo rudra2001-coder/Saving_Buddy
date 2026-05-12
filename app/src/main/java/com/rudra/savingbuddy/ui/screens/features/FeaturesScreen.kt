@@ -76,11 +76,20 @@ val allFeatures = listOf(
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
     FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
     FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, Color(0xFF4CAF50), "Settings", "backup", isNew = true),
+    FeatureItem("music", "Music Player", "Focus & mood music", Icons.Default.MusicNote, Color(0xFFE91E63), "Entertainment", "music", isNew = true),
+    FeatureItem("mood_music", "Mood Music", "Music by your mood", Icons.Default.Psychology, Color(0xFF9C27B0), "Entertainment", "mood_music", isNew = true),
+    FeatureItem("investment_tracker", "Investments", "Track investments", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Finance", "investment_tracker", isNew = true),
+    FeatureItem("net_worth", "Net Worth", "Total wealth tracking", Icons.Default.AccountBalance, Color(0xFF2196F3), "Finance", "net_worth", isNew = true),
+    FeatureItem("subscription_manager", "Subscriptions", "Manage subscriptions", Icons.Default.Subscriptions, Color(0xFFFF9800), "Finance", "subscription_manager", isNew = true),
+    FeatureItem("currency_converter", "Currency Converter", "14 currencies live", Icons.Default.CurrencyExchange, Color(0xFF00BCD4), "Finance", "currency_converter", isNew = true),
+    FeatureItem("receipt_scanner", "Receipt Scanner", "Scan with camera", Icons.Default.CameraAlt, Color(0xFF2196F3), "Finance", "receipt_scanner", isNew = true),
+    FeatureItem("changelog", "What's New", "Version history", Icons.Default.NewReleases, Color(0xFFE91E63), "Settings", "changelog", isNew = true),
+    FeatureItem("language", "Language", "Multi-language support", Icons.Default.Language, Color(0xFF607D8B), "Settings", "language_settings", isNew = true),
     FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, Color(0xFF7C4DFF), "Settings", "advanced", isNew = true),
 )
 
 val featureCategories = listOf(
-    "All", "Main", "Add", "Accounts", "History", "Goals", "Budget", "Transactions", "Tools", "Reports", "Settings"
+    "All", "Main", "Add", "Accounts", "History", "Goals", "Budget", "Transactions", "Tools", "Reports", "Entertainment", "Finance", "Settings"
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

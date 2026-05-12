@@ -19,6 +19,10 @@ import javax.inject.Inject
 
 data class SettingsUiState(
     val darkMode: Boolean = false,
+    val amoledMode: Boolean = false,
+    val darkModeScheduled: Boolean = false,
+    val darkModeStartHour: Int = 18,
+    val darkModeEndHour: Int = 6,
     val currency: String = "BDT",
     val startOfWeek: String = "Saturday",
     val budget: Budget? = null,
@@ -37,7 +41,15 @@ data class SettingsUiState(
     val isLoading: Boolean = false,
     val accountCount: Int = 0,
     val goalCount: Int = 0,
-    val billCount: Int = 0
+    val billCount: Int = 0,
+    val musicEnabled: Boolean = true,
+    val musicAutoPlay: Boolean = false,
+    val language: String = "English",
+    val languageCode: String = "en",
+    val investmentTracking: Boolean = false,
+    val autoCategorizeEnabled: Boolean = true,
+    val smartNotificationsEnabled: Boolean = true,
+    val receiptScannerEnabled: Boolean = true
 )
 
 @HiltViewModel
@@ -64,6 +76,10 @@ class SettingsViewModel @Inject constructor(
             ) { settings, budget ->
                 SettingsUiState(
                     darkMode = settings?.darkMode ?: false,
+                    amoledMode = settings?.amoledMode ?: false,
+                    darkModeScheduled = settings?.darkModeScheduled ?: false,
+                    darkModeStartHour = settings?.darkModeStartHour ?: 18,
+                    darkModeEndHour = settings?.darkModeEndHour ?: 6,
                     currency = settings?.currency ?: "BDT",
                     startOfWeek = settings?.startOfWeek ?: "Saturday",
                     budget = budget,
@@ -88,6 +104,10 @@ class SettingsViewModel @Inject constructor(
     private fun getCurrentUserSettings() = UserSettings(
         id = 1,
         darkMode = _uiState.value.darkMode,
+        amoledMode = _uiState.value.amoledMode,
+        darkModeScheduled = _uiState.value.darkModeScheduled,
+        darkModeStartHour = _uiState.value.darkModeStartHour,
+        darkModeEndHour = _uiState.value.darkModeEndHour,
         currency = _uiState.value.currency,
         startOfWeek = _uiState.value.startOfWeek,
         dailyReminderEnabled = _uiState.value.dailyReminderEnabled,
@@ -102,9 +122,58 @@ class SettingsViewModel @Inject constructor(
         biometricLockEnabled = _uiState.value.biometricLockEnabled
     )
 
+    fun setMusicEnabled(enabled: Boolean) {
+        _uiState.update { it.copy(musicEnabled = enabled) }
+    }
+
+    fun setMusicAutoPlay(enabled: Boolean) {
+        _uiState.update { it.copy(musicAutoPlay = enabled) }
+    }
+
+    fun setInvestmentTracking(enabled: Boolean) {
+        _uiState.update { it.copy(investmentTracking = enabled) }
+    }
+
+    fun setAutoCategorize(enabled: Boolean) {
+        _uiState.update { it.copy(autoCategorizeEnabled = enabled) }
+    }
+
+    fun setSmartNotifications(enabled: Boolean) {
+        _uiState.update { it.copy(smartNotificationsEnabled = enabled) }
+    }
+
     fun setDarkMode(enabled: Boolean) {
         viewModelScope.launch {
             settingsRepository.updateSettings(getCurrentUserSettings().copy(darkMode = enabled))
+            _uiState.update { it.copy(darkMode = enabled) }
+        }
+    }
+
+    fun setAmoledMode(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(amoledMode = enabled))
+            _uiState.update { it.copy(amoledMode = enabled) }
+        }
+    }
+
+    fun setDarkModeScheduled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(darkModeScheduled = enabled))
+            _uiState.update { it.copy(darkModeScheduled = enabled) }
+        }
+    }
+
+    fun setDarkModeStartHour(hour: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(darkModeStartHour = hour))
+            _uiState.update { it.copy(darkModeStartHour = hour) }
+        }
+    }
+
+    fun setDarkModeEndHour(hour: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(darkModeEndHour = hour))
+            _uiState.update { it.copy(darkModeEndHour = hour) }
         }
     }
 

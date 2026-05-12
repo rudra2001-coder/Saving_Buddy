@@ -18,43 +18,7 @@ import com.rudra.savingbuddy.domain.model.NotificationFilter
 import com.rudra.savingbuddy.domain.model.NotificationType
 import com.rudra.savingbuddy.util.DateUtils
 
-private val sampleNotifications = listOf(
-    AppNotification(
-        id = 1,
-        title = "Budget Alert",
-        message = "You've used 80% of your monthly budget",
-        type = NotificationType.BUDGET_ALERT,
-        timestamp = System.currentTimeMillis() - 3600000
-    ),
-    AppNotification(
-        id = 2,
-        title = "Bill Reminder",
-        message = "Electricity bill due in 2 days",
-        type = NotificationType.BILL_REMINDER,
-        timestamp = System.currentTimeMillis() - 7200000
-    ),
-    AppNotification(
-        id = 3,
-        title = "Savings Streak",
-        message = "Great job! 5-day savings streak continued",
-        type = NotificationType.SAVINGS_STREAK,
-        timestamp = System.currentTimeMillis() - 86400000
-    ),
-    AppNotification(
-        id = 4,
-        title = "Recurring Income",
-        message = "Salary of $3,000 has been added",
-        type = NotificationType.RECURRING_TRANSACTION,
-        timestamp = System.currentTimeMillis() - 172800000
-    ),
-    AppNotification(
-        id = 5,
-        title = "Achievement Unlocked",
-        message = "First $1,000 saved!",
-        type = NotificationType.ACHIEVEMENT,
-        timestamp = System.currentTimeMillis() - 259200000
-    )
-)
+private val sampleNotifications = emptyList<AppNotification>()
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

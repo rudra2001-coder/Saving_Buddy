@@ -65,10 +65,16 @@ fun SettingsScreen(
     var showStartOfWeekDialog by remember { mutableStateOf(false) }
     var showExportDialog by remember { mutableStateOf(false) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showStartHourPicker by remember { mutableStateOf(false) }
+    var showEndHourPicker by remember { mutableStateOf(false) }
 
     val settingsSections = listOf(
         SettingsSection("Appearance", Icons.Outlined.Palette, listOf(
-            SettingsItem("Theme", if (uiState.darkMode) "Dark" else "Light", Icons.Outlined.DarkMode, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.darkMode, onCheckedChange = { viewModel.setDarkMode(it) }) }),
+            SettingsItem("Theme", if (uiState.amoledMode) "AMOLED Dark" else if (uiState.darkMode) "Dark" else "Light", Icons.Outlined.DarkMode, Color(0xFF7C4DFF), SettingsAction.Dialog),
+            SettingsItem("AMOLED Mode", "Pure black background", Icons.Outlined.Brightness3, Color(0xFF1A1A2E), SettingsAction.Toggle, { Switch(checked = uiState.amoledMode, onCheckedChange = { viewModel.setAmoledMode(it) }) }),
+            SettingsItem("Dark Mode Schedule", if (uiState.darkModeScheduled) "On" else "Off", Icons.Outlined.Schedule, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.darkModeScheduled, onCheckedChange = { viewModel.setDarkModeScheduled(it) }) }),
+            SettingsItem("Schedule Start", "${uiState.darkModeStartHour}:00", Icons.Outlined.NightsStay, Color(0xFF455A64), if (uiState.darkModeScheduled) SettingsAction.Dialog else SettingsAction.None),
+            SettingsItem("Schedule End", "${uiState.darkModeEndHour}:00", Icons.Outlined.WbSunny, Color(0xFFFF9800), if (uiState.darkModeScheduled) SettingsAction.Dialog else SettingsAction.None),
             SettingsItem("Currency", "${uiState.currency} (৳)", Icons.Outlined.AttachMoney, Color(0xFF4CAF50), SettingsAction.Dialog),
             SettingsItem("Start of Week", uiState.startOfWeek, Icons.Outlined.CalendarViewWeek, Color(0xFFFF9800), SettingsAction.Dialog)
         )),
@@ -93,6 +99,19 @@ fun SettingsScreen(
             SettingsItem("Backup", "Local storage", Icons.Outlined.Backup, Color(0xFF607D8B), SettingsAction.Navigation),
             SettingsItem("Privacy Mode", "Hide amounts", Icons.Outlined.VisibilityOff, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.privacyModeEnabled, onCheckedChange = { viewModel.setPrivacyMode(it) }) }),
             SettingsItem("Biometric Lock", "Fingerprint unlock", Icons.Outlined.Fingerprint, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.biometricLockEnabled, onCheckedChange = { viewModel.setBiometricLock(it) }) })
+        )),
+        SettingsSection("Music & Audio", Icons.Default.MusicNote, listOf(
+            SettingsItem("Background Music", "Focus & mood player", Icons.Default.MusicNote, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.musicEnabled, onCheckedChange = { viewModel.setMusicEnabled(it) }) }),
+            SettingsItem("Auto-Play Music", "Play on app open", Icons.Default.PlayCircle, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.musicAutoPlay, onCheckedChange = { viewModel.setMusicAutoPlay(it) }) }),
+            SettingsItem("Open Music Player", "Browse & play tracks", Icons.Default.QueueMusic, Color(0xFFE91E63), SettingsAction.Navigation)
+        )),
+        SettingsSection("Language", Icons.Default.Language, listOf(
+            SettingsItem("App Language", uiState.language, Icons.Default.Language, Color(0xFF607D8B), SettingsAction.Navigation)
+        )),
+        SettingsSection("Smart Features", Icons.Default.AutoAwesome, listOf(
+            SettingsItem("Investment Tracking", "Track stocks & funds", Icons.Default.TrendingUp, Color(0xFF4CAF50), SettingsAction.Toggle, { Switch(checked = uiState.investmentTracking, onCheckedChange = { viewModel.setInvestmentTracking(it) }) }),
+            SettingsItem("Auto-Categorize", "Smart category detection", Icons.Default.AutoAwesome, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.autoCategorizeEnabled, onCheckedChange = { viewModel.setAutoCategorize(it) }) }),
+            SettingsItem("Smart Notifications", "AI-powered alerts", Icons.Default.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.smartNotificationsEnabled, onCheckedChange = { viewModel.setSmartNotifications(it) }) })
         )),
         SettingsSection("About & Support", Icons.Outlined.Info, listOf(
             SettingsItem("App Version", "1.0.0 (Build 1)", Icons.Outlined.Info, Color(0xFF607D8B), SettingsAction.None),
@@ -139,19 +158,24 @@ fun SettingsScreen(
             }
 
             items(settingsSections.filter { it.title == expandedSection }) { section ->
-                SettingsSectionCard(title = section.title, icon = section.icon, items = section.items, isExpanded = true, onToggle = {}, onItemClick = { item -> 
+                SettingsSectionCard(title = section.title, icon = section.icon, items = section.items, isExpanded = true, onToggle = {},                     onItemClick = { item -> 
                     when (item.title) {
                         "Monthly Budget" -> showBudgetDialog = true
                         "Currency" -> showCurrencyDialog = true
                         "Export Data" -> showExportDialog = true
-                        "Theme" -> viewModel.setDarkMode(!uiState.darkMode)
+                        "Theme" -> showThemeDialog = true
                         "Start of Week" -> showStartOfWeekDialog = true
+                        "Schedule Start" -> showStartHourPicker = true
+                        "Schedule End" -> showEndHourPicker = true
                         "Backup" -> navController?.navigate("backup")
                         "Rate App" -> viewModel.rateApp()
                         "Share App" -> viewModel.shareApp()
                         "Contact Support" -> viewModel.contactSupport()
                         "Privacy Policy" -> navController?.navigate("privacy_policy")
                         "Terms of Service" -> navController?.navigate("terms_of_service")
+                        "Open Music Player" -> navController?.navigate("music")
+                        "App Language" -> navController?.navigate("language_settings")
+                        "Investment Tracking" -> navController?.navigate("investment_tracker")
                     }
                 })
             }
@@ -187,6 +211,109 @@ fun SettingsScreen(
     if (showStartOfWeekDialog) {
         SelectionDialog(title = "Start of Week", options = weekDays, selectedOption = uiState.startOfWeek, onDismiss = { showStartOfWeekDialog = false }, onSelect = { viewModel.setStartOfWeek(it); showStartOfWeekDialog = false })
     }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Theme Settings", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Dark Mode", fontWeight = FontWeight.Medium)
+                            Text("Use dark color scheme", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.darkMode, onCheckedChange = { viewModel.setDarkMode(it) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("AMOLED Mode", fontWeight = FontWeight.Medium)
+                            Text("Pure black backgrounds", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.amoledMode, onCheckedChange = { viewModel.setAmoledMode(it) })
+                    }
+                    HorizontalDivider()
+                    Text("Schedule", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Scheduled Dark Mode", fontWeight = FontWeight.Medium)
+                            Text("Auto-switch based on time", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.darkModeScheduled, onCheckedChange = { viewModel.setDarkModeScheduled(it) })
+                    }
+                    if (uiState.darkModeScheduled) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Start Time", fontWeight = FontWeight.Medium)
+                            TextButton(onClick = { showStartHourPicker = true; showThemeDialog = false }) {
+                                Text("${uiState.darkModeStartHour}:00")
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("End Time", fontWeight = FontWeight.Medium)
+                            TextButton(onClick = { showEndHourPicker = true; showThemeDialog = false }) {
+                                Text("${uiState.darkModeEndHour}:00")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("Done") } }
+        )
+    }
+
+    if (showStartHourPicker) {
+        HourPickerDialog(
+            title = "Dark Mode Start",
+            currentHour = uiState.darkModeStartHour,
+            onDismiss = { showStartHourPicker = false },
+            onSelect = { viewModel.setDarkModeStartHour(it); showStartHourPicker = false }
+        )
+    }
+
+    if (showEndHourPicker) {
+        HourPickerDialog(
+            title = "Dark Mode End",
+            currentHour = uiState.darkModeEndHour,
+            onDismiss = { showEndHourPicker = false },
+            onSelect = { viewModel.setDarkModeEndHour(it); showEndHourPicker = false }
+        )
+    }
+}
+
+@Composable
+private fun HourPickerDialog(
+    title: String,
+    currentHour: Int,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit
+) {
+    val hours = (0..23).map { String.format("%02d:00", it) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Bold) },
+        text = {
+            LazyColumn {
+                items(hours) { hourStr ->
+                    val hour = hourStr.substringBefore(":").toInt()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(hour) }
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(hourStr, style = MaterialTheme.typography.bodyLarge)
+                        if (hour == currentHour) {
+                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
 }
 
 @Composable

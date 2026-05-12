@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class BackupData(
-    val version: Int = 1,
+    val version: Int = 2,
     val timestamp: Long = System.currentTimeMillis(),
     val accounts: List<AccountBackup> = emptyList(),
     val transactions: List<TransactionBackup> = emptyList(),
@@ -13,6 +13,10 @@ data class BackupData(
     val billReminders: List<BillReminderBackup> = emptyList(),
     val incomeList: List<IncomeBackup> = emptyList(),
     val expenseList: List<ExpenseBackup> = emptyList(),
+    val subscriptions: List<SubscriptionBackup> = emptyList(),
+    val investments: List<InvestmentBackup> = emptyList(),
+    val musicFavorites: List<MusicFavoriteBackup> = emptyList(),
+    val gamification: GamificationBackup? = null,
     val settings: BackupSettings = BackupSettings()
 )
 
@@ -142,6 +146,49 @@ data class ExpenseBackup(
     val isApproved: Boolean,
     val approvedBy: String?,
     val receiptImagePath: String?
+)
+
+@Serializable
+data class SubscriptionBackup(
+    val id: Long,
+    val name: String,
+    val amount: Double,
+    val billingCycle: String,
+    val nextBillingDate: Long,
+    val category: String,
+    val isActive: Boolean,
+    val notes: String? = null,
+    val createdAt: Long
+)
+
+@Serializable
+data class InvestmentBackup(
+    val id: Int,
+    val name: String,
+    val type: String,
+    val amount: Double,
+    val returns: Double,
+    val returnPercentage: Double,
+    val notes: String? = null
+)
+
+@Serializable
+data class MusicFavoriteBackup(
+    val trackId: Int,
+    val title: String,
+    val artist: String,
+    val genre: String,
+    val addedAt: Long
+)
+
+@Serializable
+data class GamificationBackup(
+    val level: Int = 1,
+    val xp: Int = 0,
+    val currentStreak: Int = 0,
+    val longestStreak: Int = 0,
+    val unlockedBadgeIds: List<String> = emptyList(),
+    val lastLogDate: Long? = null
 )
 
 @Serializable

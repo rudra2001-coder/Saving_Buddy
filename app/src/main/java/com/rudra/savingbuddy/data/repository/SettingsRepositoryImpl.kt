@@ -30,6 +30,10 @@ fun UserSettingsEntity.toDomainSettings(): UserSettings {
     return UserSettings(
         id = 0,
         darkMode = map["darkMode"]?.toBoolean() ?: false,
+        amoledMode = map["amoledMode"]?.toBoolean() ?: false,
+        darkModeScheduled = map["darkModeScheduled"]?.toBoolean() ?: false,
+        darkModeStartHour = map["darkModeStartHour"]?.toIntOrNull() ?: 18,
+        darkModeEndHour = map["darkModeEndHour"]?.toIntOrNull() ?: 6,
         currency = map["currency"] ?: "BDT",
         startOfWeek = map["startOfWeek"] ?: "Saturday",
         dailyReminderEnabled = map["dailyReminder"]?.toBoolean() ?: true,
@@ -50,6 +54,10 @@ fun UserSettingsEntity.toDomainSettings(): UserSettings {
 fun UserSettings.toSettingsEntity(): UserSettingsEntity {
     val valueStr = listOf(
         "darkMode=$darkMode",
+        "amoledMode=$amoledMode",
+        "darkModeScheduled=$darkModeScheduled",
+        "darkModeStartHour=$darkModeStartHour",
+        "darkModeEndHour=$darkModeEndHour",
         "currency=$currency",
         "startOfWeek=$startOfWeek",
         "dailyReminder=$dailyReminderEnabled",

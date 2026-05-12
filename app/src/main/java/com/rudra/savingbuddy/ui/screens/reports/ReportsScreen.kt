@@ -32,6 +32,10 @@ import com.rudra.savingbuddy.util.DateUtils
 import com.rudra.savingbuddy.util.ExportFormat
 import com.rudra.savingbuddy.util.ExportManager
 import com.rudra.savingbuddy.util.ExportType
+import com.rudra.savingbuddy.ui.theme.PremiumButton
+import com.rudra.savingbuddy.ui.theme.PremiumOutlineButton
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import java.text.SimpleDateFormat
 import java.util.Locale
 
@@ -77,7 +81,7 @@ fun ReportsScreen(
             }
 
             when (selectedTab) {
-                0 -> ReportsOverview(viewModel = viewModel, uiState = uiState, onFilterClick = { showFilterSheet = true }, onCustomDateClick = { showCustomDatePicker = true })
+                0 -> ReportsOverview(viewModel = viewModel, uiState = uiState, onFilterClick = { showFilterSheet = true }, onCustomDateClick = { showCustomDatePicker = true }, onExportClick = { showExportDialog = true })
                 1 -> TransactionLogsView(viewModel = viewModel, uiState = uiState, showFilterSheet = showFilterSheet, onFilterClick = { showFilterSheet = true }, onClearFilter = { viewModel.clearFilters() })
             }
         }
@@ -128,7 +132,7 @@ fun ReportsScreen(
 }
 
 @Composable
-fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilterClick: () -> Unit, onCustomDateClick: () -> Unit) {
+fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilterClick: () -> Unit, onCustomDateClick: () -> Unit, onExportClick: () -> Unit = {}) {
     LazyColumn(modifier = Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
         item { Spacer(modifier = Modifier.height(8.dp)) }
 
@@ -235,7 +239,86 @@ fun ReportsOverview(viewModel: ReportsViewModel, uiState: ReportsUiState, onFilt
             }
         }
 
+        if (uiState.insights.isNotEmpty()) {
+            item {
+                InsightsSection(insights = uiState.insights)
+            }
+        }
+
+        item {
+            PremiumActionButtons(
+                onGeneratePdf = { viewModel.generatePdfReport() },
+                onExportData = onExportClick,
+                pdfState = uiState.pdfGenerationState
+            )
+        }
+
         item { Spacer(modifier = Modifier.height(24.dp)) }
+    }
+}
+
+@Composable
+private fun InsightsSection(insights: List<ReportInsight>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = BackgroundCardGlass),
+        border = BorderStroke(1.dp, BorderLight.copy(alpha = 0.3f))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Outlined.Lightbulb, null, tint = WarningOrange, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Smart Insights", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+            insights.forEach { insight ->
+                val (bgColor, iconColor, icon) = when (insight.type) {
+                    InsightType.SUCCESS -> Triple(PrimaryGreen.copy(alpha = 0.1f), PrimaryGreen, Icons.Default.CheckCircle)
+                    InsightType.WARNING -> Triple(WarningOrange.copy(alpha = 0.1f), WarningOrange, Icons.Default.Warning)
+                    InsightType.ERROR -> Triple(ExpenseRed.copy(alpha = 0.1f), ExpenseRed, Icons.Default.Error)
+                    InsightType.INFO -> Triple(SavingsBlue.copy(alpha = 0.1f), SavingsBlue, Icons.Default.Info)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp).clip(RoundedCornerShape(12.dp)).background(bgColor).padding(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Icon(icon, null, tint = iconColor, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column {
+                        Text(insight.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text(insight.description, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PremiumActionButtons(
+    onGeneratePdf: () -> Unit,
+    onExportData: () -> Unit,
+    pdfState: PdfState
+) {
+    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        PremiumButton(
+            text = when (pdfState) {
+                is PdfState.Generating -> "Generating..."
+                is PdfState.Success -> "Done!"
+                else -> "PDF Report"
+            },
+            onClick = onGeneratePdf,
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.PictureAsPdf,
+            enabled = pdfState !is PdfState.Generating
+        )
+        PremiumOutlineButton(
+            text = "Export Data",
+            onClick = onExportData,
+            modifier = Modifier.weight(1f),
+            icon = Icons.Default.FileDownload
+        )
     }
 }
 

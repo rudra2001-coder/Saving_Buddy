@@ -3,6 +3,10 @@ package com.rudra.savingbuddy.domain.model
 data class UserSettings(
     val id: Int = 0,
     val darkMode: Boolean = false,
+    val amoledMode: Boolean = false,
+    val darkModeScheduled: Boolean = false,
+    val darkModeStartHour: Int = 18,
+    val darkModeEndHour: Int = 6,
     val currency: String = "BDT",
     val startOfWeek: String = "Saturday",
     val dailyReminderEnabled: Boolean = true,

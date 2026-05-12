@@ -79,9 +79,14 @@ private val PremiumLightColorScheme = lightColorScheme(
 fun SavingBuddyTheme(
     darkTheme: Boolean = false,
     dynamicColor: Boolean = false,
+    amoledMode: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) PremiumDarkColorScheme else PremiumLightColorScheme
+    val colorScheme = when {
+        amoledMode -> AmoledDarkColorScheme
+        darkTheme -> PremiumDarkColorScheme
+        else -> PremiumLightColorScheme
+    }
     
     val view = LocalView.current
     if (!view.isInEditMode) {

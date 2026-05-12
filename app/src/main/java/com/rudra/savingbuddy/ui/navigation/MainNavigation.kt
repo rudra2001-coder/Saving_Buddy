@@ -1,9 +1,12 @@
 package com.rudra.savingbuddy.ui.navigation
 
+import android.content.Context
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
@@ -42,36 +45,44 @@ import com.rudra.savingbuddy.ui.screens.expense.ExpenseDetailScreen
 
 @Composable
 fun MainNavigation() {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("onboarding", Context.MODE_PRIVATE) }
+    val onboardingCompleted = remember { prefs.getBoolean("completed", false) }
+    val startDestination = if (onboardingCompleted) Screen.Dashboard.route else Screen.Onboarding.route
+
     val navController = rememberNavController()
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
+            AnimatedVisibility(visible = currentRoute != Screen.Onboarding.route && currentRoute != null) {
+                NavigationBar {
+                    val currentDestination = navBackStackEntry?.destination
 
-                bottomNavItems.forEach { screen ->
-                    NavigationBarItem(
-                        icon = { Icon(screen.icon, contentDescription = screen.title) },
-                        label = { Text(screen.title) },
-                        selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
-                        onClick = {
-                            navController.navigate(screen.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
+                    bottomNavItems.forEach { screen ->
+                        NavigationBarItem(
+                            icon = { Icon(screen.icon, contentDescription = screen.title) },
+                            label = { Text(screen.title) },
+                            selected = currentDestination?.hierarchy?.any { it.route == screen.route } == true,
+                            onClick = {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.findStartDestination().id) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
                                 }
-                                launchSingleTop = true
-                                restoreState = true
                             }
-                        }
-                    )
+                        )
+                    }
                 }
             }
         }
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = Screen.Dashboard.route,
+            startDestination = startDestination,
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
@@ -180,6 +191,55 @@ fun MainNavigation() {
             composable(Screen.ExpenseDetail.route + "/{expenseId}") { backStackEntry ->
                 val expenseId = backStackEntry.arguments?.getString("expenseId")?.toLongOrNull() ?: 0L
                 ExpenseDetailScreen(navController = navController, expenseId = expenseId)
+            }
+            composable(Screen.Music.route) {
+                com.rudra.savingbuddy.ui.screens.music.MusicScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.LanguageSettings.route) {
+                com.rudra.savingbuddy.ui.screens.language.LanguageScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.InvestmentTracker.route) {
+                com.rudra.savingbuddy.ui.screens.investment.InvestmentScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.NetWorth.route) {
+                com.rudra.savingbuddy.ui.screens.investment.InvestmentScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.SubscriptionManager.route) {
+                com.rudra.savingbuddy.ui.screens.subscriptions.SubscriptionManagerScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.CurrencyConverter.route) {
+                com.rudra.savingbuddy.ui.screens.currency.CurrencyConverterScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.ReceiptScanner.route) {
+                com.rudra.savingbuddy.ui.screens.scanner.ReceiptScannerScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Changelog.route) {
+                com.rudra.savingbuddy.ui.screens.changelog.ChangelogScreen(
+                    onNavigateBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.Onboarding.route) {
+                com.rudra.savingbuddy.ui.screens.onboarding.OnboardingScreen(
+                    onComplete = {
+                        navController.navigate(Screen.Dashboard.route) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
+                )
             }
         }
     }

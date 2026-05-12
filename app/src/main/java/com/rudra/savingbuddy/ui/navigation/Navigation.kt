@@ -51,14 +51,30 @@ sealed class Screen(
     data object AutoCategory : Screen("auto_category", "Auto Category", Icons.Default.AutoAwesome)
     data object ExpenseDetail : Screen("expense_detail", "Expense Detail", Icons.Default.Receipt)
     data object Transactions : Screen("transactions", "Transactions", Icons.Default.SwapHoriz)
+    data object Music : Screen("music", "Music Player", Icons.Default.MusicNote)
+    data object ReportDetail : Screen("report_detail/{reportId}", "Report Detail", Icons.Default.Assessment) {
+        fun createRoute(reportId: String) = "report_detail/$reportId"
+    }
+    data object StatementViewer : Screen("statement_viewer", "Statement", Icons.Default.Description)
+    data object LanguageSettings : Screen("language_settings", "Language", Icons.Default.Language)
+    data object MoodMusic : Screen("mood_music", "Mood Music", Icons.Default.MusicNote)
+    data object InvestmentTracker : Screen("investment_tracker", "Investments", Icons.Default.TrendingUp)
+    data object NetWorth : Screen("net_worth", "Net Worth", Icons.Default.AccountBalance)
+    data object SubscriptionManager : Screen("subscription_manager", "Subscriptions", Icons.Default.Subscriptions)
+    data object CurrencyConverter : Screen("currency_converter", "Currency", Icons.Default.CurrencyExchange)
+    data object ReceiptScanner : Screen("receipt_scanner", "Scan Receipt", Icons.Default.CameraAlt)
+    data object Onboarding : Screen("onboarding", "Welcome", Icons.Default.Star)
+    data object Changelog : Screen("changelog", "What's New", Icons.Default.NewReleases)
+    data object MusicSettings : Screen("music_settings", "Music Settings", Icons.Default.MusicNote)
+    data object DarkModeSettings : Screen("dark_mode_settings", "Theme", Icons.Default.DarkMode)
 }
 
 val bottomNavItems = listOf(
     Screen.Dashboard,
     Screen.Features,
     Screen.Reports,
+    Screen.Music,
     Screen.Settings,
-
 )
 
 val moreMenuItems = listOf(

@@ -1,13 +1,20 @@
 package com.rudra.savingbuddy.ui.screens.reports
 
+import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
+import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+import com.rudra.savingbuddy.util.ReportConfig
+import com.rudra.savingbuddy.util.ReportGenerator
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.*
@@ -36,7 +43,32 @@ data class ReportsUiState(
     val isThisMonth: Boolean = true,
     val isThisYear: Boolean = false,
     val filteredIncomes: List<Income> = emptyList(),
-    val filteredExpenses: List<Expense> = emptyList()
+    val filteredExpenses: List<Expense> = emptyList(),
+    val insights: List<ReportInsight> = emptyList(),
+    val pdfGenerationState: PdfState = PdfState.Idle,
+    val comparisonData: ComparisonData? = null
+)
+
+data class ReportInsight(
+    val title: String,
+    val description: String,
+    val type: InsightType = InsightType.INFO
+)
+
+enum class InsightType { SUCCESS, WARNING, ERROR, INFO }
+
+sealed class PdfState {
+    data object Idle : PdfState()
+    data object Generating : PdfState()
+    data object Success : PdfState()
+    data class Error(val message: String) : PdfState()
+}
+
+data class ComparisonData(
+    val previousIncome: Double,
+    val previousExpenses: Double,
+    val incomeChange: Double,
+    val expenseChange: Double
 )
 
 data class TransactionLog(
@@ -65,7 +97,8 @@ data class CategoryBreakdownItem(
 @HiltViewModel
 class ReportsViewModel @Inject constructor(
     private val incomeRepository: IncomeRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportsUiState())
@@ -85,7 +118,44 @@ class ReportsViewModel @Inject constructor(
 
             loadDataForRange(startOfMonth, endOfMonth)
             loadMonthlyTrend()
+            generateInsights()
         }
+    }
+
+    private suspend fun generateInsights() {
+        val state = _uiState.value
+        val insights = mutableListOf<ReportInsight>()
+        
+        if (state.savingsRate >= 50) {
+            insights.add(ReportInsight("Excellent Saver", "You're saving ${state.savingsRate.toInt()}% of income! Outstanding!", InsightType.SUCCESS))
+        } else if (state.savingsRate >= 20) {
+            insights.add(ReportInsight("Good Progress", "Saving ${state.savingsRate.toInt()}%. Keep going!", InsightType.SUCCESS))
+        } else if (state.savingsRate > 0) {
+            insights.add(ReportInsight("Room to Improve", "Aim for 20%+ savings rate", InsightType.WARNING))
+        } else {
+            insights.add(ReportInsight("Overspending Alert", "Expenses exceed income by ${CurrencyFormatter.format(-state.totalSavings)}", InsightType.ERROR))
+        }
+
+        val topCategory = state.categoryBreakdown.maxByOrNull { it.percentage }
+        if (topCategory != null && topCategory.percentage > 30) {
+            insights.add(ReportInsight("High Category Spend", "\"${topCategory.category}\" is ${topCategory.percentage.toInt()}% of expenses", InsightType.WARNING))
+        }
+
+        if (state.totalExpenses > state.totalIncome * 0.8 && state.totalIncome > 0) {
+            insights.add(ReportInsight("Budget Warning", "${(state.totalExpenses / state.totalIncome * 100).toInt()}% of income spent", InsightType.ERROR))
+        }
+
+        if (state.totalIncome > 0 && state.totalExpenses > 0) {
+            val ratio = state.totalIncome / state.totalExpenses
+            when {
+                ratio > 2.0 -> insights.add(ReportInsight("Strong Financials", "Income is ${String.format("%.1f", ratio)}x expenses", InsightType.SUCCESS))
+                ratio > 1.5 -> insights.add(ReportInsight("Healthy Ratio", "Income is ${String.format("%.1f", ratio)}x expenses", InsightType.SUCCESS))
+                ratio > 1.0 -> insights.add(ReportInsight("Positive Cash Flow", "Income exceeds expenses", InsightType.INFO))
+                else -> insights.add(ReportInsight("Negative Cash Flow", "Expenses exceed income by ${String.format("%.1f", 1/ratio)}x", InsightType.ERROR))
+            }
+        }
+
+        _uiState.update { it.copy(insights = insights) }
     }
 
     private suspend fun loadDataForRange(startDate: Long, endDate: Long) {
@@ -276,5 +346,35 @@ class ReportsViewModel @Inject constructor(
     fun clearFilters() {
         _uiState.update { it.copy(filterStartDate = null, filterEndDate = null, filterType = null) }
         loadTransactionLogs()
+    }
+
+    fun generatePdfReport() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(pdfGenerationState = PdfState.Generating) }
+            try {
+                val state = _uiState.value
+                val config = ReportConfig(
+                    title = "Monthly Financial Report",
+                    startDate = state.overviewStartDate ?: DateUtils.getStartOfMonth(),
+                    endDate = state.overviewEndDate ?: DateUtils.getEndOfMonth()
+                )
+                val reportData = ReportGenerator.generateReportData(
+                    incomes = state.filteredIncomes,
+                    expenses = state.filteredExpenses,
+                    config = config
+                )
+                val intent = ReportGenerator.generatePdfReport(context, reportData)
+                if (intent != null) {
+                    context.startActivity(Intent.createChooser(intent, "Share Report"))
+                    _uiState.update { it.copy(pdfGenerationState = PdfState.Success) }
+                } else {
+                    _uiState.update { it.copy(pdfGenerationState = PdfState.Error("Failed to generate PDF")) }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(pdfGenerationState = PdfState.Error(e.message ?: "Unknown error")) }
+            }
+            delay(1500)
+            _uiState.update { it.copy(pdfGenerationState = PdfState.Idle) }
+        }
     }
 }
