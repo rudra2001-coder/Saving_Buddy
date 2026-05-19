@@ -70,7 +70,6 @@ data class ExportUiState(
     val endDate: Long = DateUtils.getEndOfMonth(),
     val period: ExportPeriod = ExportPeriod.THIS_MONTH,
     val dataType: ExportDataType = ExportDataType.ALL,
-    val format: ExportFormat = ExportFormat.CSV,
     val selectedCategories: Set<String> = emptySet(),
     val availableCategories: List<String> = emptyList(),
     val isLoading: Boolean = false,
@@ -134,10 +133,6 @@ class ExportViewModel @Inject constructor(
             period = ExportPeriod.CUSTOM
         )
         filterData()
-    }
-
-    fun setExportFormat(format: ExportFormat) {
-        _uiState.value = _uiState.value.copy(format = format)
     }
 
     fun setDataType(dataType: ExportDataType) {
@@ -213,19 +208,16 @@ class ExportViewModel @Inject constructor(
 
     private fun applyFilters() {
         val categories = _uiState.value.selectedCategories
-        if (categories.isEmpty()) {
-            filterData()
-            return
-        }
-        
-        val filteredIncomes = _uiState.value.allIncomes.filter { 
+        if (categories.isEmpty()) return
+
+        val filteredIncomes = _uiState.value.allIncomes.filter {
             it.date in _uiState.value.startDate.._uiState.value.endDate || _uiState.value.startDate == 0L
         }.filter { it.category.displayName in categories }
-        
-        val filteredExpenses = _uiState.value.allExpenses.filter { 
+
+        val filteredExpenses = _uiState.value.allExpenses.filter {
             it.date in _uiState.value.startDate.._uiState.value.endDate || _uiState.value.startDate == 0L
         }.filter { it.category.displayName in categories }
-        
+
         _uiState.value = _uiState.value.copy(
             filteredIncomes = filteredIncomes,
             filteredExpenses = filteredExpenses,
@@ -567,61 +559,6 @@ fun ExportScreen(
             }
 
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Code,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                                tint = PrimaryGreen
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "Export Format",
-                                style = MaterialTheme.typography.labelMedium,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChip(
-                                selected = uiState.format == ExportFormat.CSV,
-                                onClick = { viewModel.setExportFormat(ExportFormat.CSV) },
-                                label = { Text("CSV") },
-                                leadingIcon = if (uiState.format == ExportFormat.CSV) {
-                                    { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                                } else null
-                            )
-                            FilterChip(
-                                selected = uiState.format == ExportFormat.TEXT,
-                                onClick = { viewModel.setExportFormat(ExportFormat.TEXT) },
-                                label = { Text("Text") },
-                                leadingIcon = if (uiState.format == ExportFormat.TEXT) {
-                                    { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                                } else null
-                            )
-                            FilterChip(
-                                selected = uiState.format == ExportFormat.JSON,
-                                onClick = { viewModel.setExportFormat(ExportFormat.JSON) },
-                                label = { Text("JSON") },
-                                leadingIcon = if (uiState.format == ExportFormat.JSON) {
-                                    { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                                } else null
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(20.dp),
@@ -704,15 +641,10 @@ fun ExportScreen(
             title = { Text("Confirm Export", fontWeight = FontWeight.Bold) },
             text = {
                 Column {
-                    Text("Export ${uiState.format.name} format with ${uiState.filteredIncomes.size + uiState.filteredExpenses.size} records?")
+                    Text("Export CSV with ${uiState.filteredIncomes.size + uiState.filteredExpenses.size} records?")
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
                         text = "Period: ${DateUtils.formatDate(uiState.startDate)} - ${DateUtils.formatDate(uiState.endDate)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "Format: ${uiState.format.name}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -725,7 +657,7 @@ fun ExportScreen(
                             context = context,
                             incomes = uiState.filteredIncomes,
                             expenses = uiState.filteredExpenses,
-                            format = uiState.format,
+                            format = ExportFormat.CSV,
                             dataType = when (uiState.dataType) {
                                 ExportDataType.ALL -> com.rudra.savingbuddy.util.ExportType.ALL
                                 ExportDataType.INCOME -> com.rudra.savingbuddy.util.ExportType.INCOME
@@ -743,7 +675,7 @@ fun ExportScreen(
                 ) {
                     Icon(Icons.Default.Download, null)
                     Spacer(modifier = Modifier.width(8.dp))
-                    Text("Export ${uiState.format.name}")
+                    Text("Export CSV")
                 }
             },
             dismissButton = {

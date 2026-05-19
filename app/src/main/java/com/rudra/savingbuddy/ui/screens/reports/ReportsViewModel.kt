@@ -353,28 +353,34 @@ class ReportsViewModel @Inject constructor(
             _uiState.update { it.copy(pdfGenerationState = PdfState.Generating) }
             try {
                 val state = _uiState.value
+                val startDate = state.overviewStartDate ?: DateUtils.getStartOfMonth()
+                val endDate = state.overviewEndDate ?: DateUtils.getEndOfMonth()
+
+                val incomes = incomeRepository.getIncomeByDateRange(startDate, endDate).first()
+                val expenses = expenseRepository.getExpensesByDateRange(startDate, endDate).first()
+
                 val config = ReportConfig(
                     title = "Monthly Financial Report",
-                    startDate = state.overviewStartDate ?: DateUtils.getStartOfMonth(),
-                    endDate = state.overviewEndDate ?: DateUtils.getEndOfMonth()
+                    startDate = startDate,
+                    endDate = endDate
                 )
                 val reportData = ReportGenerator.generateReportData(
-                    incomes = state.filteredIncomes,
-                    expenses = state.filteredExpenses,
+                    incomes = incomes,
+                    expenses = expenses,
                     config = config
                 )
                 val intent = ReportGenerator.generatePdfReport(context, reportData)
                 if (intent != null) {
                     context.startActivity(Intent.createChooser(intent, "Share Report"))
                     _uiState.update { it.copy(pdfGenerationState = PdfState.Success) }
+                    delay(1500)
+                    _uiState.update { it.copy(pdfGenerationState = PdfState.Idle) }
                 } else {
                     _uiState.update { it.copy(pdfGenerationState = PdfState.Error("Failed to generate PDF")) }
                 }
             } catch (e: Exception) {
                 _uiState.update { it.copy(pdfGenerationState = PdfState.Error(e.message ?: "Unknown error")) }
             }
-            delay(1500)
-            _uiState.update { it.copy(pdfGenerationState = PdfState.Idle) }
         }
     }
 }

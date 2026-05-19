@@ -1,25 +1,32 @@
 package com.rudra.savingbuddy.ui.screens.backup
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.rudra.savingbuddy.ui.theme.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.rudra.savingbuddy.data.models.*
 import com.rudra.savingbuddy.data.BackupFileInfo
+import com.rudra.savingbuddy.data.models.BackupDay
+import com.rudra.savingbuddy.data.models.BackupFrequency
+import com.rudra.savingbuddy.data.models.BackupLocation
+import com.rudra.savingbuddy.ui.theme.*
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -29,19 +36,20 @@ fun BackupScreen(
     onNavigateBack: () -> Unit,
     viewModel: BackupViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val backupList by viewModel.backupList.collectAsStateWithLifecycle()
-    
-    var showDeleteDialog by remember { mutableStateOf<BackupFileInfo?>(null) }
-    var expandedFrequency by remember { mutableStateOf(false) }
-    var expandedDay by remember { mutableStateOf(false) }
-    var expandedLocation by remember { mutableStateOf(false) }
-
     val snackbarHostState = remember { SnackbarHostState() }
 
-    LaunchedEffect(Unit) {
-        viewModel.initialize(context)
+    var showDeleteDialog by remember { mutableStateOf<BackupFileInfo?>(null) }
+    var showRestoreDialog by remember { mutableStateOf<BackupFileInfo?>(null) }
+    var showFrequencyMenu by remember { mutableStateOf(false) }
+    var showDayMenu by remember { mutableStateOf(false) }
+    var showLocationMenu by remember { mutableStateOf(false) }
+
+    val importLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.importBackup(it) }
     }
 
     LaunchedEffect(uiState.error, uiState.success) {
@@ -62,7 +70,7 @@ fun BackupScreen(
                     Column {
                         Text("Backup & Restore", fontWeight = FontWeight.Bold)
                         Text(
-                            "Manage cloud & local backups",
+                            "Protect your financial data",
                             style = MaterialTheme.typography.bodySmall,
                             color = TextSecondary
                         )
@@ -73,228 +81,92 @@ fun BackupScreen(
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (uiState.isEnabled) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Column {
-                            Text(
-                                "Auto Backup",
-                                color = if (uiState.isEnabled) Color.White else Color.Unspecified,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = MaterialTheme.typography.titleLarge.fontSize
-                            )
-                            Text(
-                                if (uiState.isEnabled) "ON • ${uiState.frequency.name}" else "OFF • Manual only",
-                                color = if (uiState.isEnabled) Color.White.copy(alpha = 0.8f) else Color.Gray
-                            )
-                        }
-                        Switch(
-                            checked = uiState.isEnabled,
-                            onCheckedChange = { viewModel.toggleBackup(it) }
-                        )
-                    }
-                }
-            }
-
-            if (uiState.isEnabled) {
-                item {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    Icons.Default.Schedule,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = PrimaryGreen
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Schedule", fontWeight = FontWeight.Bold)
-                            }
-                            
-                            Box {
-                                OutlinedCard(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onClick = { expandedFrequency = true }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("Frequency")
-                                        Text(uiState.frequency.name, color = Color.Gray)
-                                    }
-                                }
-                                DropdownMenu(
-                                    expanded = expandedFrequency,
-                                    onDismissRequest = { expandedFrequency = false }
-                                ) {
-                                    BackupFrequency.entries.forEach { freq ->
-                                        DropdownMenuItem(
-                                            text = { Text(freq.name) },
-                                            onClick = {
-                                                viewModel.updateFrequency(freq)
-                                                expandedFrequency = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-
-                            if (uiState.frequency == BackupFrequency.WEEKLY) {
-                                Box {
-                                    OutlinedCard(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        onClick = { expandedDay = true }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(16.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text("Backup Day")
-                                            Text(uiState.backupDay?.name ?: "Monday", color = Color.Gray)
-                                        }
-                                    }
-                                    DropdownMenu(
-                                        expanded = expandedDay,
-                                        onDismissRequest = { expandedDay = false }
-                                    ) {
-                                        BackupDay.entries.forEach { day ->
-                                            DropdownMenuItem(
-                                                text = { Text(day.name) },
-                                                onClick = {
-                                                    viewModel.updateBackupDay(day)
-                                                    expandedDay = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            Box {
-                                OutlinedCard(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    onClick = { expandedLocation = true }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(16.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Text("Location")
-                                        Text(
-                                            when (uiState.backupLocation) {
-                                                BackupLocation.DOWNLOADS -> "Downloads"
-                                                BackupLocation.INTERNAL -> "Internal"
-                                            },
-                                            color = Color.Gray
-                                        )
-                                    }
-                                }
-                                DropdownMenu(
-                                    expanded = expandedLocation,
-                                    onDismissRequest = { expandedLocation = false }
-                                ) {
-                                    BackupLocation.entries.forEach { loc ->
-                                        DropdownMenuItem(
-                                            text = {
-                                                Text(
-                                                    when (loc) {
-                                                        BackupLocation.DOWNLOADS -> "Downloads Folder"
-                                                        BackupLocation.INTERNAL -> "Internal Storage"
-                                                    }
-                                                )
-                                            },
-                                            onClick = {
-                                                viewModel.updateLocation(loc)
-                                                expandedLocation = false
-                                            }
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                AutoBackupCard(
+                    isEnabled = uiState.isEnabled,
+                    frequency = uiState.frequency,
+                    backupDay = uiState.backupDay,
+                    backupLocation = uiState.backupLocation,
+                    lastBackupTime = uiState.lastBackupTime,
+                    onToggle = { viewModel.toggleBackup(it) },
+                    onFrequencyChange = { viewModel.updateFrequency(it) },
+                    onDayChange = { viewModel.updateBackupDay(it) },
+                    onLocationChange = { viewModel.updateLocation(it) },
+                    showFrequencyMenu = showFrequencyMenu,
+                    onShowFrequencyMenu = { showFrequencyMenu = it },
+                    showDayMenu = showDayMenu,
+                    onShowDayMenu = { showDayMenu = it },
+                    showLocationMenu = showLocationMenu,
+                    onShowLocationMenu = { showLocationMenu = it }
+                )
             }
 
             item {
-                Button(
-                    onClick = { viewModel.createBackup() },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    enabled = !uiState.isBackingUp,
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PrimaryGreen,
-                        disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    if (uiState.isBackingUp) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = Color.White
-                        )
-                    } else {
-                        Icon(Icons.Default.Backup, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Backup Now")
+                    Button(
+                        onClick = { viewModel.createBackup() },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        enabled = !uiState.isBackingUp,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                    ) {
+                        if (uiState.isBackingUp) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                        } else {
+                            Icon(Icons.Default.Backup, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Export Backup")
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        enabled = !uiState.isRestoring,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.5.dp, PrimaryGreen),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = PrimaryGreen)
+                    ) {
+                        if (uiState.isRestoring) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = PrimaryGreen)
+                        } else {
+                            Icon(Icons.Default.RestorePage, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Import Backup")
+                        }
                     }
                 }
             }
 
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.Folder,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        tint = PrimaryGreen
-                    )
+                    Icon(Icons.Outlined.Folder, null, modifier = Modifier.size(20.dp), tint = PrimaryGreen)
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         "Recent Backups",
                         fontWeight = FontWeight.Bold,
-                        fontSize = MaterialTheme.typography.titleMedium.fontSize
+                        style = MaterialTheme.typography.titleMedium
                     )
+                    Spacer(modifier = Modifier.weight(1f))
+                    if (backupList.isNotEmpty()) {
+                        TextButton(onClick = { viewModel.loadBackupList() }) {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Refresh")
+                        }
+                    }
                 }
             }
 
@@ -304,26 +176,17 @@ fun BackupScreen(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(20.dp),
                         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant
-                        )
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(32.dp),
+                            modifier = Modifier.fillMaxWidth().padding(32.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Icon(
-                                Icons.Default.FolderOpen,
-                                contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = TextSecondary
-                            )
+                            Icon(Icons.Outlined.FolderOpen, null, modifier = Modifier.size(48.dp), tint = TextSecondary)
                             Spacer(modifier = Modifier.height(8.dp))
                             Text("No backups found", color = TextSecondary)
                             Text(
-                                "Tap 'Backup Now' to create your first backup",
+                                "Tap 'Export Backup' to create your first backup",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextSecondary
                             )
@@ -331,10 +194,11 @@ fun BackupScreen(
                     }
                 }
             } else {
-                items(backupList) { backup ->
+                items(backupList, key = { it.path }) { backup ->
                     BackupItemCard(
                         backup = backup,
-                        onRestore = { viewModel.restoreBackup(backup.path) },
+                        onShare = { viewModel.shareBackup(backup.path) },
+                        onRestore = { showRestoreDialog = backup },
                         onDelete = { showDeleteDialog = backup }
                     )
                 }
@@ -344,33 +208,259 @@ fun BackupScreen(
         }
     }
 
-    showDeleteDialog?.let { backup ->
+    showRestoreDialog?.let { backup ->
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = null },
-            title = { Text("Delete Backup") },
-            text = { Text("Are you sure you want to delete this backup?") },
+            onDismissRequest = { showRestoreDialog = null },
+            icon = { Icon(Icons.Default.RestorePage, null, tint = WarningOrange) },
+            title = { Text("Restore Backup", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("This will replace ALL current data with the backup data.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(backup.name, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    Text("${formatSize(backup.size)}", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                }
+            },
             confirmButton = {
-                TextButton(
+                Button(
                     onClick = {
-                        viewModel.deleteBackup(backup.path)
-                        showDeleteDialog = null
-                    }
+                        viewModel.restoreBackup(backup.path)
+                        showRestoreDialog = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = WarningOrange)
                 ) {
-                    Text("Delete", color = ExpenseRed)
+                    Text("Restore")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = null }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showRestoreDialog = null }) { Text("Cancel") }
+            }
+        )
+    }
+
+    showDeleteDialog?.let { backup ->
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = null },
+            icon = { Icon(Icons.Default.Delete, null, tint = ExpenseRed) },
+            title = { Text("Delete Backup") },
+            text = { Text("Are you sure you want to delete ${backup.name}?") },
+            confirmButton = {
+                TextButton(
+                    onClick = { viewModel.deleteBackup(backup.path); showDeleteDialog = null }
+                ) { Text("Delete", color = ExpenseRed) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") }
             }
         )
     }
 }
 
 @Composable
+private fun AutoBackupCard(
+    isEnabled: Boolean,
+    frequency: BackupFrequency,
+    backupDay: BackupDay?,
+    backupLocation: BackupLocation,
+    lastBackupTime: Long,
+    onToggle: (Boolean) -> Unit,
+    onFrequencyChange: (BackupFrequency) -> Unit,
+    onDayChange: (BackupDay) -> Unit,
+    onLocationChange: (BackupLocation) -> Unit,
+    showFrequencyMenu: Boolean,
+    onShowFrequencyMenu: (Boolean) -> Unit,
+    showDayMenu: Boolean,
+    onShowDayMenu: (Boolean) -> Unit,
+    showLocationMenu: Boolean,
+    onShowLocationMenu: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isEnabled) PrimaryGreen else MaterialTheme.colorScheme.surface
+        )
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        "Auto Backup",
+                        color = if (isEnabled) Color.White else MaterialTheme.colorScheme.onSurface,
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        if (isEnabled) "ON \u2022 ${frequency.name.lowercase().replaceFirstChar { it.uppercase() }}" else "OFF",
+                        color = if (isEnabled) Color.White.copy(alpha = 0.8f) else TextSecondary,
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+                Switch(
+                    checked = isEnabled,
+                    onCheckedChange = onToggle,
+                    colors = if (isEnabled) SwitchDefaults.colors(
+                        checkedTrackColor = Color.White,
+                        checkedThumbColor = PrimaryGreen
+                    ) else SwitchDefaults.colors()
+                )
+            }
+
+            if (lastBackupTime > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (isEnabled) Icons.Default.CheckCircle else Icons.Outlined.AccessTime,
+                        null,
+                        modifier = Modifier.size(14.dp),
+                        tint = if (isEnabled) Color.White.copy(alpha = 0.8f) else TextSecondary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Last backup: ${formatDate(lastBackupTime)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (isEnabled) Color.White.copy(alpha = 0.7f) else TextSecondary
+                    )
+                }
+            }
+
+            if (isEnabled) {
+                Spacer(modifier = Modifier.height(16.dp))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.2f))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                SettingsRow(
+                    label = "Frequency",
+                    value = when (frequency) {
+                        BackupFrequency.DAILY -> "Daily"
+                        BackupFrequency.WEEKLY -> "Weekly"
+                        BackupFrequency.MONTHLY -> "Monthly"
+                    },
+                    icon = Icons.Default.Schedule,
+                    expanded = showFrequencyMenu,
+                    onToggle = onShowFrequencyMenu,
+                    textColor = Color.White
+                ) {
+                    BackupFrequency.entries.forEach { freq ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    when (freq) {
+                                        BackupFrequency.DAILY -> "Daily"
+                                        BackupFrequency.WEEKLY -> "Weekly"
+                                        BackupFrequency.MONTHLY -> "Monthly"
+                                    },
+                                    color = if (freq == frequency) PrimaryGreen else Color.Unspecified
+                                )
+                            },
+                            onClick = { onFrequencyChange(freq); onShowFrequencyMenu(false) },
+                            leadingIcon = {
+                                if (freq == frequency) Icon(Icons.Default.Check, null, tint = PrimaryGreen)
+                            }
+                        )
+                    }
+                }
+
+                if (frequency == BackupFrequency.WEEKLY) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    SettingsRow(
+                        label = "Backup Day",
+                        value = backupDay?.name?.lowercase()?.replaceFirstChar { it.uppercase() } ?: "Monday",
+                        icon = Icons.Default.CalendarToday,
+                        expanded = showDayMenu,
+                        onToggle = onShowDayMenu,
+                        textColor = Color.White
+                    ) {
+                        BackupDay.entries.forEach { day ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        day.name.lowercase().replaceFirstChar { it.uppercase() },
+                                        color = if (day == backupDay) PrimaryGreen else Color.Unspecified
+                                    )
+                                },
+                                onClick = { onDayChange(day); onShowDayMenu(false) },
+                                leadingIcon = {
+                                    if (day == backupDay) Icon(Icons.Default.Check, null, tint = PrimaryGreen)
+                                }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+                SettingsRow(
+                    label = "Save to",
+                    value = when (backupLocation) {
+                        BackupLocation.DOWNLOADS -> "Downloads"
+                        BackupLocation.INTERNAL -> "Internal Storage"
+                    },
+                    icon = Icons.Default.Folder,
+                    expanded = showLocationMenu,
+                    onToggle = onShowLocationMenu,
+                    textColor = Color.White
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Downloads", color = if (backupLocation == BackupLocation.DOWNLOADS) PrimaryGreen else Color.Unspecified) },
+                        onClick = { onLocationChange(BackupLocation.DOWNLOADS); onShowLocationMenu(false) },
+                        leadingIcon = { if (backupLocation == BackupLocation.DOWNLOADS) Icon(Icons.Default.Check, null, tint = PrimaryGreen) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Internal Storage", color = if (backupLocation == BackupLocation.INTERNAL) PrimaryGreen else Color.Unspecified) },
+                        onClick = { onLocationChange(BackupLocation.INTERNAL); onShowLocationMenu(false) },
+                        leadingIcon = { if (backupLocation == BackupLocation.INTERNAL) Icon(Icons.Default.Check, null, tint = PrimaryGreen) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    label: String,
+    value: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    expanded: Boolean,
+    onToggle: (Boolean) -> Unit,
+    textColor: Color,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    Box {
+        OutlinedCard(
+            modifier = Modifier.fillMaxWidth(),
+            onClick = { onToggle(true) },
+            colors = CardDefaults.outlinedCardColors(containerColor = Color.White.copy(alpha = 0.1f)),
+            border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, null, modifier = Modifier.size(18.dp), tint = textColor.copy(alpha = 0.8f))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(label, color = textColor.copy(alpha = 0.8f), style = MaterialTheme.typography.bodyMedium)
+                }
+                Text(value, color = textColor, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            }
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { onToggle(false) }) {
+            content()
+        }
+    }
+}
+
+@Composable
 private fun BackupItemCard(
     backup: BackupFileInfo,
+    onShare: () -> Unit,
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
@@ -380,49 +470,53 @@ private fun BackupItemCard(
         border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            Icon(
+                Icons.Default.Description,
+                null,
+                modifier = Modifier.size(36.dp),
+                tint = PrimaryGreen
+            )
+            Spacer(modifier = Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     backup.name,
                     style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
                     maxLines = 1
                 )
                 Text(
-                    "${formatSize(backup.size)} • ${formatDate(backup.modifiedDate)}",
+                    "${formatSize(backup.size)} \u2022 ${formatDate(backup.modifiedDate)}",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Color.Gray
+                    color = TextSecondary
                 )
             }
             Row {
+                IconButton(onClick = onShare) {
+                    Icon(Icons.Default.Share, null, tint = SavingsBlue, modifier = Modifier.size(20.dp))
+                }
                 IconButton(onClick = onRestore) {
-                    Icon(Icons.Default.Restore, contentDescription = "Restore")
+                    Icon(Icons.Default.Restore, null, tint = WarningOrange, modifier = Modifier.size(20.dp))
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = Color.Red
-                    )
+                    Icon(Icons.Default.Delete, null, tint = ExpenseRed, modifier = Modifier.size(20.dp))
                 }
             }
         }
     }
 }
 
-private fun formatSize(bytes: Long): String {
-    return when {
-        bytes < 1024 -> "$bytes B"
-        bytes < 1024 * 1024 -> "${bytes / 1024} KB"
-        else -> "${bytes / (1024 * 1024)} MB"
-    }
+private fun formatSize(bytes: Long): String = when {
+    bytes < 1024 -> "$bytes B"
+    bytes < 1024 * 1024 -> "${bytes / 1024} KB"
+    else -> "${"%.1f".format(bytes.toDouble() / (1024 * 1024))} MB"
 }
 
 private fun formatDate(timestamp: Long): String {
-    val format = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
-    return format.format(Date(timestamp))
+    return try {
+        val sdf = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
+        sdf.format(Date(timestamp))
+    } catch (_: Exception) { "Unknown" }
 }

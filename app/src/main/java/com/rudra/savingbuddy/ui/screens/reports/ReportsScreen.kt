@@ -680,7 +680,6 @@ fun ExportDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var selectedFormat by remember { mutableStateOf(ExportFormat.CSV) }
     var selectedDataType by remember { mutableStateOf(ExportType.ALL) }
 
     AlertDialog(
@@ -740,25 +739,6 @@ fun ExportDialog(
                     )
                 }
 
-                Text(
-                    text = "Select Format",
-                    style = MaterialTheme.typography.labelMedium,
-                    fontWeight = FontWeight.Medium
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = selectedFormat == ExportFormat.CSV,
-                        onClick = { selectedFormat = ExportFormat.CSV },
-                        label = { Text("CSV") },
-                        leadingIcon = if (selectedFormat == ExportFormat.CSV) {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }} else null
-                    )
-                    FilterChip(
-                        selected = selectedFormat == ExportFormat.TEXT,
-                        onClick = { selectedFormat = ExportFormat.TEXT },
-                        label = { Text("Text") },
-                        leadingIcon = if (selectedFormat == ExportFormat.TEXT) {{ Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }} else null
-                    )
-                }
             }
         },
         confirmButton = {
@@ -768,7 +748,7 @@ fun ExportDialog(
                         context = context,
                         incomes = incomes,
                         expenses = expenses,
-                        format = selectedFormat,
+                        format = ExportFormat.CSV,
                         dataType = selectedDataType
                     )
                     if (intent != null) {
