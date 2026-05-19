@@ -1,6 +1,5 @@
 package com.rudra.savingbuddy.ui.screens.features
 
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -48,7 +47,7 @@ data class FeatureItem(
 val allFeatures = listOf(
     FeatureItem("dashboard", "Dashboard", "Overview & summary", Icons.Default.Dashboard, PrimaryGreen, "Main", "dashboard"),
     FeatureItem("fusion", "Fusion Timeline", "Unified transactions", Icons.Default.JoinInner, AccentPurple, "Main", "fusion", isNew = true),
-    
+
     FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, IncomeGreen, "Add", "add_income"),
     FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, ExpenseRed, "Add", "add_expense"),
     FeatureItem("transfer", "Transfer Money", "Move between accounts", Icons.Default.SwapHoriz, WarningOrange, "Add", "transfer"),
@@ -58,8 +57,10 @@ val allFeatures = listOf(
 
     FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, IncomeGreen, "History", "income"),
     FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, ExpenseRed, "History", "expense"),
+    FeatureItem("transaction_history", "Transaction History", "All transactions in one place", Icons.Default.History, AccentTeal, "History", "transaction_history"),
 
     FeatureItem("goals", "Savings Goals", "Track your goals", Icons.Default.Flag, EntertainmentColor, "Goals", "goals"),
+    FeatureItem("gamification", "Achievements", "Gamified milestones", Icons.Default.EmojiEvents, WarningOrange, "Goals", "gamification"),
 
     FeatureItem("budget", "Budget", "Monthly budget", Icons.Default.AccountBalance, SavingsBlue, "Budget", "budget"),
 
@@ -75,20 +76,24 @@ val allFeatures = listOf(
 
     FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, SurfaceDark, "Settings", "settings"),
     FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, ExpenseRed, "Settings", "notifications"),
-    FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, PrimaryGreen, "Settings", "backup", isNew = true),
+    FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, PrimaryGreen, "Settings", "backup"),
+    FeatureItem("changelog", "What's New", "Version history", Icons.Default.NewReleases, AccentPurple, "Settings", "changelog"),
+    FeatureItem("language", "Language", "Multi-language support", Icons.Default.Language, SurfaceDark, "Settings", "language_settings"),
+    FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, AccentPurple, "Settings", "advanced_features"),
+
     FeatureItem("investment_tracker", "Investments", "Track investments & portfolio", Icons.Default.TrendingUp, PrimaryGreen, "Finance", "investment_tracker", isNew = true),
-    FeatureItem("net_worth", "Net Worth", "Total wealth tracking", Icons.Default.AccountBalance, SavingsBlue, "Finance", "net_worth", isNew = true),
     FeatureItem("subscription_manager", "Subscriptions", "Manage subscriptions", Icons.Default.Subscriptions, WarningOrange, "Finance", "subscription_manager", isNew = true),
     FeatureItem("currency_converter", "Currency Converter", "14 currencies live", Icons.Default.CurrencyExchange, AccentCyan, "Finance", "currency_converter", isNew = true),
     FeatureItem("receipt_scanner", "Receipt Scanner", "Scan with camera", Icons.Default.CameraAlt, SavingsBlue, "Finance", "receipt_scanner", isNew = true),
-    FeatureItem("changelog", "What's New", "Version history", Icons.Default.NewReleases, EntertainmentColor, "Settings", "changelog", isNew = true),
-    FeatureItem("language", "Language", "Multi-language support", Icons.Default.Language, SurfaceDark, "Settings", "language_settings", isNew = true),
-    FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, AccentPurple, "Settings", "advanced_features", isNew = true),
 )
 
 val featureCategories = listOf(
-    "All", "Main", "Add", "Accounts", "History", "Goals", "Budget", "Transactions", "Tools", "Reports", "Entertainment", "Finance", "Settings"
+    "All", "Main", "Add", "Accounts", "History", "Goals", "Budget", "Transactions", "Tools", "Reports", "Finance", "Settings"
 )
+
+private val StatBlue600 = Color(0xFF185FA5)
+private val StatGreen600 = Color(0xFF22C55E)
+private val StatAmber600 = Color(0xFF854F0B)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -99,7 +104,7 @@ fun FeaturesScreen(navController: NavController?) {
     var showGrid by remember { mutableStateOf(true) }
 
     val filteredFeatures = allFeatures.filter { feature ->
-        val matchesSearch = searchQuery.isBlank() || 
+        val matchesSearch = searchQuery.isBlank() ||
             feature.title.contains(searchQuery, ignoreCase = true) ||
             feature.description.contains(searchQuery, ignoreCase = true)
         val matchesCategory = selectedCategory == "All" || feature.category == selectedCategory
@@ -175,12 +180,12 @@ fun FeaturesScreen(navController: NavController?) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             ) {
                 Row(
                     modifier = Modifier
@@ -191,17 +196,17 @@ fun FeaturesScreen(navController: NavController?) {
                     FeatureStatColumn(
                         value = allFeatures.size.toString(),
                         label = "Features",
-                        color = MaterialTheme.colorScheme.primary
+                        color = StatBlue600
                     )
                     FeatureStatColumn(
                         value = (featureCategories.size - 1).toString(),
                         label = "Categories",
-                        color = MaterialTheme.colorScheme.secondary
+                        color = StatGreen600
                     )
                     FeatureStatColumn(
                         value = allFeatures.count { it.isNew }.toString(),
                         label = "New",
-                        color = PrimaryGreen
+                        color = StatAmber600
                     )
                 }
             }
@@ -217,7 +222,7 @@ fun FeaturesScreen(navController: NavController?) {
                     contentPadding = PaddingValues(bottom = 16.dp)
                 ) {
                     items(filteredFeatures) { feature ->
-                        ModernFeatureCard(
+                        FeatureCard(
                             feature = feature,
                             onClick = { navController?.navigate(feature.route) }
                         )
@@ -230,7 +235,7 @@ fun FeaturesScreen(navController: NavController?) {
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     items(filteredFeatures) { feature ->
-                        ModernFeatureListItem(
+                        FeatureListItem(
                             feature = feature,
                             onClick = { navController?.navigate(feature.route) }
                         )
@@ -245,13 +250,14 @@ fun FeaturesScreen(navController: NavController?) {
 private fun FeatureStatColumn(value: String, label: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
-            value, 
-            style = MaterialTheme.typography.headlineSmall, 
-            fontWeight = FontWeight.Bold, 
+            value,
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
             color = color
         )
+        Spacer(modifier = Modifier.height(2.dp))
         Text(
-            label, 
+            label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -259,7 +265,7 @@ private fun FeatureStatColumn(value: String, label: String, color: Color) {
 }
 
 @Composable
-fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
+fun FeatureCard(feature: FeatureItem, onClick: () -> Unit) {
     val scale by animateFloatAsState(targetValue = 1f, animationSpec = tween(200), label = "scale")
 
     Card(
@@ -268,12 +274,12 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
             .aspectRatio(0.95f)
             .scale(scale)
             .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -285,25 +291,20 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
             ) {
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(16.dp))
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
                         .background(
                             Brush.linearGradient(
                                 colors = listOf(
-                                    feature.color.copy(alpha = 0.3f),
+                                    feature.color.copy(alpha = 0.25f),
                                     feature.color.copy(alpha = 0.1f)
                                 )
                             )
                         )
                         .border(
                             width = 1.dp,
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    feature.color.copy(alpha = 0.5f),
-                                    feature.color.copy(alpha = 0.2f)
-                                )
-                            ),
-                            shape = RoundedCornerShape(16.dp)
+                            color = feature.color.copy(alpha = 0.3f),
+                            shape = RoundedCornerShape(14.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -311,7 +312,7 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
                         imageVector = feature.icon,
                         contentDescription = null,
                         tint = feature.color,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
 
@@ -345,7 +346,7 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
                 ) {
                     if (feature.isNew) {
                         Surface(
-                            color = Color(0xFF4CAF50),
+                            color = PrimaryGreen,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
@@ -376,18 +377,18 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
 }
 
 @Composable
-fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
+fun FeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier
@@ -397,8 +398,8 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
@@ -410,7 +411,7 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
                     .border(
                         width = 1.dp,
                         color = feature.color.copy(alpha = 0.3f),
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -418,11 +419,11 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
                     imageVector = feature.icon,
                     contentDescription = null,
                     tint = feature.color,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -439,7 +440,7 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
 
             if (feature.isNew) {
                 Surface(
-                    color = Color(0xFF4CAF50),
+                    color = PrimaryGreen,
                     shape = RoundedCornerShape(6.dp)
                 ) {
                     Text(
@@ -449,6 +450,7 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
                         modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
+                Spacer(modifier = Modifier.width(8.dp))
             }
 
             Icon(
