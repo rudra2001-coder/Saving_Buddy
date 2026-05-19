@@ -13,6 +13,7 @@ import com.rudra.savingbuddy.data.local.dao.BudgetDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.InvestmentDao
 import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
@@ -23,6 +24,7 @@ import com.rudra.savingbuddy.data.local.entity.BudgetEntity
 import com.rudra.savingbuddy.data.local.entity.ExpenseEntity
 import com.rudra.savingbuddy.data.local.entity.GoalEntity
 import com.rudra.savingbuddy.data.local.entity.IncomeEntity
+import com.rudra.savingbuddy.data.local.entity.InvestmentEntity
 import com.rudra.savingbuddy.data.local.entity.SubscriptionEntity
 import com.rudra.savingbuddy.data.local.entity.TransferEntity
 import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
@@ -38,9 +40,10 @@ import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
         SubscriptionEntity::class,
         AccountEntity::class,
         TransferEntity::class,
-        AccountBalanceHistoryEntity::class
+        AccountBalanceHistoryEntity::class,
+        InvestmentEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = true
 )
 abstract class SavingBuddyDatabase : RoomDatabase() {
@@ -54,6 +57,7 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
     abstract fun accountDao(): AccountDao
     abstract fun transferDao(): TransferDao
     abstract fun accountBalanceHistoryDao(): AccountBalanceHistoryDao
+    abstract fun investmentDao(): InvestmentDao
 
     companion object {
         const val DATABASE_NAME = "saving_buddy_database"
@@ -136,12 +140,32 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS `investments` (
+                        `id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        `name` TEXT NOT NULL,
+                        `type` TEXT NOT NULL,
+                        `amount` REAL NOT NULL,
+                        `currentValue` REAL NOT NULL,
+                        `purchaseDate` INTEGER NOT NULL,
+                        `notes` TEXT,
+                        `createdAt` INTEGER NOT NULL
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_investments_type` ON `investments` (`type`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_investments_purchaseDate` ON `investments` (`purchaseDate`)")
+            }
+        }
+
         fun getMigrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
-            MIGRATION_5_6
+            MIGRATION_5_6,
+            MIGRATION_6_7
         )
     }
 }

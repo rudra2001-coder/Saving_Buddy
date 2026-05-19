@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -58,12 +59,11 @@ fun CalendarScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Text(
-                        "Calendar", 
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    ) 
+                title = {
+                    Column {
+                        Text("Calendar", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("View transactions by date", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController?.popBackStack() }) {
@@ -72,7 +72,7 @@ fun CalendarScreen(
                 },
                 actions = {
                     IconButton(onClick = { currentMonth = YearMonth.now() }) {
-                        Icon(Icons.Default.Today, contentDescription = "Go to Today")
+                        Icon(Icons.Default.Today, contentDescription = "Go to Today", tint = IncomeGreen)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -145,20 +145,24 @@ private fun MonthlySummaryCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
-            modifier = Modifier.padding(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.06f), Color.Transparent)))
+                .padding(16.dp)
         ) {
-            Text(
-                text = "${month.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${month.year}",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onPrimaryContainer
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.DateRange, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                Text("${month.month.name.lowercase().replaceFirstChar { it.uppercase() }} ${month.year}",
+                    style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             
             Spacer(modifier = Modifier.height(12.dp))
             

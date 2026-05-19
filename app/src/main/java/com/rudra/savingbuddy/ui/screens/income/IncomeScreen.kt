@@ -18,6 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -25,9 +26,14 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.model.IncomeCategory
 import com.rudra.savingbuddy.ui.components.IncomeDialog
-import com.rudra.savingbuddy.ui.theme.IncomeGreen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+
+private val Green600 = Color(0xFF3B6D11)
+private val Green50 = Color(0xFFEAF3DE)
+private val Blue600 = Color(0xFF185FA5)
+private val Blue50 = Color(0xFFE6F1FB)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,12 +69,13 @@ fun IncomeScreen(
         floatingActionButton = {
             ExtendedFloatingActionButton(
                 onClick = { viewModel.showAddDialog() },
-                containerColor = IncomeGreen,
-                contentColor = MaterialTheme.colorScheme.onPrimary
+                containerColor = Green600,
+                contentColor = Color.White,
+                shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = null)
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Add Income")
+                Text("Add Income", fontWeight = FontWeight.SemiBold)
             }
         }
     ) { padding ->
@@ -77,7 +84,7 @@ fun IncomeScreen(
                 .fillMaxSize()
                 .padding(padding),
             state = listState,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
                 HeaderCard(
@@ -111,7 +118,7 @@ fun IncomeScreen(
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = IncomeGreen, modifier = Modifier.size(32.dp))
+                        CircularProgressIndicator(color = Green600, modifier = Modifier.size(28.dp))
                     }
                 }
             }
@@ -123,12 +130,19 @@ fun IncomeScreen(
     showDeleteDialog?.let { income ->
         AlertDialog(
             onDismissRequest = { showDeleteDialog = null },
-            icon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) },
-            title = { Text("Delete Income") },
-            text = { Text("Delete ${CurrencyFormatter.formatBDT(income.amount)}?") },
+            icon = {
+                Box(
+                    modifier = Modifier.size(40.dp).clip(CircleShape).background(ExpenseRed.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Delete, null, tint = ExpenseRed, modifier = Modifier.size(20.dp))
+                }
+            },
+            title = { Text("Delete Income", fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete ${CurrencyFormatter.formatBDT(income.amount)} from ${income.source}?") },
             confirmButton = {
                 TextButton(onClick = { viewModel.deleteIncome(income); showDeleteDialog = null }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text("Delete", color = ExpenseRed, fontWeight = FontWeight.SemiBold)
                 }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = null }) { Text("Cancel") } }
@@ -155,14 +169,15 @@ private fun HeaderCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(20.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.1f), IncomeGreen.copy(alpha = 0.05f))))
-                .padding(20.dp)
+            modifier = Modifier.fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.08f), IncomeGreen.copy(alpha = 0.02f))))
+                .padding(16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -170,29 +185,48 @@ private fun HeaderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Income History", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text("$totalCount records", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Income History", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("$totalCount records", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 Box(
-                    modifier = Modifier.size(40.dp).background(IncomeGreen.copy(alpha = 0.2f), CircleShape).padding(8.dp),
+                    modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(IncomeGreen.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Default.TrendingUp, null, tint = IncomeGreen)
+                    Icon(Icons.Default.AccountBalanceWallet, null, tint = IncomeGreen, modifier = Modifier.size(22.dp))
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
-                placeholder = { Text("Search income...") },
-                leadingIcon = { Icon(Icons.Default.Search, null) },
-                trailingIcon = { if (searchQuery.isNotEmpty()) IconButton(onClick = { onSearchChange("") }) { Icon(Icons.Default.Clear, null) } },
+                placeholder = { Text("Search income...", color = MaterialTheme.colorScheme.onSurfaceVariant) },
+                leadingIcon = {
+                    Box(
+                        modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(Blue600.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Search, null, tint = Blue600, modifier = Modifier.size(16.dp))
+                    }
+                },
+                trailingIcon = {
+                    if (searchQuery.isNotEmpty()) {
+                        IconButton(onClick = { onSearchChange("") }) {
+                            Icon(Icons.Default.Clear, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = IncomeGreen)
+                shape = RoundedCornerShape(14.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = IncomeGreen,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f),
+                    cursorColor = IncomeGreen
+                )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -201,19 +235,48 @@ private fun HeaderCard(
                 modifier = Modifier.horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                FilterChip(
-                    selected = selectedCategory == null,
+                Surface(
                     onClick = { onCategorySelect(null) },
-                    label = { Text("All") },
-                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen.copy(alpha = 0.2f), selectedLabelColor = IncomeGreen)
-                )
-                IncomeCategory.entries.forEach { category ->
-                    FilterChip(
-                        selected = selectedCategory == category,
-                        onClick = { onCategorySelect(category) },
-                        label = { Row(verticalAlignment = Alignment.CenterVertically) { Text(categoryEmojis[category] ?: "💵"); Spacer(Modifier.width(4.dp)); Text(category.displayName) } },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = IncomeGreen.copy(alpha = 0.2f), selectedLabelColor = IncomeGreen)
+                    shape = RoundedCornerShape(12.dp),
+                    color = if (selectedCategory == null) IncomeGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (selectedCategory == null) IncomeGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                     )
+                ) {
+                    Text(
+                        "All",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selectedCategory == null) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selectedCategory == null) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                    )
+                }
+                IncomeCategory.entries.forEach { category ->
+                    val isSelected = selectedCategory == category
+                    Surface(
+                        onClick = { onCategorySelect(category) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) IncomeGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isSelected) IncomeGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                        )
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                                Text(categoryEmojis[category] ?: "💵", style = MaterialTheme.typography.bodyMedium)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                category.displayName,
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -225,17 +288,24 @@ private fun EmptyStateCard() {
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(40.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Spacer(Modifier.height(16.dp))
-            Text("No income recorded yet", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Spacer(Modifier.height(8.dp))
-            Text("Tap + to add your first income", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f))
+            Box(
+                modifier = Modifier.size(72.dp).clip(CircleShape).background(IncomeGreen.copy(alpha = 0.08f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(36.dp), tint = IncomeGreen.copy(alpha = 0.5f))
+            }
+            Spacer(Modifier.height(20.dp))
+            Text("No income recorded yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+            Spacer(Modifier.height(6.dp))
+            Text("Tap + to add your first income", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -247,31 +317,62 @@ private fun IncomeListCard(income: Income, categoryEmoji: String, onEdit: () -> 
     Card(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
         shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().clickable { onEdit() }.padding(16.dp),
+            modifier = Modifier.fillMaxWidth().clickable { onEdit() }.padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(modifier = Modifier.size(48.dp).background(IncomeGreen.copy(alpha = 0.15f), CircleShape), contentAlignment = Alignment.Center) {
-                Text(categoryEmoji, style = MaterialTheme.typography.titleLarge)
+            Box(
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(IncomeGreen.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(categoryEmoji, style = MaterialTheme.typography.titleMedium)
             }
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(income.source, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("${income.category.displayName} • ${DateUtils.formatDate(income.date)}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(income.source, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(income.category.displayName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("•", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(DateUtils.formatShortDate(income.date), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("+${CurrencyFormatter.formatBDT(income.amount)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = IncomeGreen)
-                if (income.isRecurring) Icon(Icons.Default.Repeat, null, tint = IncomeGreen, modifier = Modifier.size(16.dp))
+                Text(
+                    "+${CurrencyFormatter.formatCompact(income.amount)}",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = IncomeGreen
+                )
+                if (income.isRecurring) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Icon(Icons.Default.Repeat, null, tint = IncomeGreen, modifier = Modifier.size(12.dp))
+                        Text("Recurring", style = MaterialTheme.typography.labelSmall, color = IncomeGreen)
+                    }
+                }
             }
+            Spacer(Modifier.width(4.dp))
             Box {
-                IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.MoreVert, null) }
+                IconButton(onClick = { showMenu = true }) {
+                    Icon(Icons.Default.MoreVert, null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+                }
                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                    DropdownMenuItem(text = { Text("Edit") }, onClick = { showMenu = false; onEdit() }, leadingIcon = { Icon(Icons.Default.Edit, null) })
-                    DropdownMenuItem(text = { Text("Delete") }, onClick = { showMenu = false; onDelete() }, leadingIcon = { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) })
+                    DropdownMenuItem(
+                        text = { Text("Edit") },
+                        onClick = { showMenu = false; onEdit() },
+                        leadingIcon = { Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp)) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Delete", color = ExpenseRed) },
+                        onClick = { showMenu = false; onDelete() },
+                        leadingIcon = { Icon(Icons.Default.Delete, null, tint = ExpenseRed, modifier = Modifier.size(18.dp)) }
+                    )
                 }
             }
         }
     }
 }
+

@@ -37,7 +37,6 @@ private val changelog = listOf(
     ChangelogEntry(
         "1.2.0", "May 2026", "Major Feature Update",
         listOf(
-            ChangeItem("Music Player with mood-based playlists", ChangeType.NEW),
             ChangeItem("Currency Converter with 14 currencies", ChangeType.NEW),
             ChangeItem("OCR Receipt Scanner", ChangeType.NEW),
             ChangeItem("Investment & Net Worth Tracker", ChangeType.NEW),
@@ -46,7 +45,7 @@ private val changelog = listOf(
             ChangeItem("Onboarding flow for new users", ChangeType.NEW),
             ChangeItem("PDF Report Generation", ChangeType.NEW),
             ChangeItem("Enhanced Analytics with Smart Insights", ChangeType.IMPROVED),
-            ChangeItem("Floating Music Mini Player", ChangeType.FEATURE),
+            ChangeItem("Investment Add & Tracking System", ChangeType.FEATURE),
             ChangeItem("Dark mode scheduling", ChangeType.IMPROVED),
             ChangeItem("Performance optimizations", ChangeType.IMPROVED)
         )
@@ -127,7 +126,7 @@ private fun ChangelogCard(entry: ChangelogEntry) {
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = BackgroundCardGlass),
-        border = BorderStroke(1.dp, BorderLight.copy(alpha = 0.3f))
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -136,6 +135,8 @@ private fun ChangelogCard(entry: ChangelogEntry) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.NewReleases, contentDescription = null, tint = PrimaryGreen.copy(alpha = 0.6f), modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
                     Box(
                         modifier = Modifier.size(40.dp).clip(CircleShape).background(PrimaryGreen.copy(alpha = 0.2f)),
                         contentAlignment = Alignment.Center
@@ -144,7 +145,7 @@ private fun ChangelogCard(entry: ChangelogEntry) {
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Column {
-                        Text("v${entry.version} - ${entry.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                        Text("${entry.title}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         Text(entry.date, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
                     }
                 }

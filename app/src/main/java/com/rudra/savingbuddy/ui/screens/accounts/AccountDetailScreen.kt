@@ -2,6 +2,7 @@ package com.rudra.savingbuddy.ui.screens.accounts
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -52,7 +53,12 @@ fun AccountDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.account?.name ?: "Account") },
+                title = {
+                    Column {
+                        Text(uiState.account?.name ?: "Account", fontWeight = FontWeight.Bold)
+                        Text("Account Overview", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -177,7 +183,7 @@ fun AccountDetailScreen(
             uiState.account?.dailyLimit?.let { limit ->
                 if (limit > 0) {
                     item {
-                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
                             Column(modifier = Modifier.padding(20.dp)) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -188,7 +194,7 @@ fun AccountDetailScreen(
                                         Icon(
                                             Icons.Outlined.Speed,
                                             contentDescription = null,
-                                            tint = Color(0xFFFF9800),
+                                            tint = WarningOrange,
                                             modifier = Modifier.size(20.dp)
                                         )
                                         Spacer(modifier = Modifier.width(8.dp))
@@ -214,7 +220,7 @@ fun AccountDetailScreen(
                                         .clip(RoundedCornerShape(4.dp)),
                                     color = when {
                                         progress >= 0.9f -> ExpenseRed
-                                        progress >= 0.7f -> Color(0xFFFF9800)
+                                        progress >= 0.7f -> WarningOrange
                                         else -> IncomeGreen
                                     },
                                     trackColor = MaterialTheme.colorScheme.surfaceVariant
@@ -232,15 +238,19 @@ fun AccountDetailScreen(
             }
 
             item {
-                Text(
-                    "Balance History (Last 7 days)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Outlined.TrendingUp, contentDescription = null, tint = SavingsBlue, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Balance History (Last 7 days)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp)) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -276,11 +286,15 @@ fun AccountDetailScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Recent Transactions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Outlined.SwapHoriz, contentDescription = null, tint = SavingsBlue, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Recent Transactions",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
 
@@ -288,7 +302,8 @@ fun AccountDetailScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(20.dp)
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Column(
                             modifier = Modifier
@@ -485,7 +500,8 @@ fun QuickActionButton(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.1f)
-        )
+        ),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
@@ -525,7 +541,8 @@ fun TransferItem(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier

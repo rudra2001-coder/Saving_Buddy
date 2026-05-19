@@ -2,8 +2,10 @@ package com.rudra.savingbuddy.ui.screens.reports
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -44,7 +46,12 @@ fun AnalyticsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Analytics", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Analytics", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("Deep dive into your finances", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -146,21 +153,38 @@ private fun PeriodSelector(
     selectedRange: DateRange,
     onSelect: (DateRange) -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 DateRange.entries.forEach { range ->
-                    FilterChip(
-                        selected = selectedRange == range,
-                        onClick = { onSelect(range) },
-                        label = { Text(range.displayName) },
-                        leadingIcon = if (selectedRange == range) {
-                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(16.dp)) }
-                        } else null
-                    )
+                    val isSelected = selectedRange == range
+                    Surface(
+                        modifier = Modifier.clickable { onSelect(range) },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (isSelected) IncomeGreen.copy(alpha = 0.12f) else Color.Transparent,
+                        border = androidx.compose.foundation.BorderStroke(
+                            if (isSelected) 1.5.dp else 0.5.dp,
+                            if (isSelected) IncomeGreen else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        )
+                    ) {
+                        Row(modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            if (isSelected) Icon(Icons.Default.Check, null, tint = IncomeGreen, modifier = Modifier.size(14.dp))
+                            Text(range.displayName, style = MaterialTheme.typography.labelMedium,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
                 }
             }
         }
@@ -268,13 +292,22 @@ private fun IncomeExpenseComparison(
     totalIncome: Double,
     totalExpenses: Double
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Income vs Expenses",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.04f), Color.Transparent)))
+            .padding(16.dp))
+        {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.CompareArrows, null, tint = IncomeGreen, modifier = Modifier.size(20.dp))
+                Text("Income vs Expenses", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             val total = (totalIncome + totalExpenses).coerceAtLeast(1.0)
@@ -411,18 +444,23 @@ private fun ComparisonItem(
 private fun CategoryBreakdownCard(
     categories: List<AnalyticsCategoryBreakdown>
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "Spending by Category",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Category, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                    Text("Spending by Category", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                }
                 Surface(
                     color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(12.dp)
@@ -529,13 +567,18 @@ private fun CategoryPieChartCard(
     categories: List<AnalyticsCategoryBreakdown>,
     totalExpenses: Double
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Expense Distribution",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.PieChart, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                Text("Expense Distribution", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             if (categories.isNotEmpty() && totalExpenses > 0) {
@@ -625,18 +668,23 @@ private fun DailySpendingTrendCard(
     dailySpending: List<DailySpending>,
     title: String
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.TrendingDown, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                    Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                }
                 Text(
                     text = "${dailySpending.size} days",
                     style = MaterialTheme.typography.labelSmall,
@@ -695,13 +743,18 @@ private fun MonthlyComparisonCard(
     dailySpending: List<DailySpending>,
     totalExpenses: Double
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Spending Summary",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Assessment, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                Text("Spending Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(
@@ -762,13 +815,18 @@ private fun InsightsCard(
     savingsRate: Double,
     categoryCount: Int
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Insights",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Lightbulb, null, tint = WarningOrange, modifier = Modifier.size(18.dp))
+                Text("Insights", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(modifier = Modifier.height(12.dp))
 
             val insightsList = mutableListOf<InsightItem>()
@@ -838,16 +896,20 @@ private fun StatisticsSummaryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Text(
-                text = "Full Data Summary",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold
-            )
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.04f), Color.Transparent)))
+            .padding(16.dp))
+        {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Assessment, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                Text("Full Data Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+            }
             Spacer(modifier = Modifier.height(16.dp))
 
             Row(

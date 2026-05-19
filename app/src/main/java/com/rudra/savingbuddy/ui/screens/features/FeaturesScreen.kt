@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.rudra.savingbuddy.ui.theme.*
 
 data class FeatureItem(
     val id: String,
@@ -45,47 +46,44 @@ data class FeatureItem(
 )
 
 val allFeatures = listOf(
-    FeatureItem("dashboard", "Dashboard", "Overview & summary", Icons.Default.Dashboard, Color(0xFF4CAF50), "Main", "dashboard"),
-    FeatureItem("fusion", "Fusion Timeline", "Unified transactions", Icons.Default.JoinInner, Color(0xFF7C4DFF), "Main", "fusion", isNew = true),
+    FeatureItem("dashboard", "Dashboard", "Overview & summary", Icons.Default.Dashboard, PrimaryGreen, "Main", "dashboard"),
+    FeatureItem("fusion", "Fusion Timeline", "Unified transactions", Icons.Default.JoinInner, AccentPurple, "Main", "fusion", isNew = true),
     
-    FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Add", "add_income"),
-    FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, Color(0xFFF44336), "Add", "add_expense"),
-    FeatureItem("transfer", "Transfer Money", "Move between accounts", Icons.Default.SwapHoriz, Color(0xFFFF9800), "Add", "transfer"),
+    FeatureItem("add_income", "Add Income", "Add new income", Icons.Default.TrendingUp, IncomeGreen, "Add", "add_income"),
+    FeatureItem("add_expense", "Add Expense", "Add new expense", Icons.Default.TrendingDown, ExpenseRed, "Add", "add_expense"),
+    FeatureItem("transfer", "Transfer Money", "Move between accounts", Icons.Default.SwapHoriz, WarningOrange, "Add", "transfer"),
 
-    FeatureItem("accounts", "All Accounts", "Manage accounts", Icons.Default.AccountBalanceWallet, Color(0xFF2196F3), "Accounts", "accounts"),
-    FeatureItem("add_account", "Add Account", "Add new account", Icons.Default.AddCircle, Color(0xFF2196F3), "Accounts", "add_account"),
+    FeatureItem("accounts", "All Accounts", "Manage accounts", Icons.Default.AccountBalanceWallet, SavingsBlue, "Accounts", "accounts"),
+    FeatureItem("add_account", "Add Account", "Add new account", Icons.Default.AddCircle, SavingsBlue, "Accounts", "add_account"),
 
-    FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, Color(0xFF4CAF50), "History", "income"),
-    FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, Color(0xFFF44336), "History", "expense"),
+    FeatureItem("income", "Income History", "View all income", Icons.Default.Savings, IncomeGreen, "History", "income"),
+    FeatureItem("expense", "Expense History", "View all expenses", Icons.Default.ShoppingCart, ExpenseRed, "History", "expense"),
 
-    FeatureItem("goals", "Savings Goals", "Track your goals", Icons.Default.Flag, Color(0xFFE91E63), "Goals", "goals"),
-    FeatureItem("add_goal", "Add New Goal", "Create a goal", Icons.Default.AddLocationAlt, Color(0xFFE91E63), "Goals", "add_goal"),
+    FeatureItem("goals", "Savings Goals", "Track your goals", Icons.Default.Flag, EntertainmentColor, "Goals", "goals"),
 
-    FeatureItem("budget", "Budget", "Monthly budget", Icons.Default.AccountBalance, Color(0xFF3F51B5), "Budget", "budget"),
+    FeatureItem("budget", "Budget", "Monthly budget", Icons.Default.AccountBalance, SavingsBlue, "Budget", "budget"),
 
-    FeatureItem("recurring", "Recurring", "Recurring transactions", Icons.Default.Repeat, Color(0xFF9C27B0), "Transactions", "recurring"),
-    FeatureItem("bills", "Bill Reminders", "Upcoming bills", Icons.Default.Receipt, Color(0xFFFF9800), "Transactions", "bills"),
+    FeatureItem("recurring", "Recurring", "Recurring transactions", Icons.Default.Repeat, AccentPurple, "Transactions", "recurring"),
+    FeatureItem("bills", "Bill Reminders", "Upcoming bills", Icons.Default.Receipt, WarningOrange, "Transactions", "bills"),
 
-    FeatureItem("calendar", "Calendar", "View by date", Icons.Default.CalendarMonth, Color(0xFF673AB7), "Tools", "calendar"),
-    FeatureItem("export", "Export Data", "Export to CSV/PDF", Icons.Default.FileDownload, Color(0xFF607D8B), "Tools", "export"),
-    FeatureItem("calculator", "Calculator", "Financial calculator", Icons.Default.Calculate, Color(0xFF00BCD4), "Tools", "calculator"),
+    FeatureItem("calendar", "Calendar", "View by date", Icons.Default.CalendarMonth, AccentPurple, "Tools", "calendar"),
+    FeatureItem("export", "Export Data", "Export to CSV/PDF", Icons.Default.FileDownload, SurfaceDark, "Tools", "export"),
+    FeatureItem("calculator", "Calculator", "Financial calculator", Icons.Default.Calculate, AccentCyan, "Tools", "calculator"),
 
-    FeatureItem("reports", "Reports", "Analytics & insights", Icons.Default.Analytics, Color(0xFF2196F3), "Reports", "reports"),
-    FeatureItem("analytics", "Analytics", "Detailed analytics", Icons.Default.Insights, Color(0xFF2196F3), "Reports", "analytics"),
+    FeatureItem("reports", "Reports", "Analytics & insights", Icons.Default.Analytics, SavingsBlue, "Reports", "reports"),
+    FeatureItem("analytics", "Analytics", "Detailed analytics", Icons.Default.Insights, SavingsBlue, "Reports", "analytics"),
 
-    FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, Color(0xFF424242), "Settings", "settings"),
-    FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, Color(0xFFF44336), "Settings", "notifications"),
-    FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, Color(0xFF4CAF50), "Settings", "backup", isNew = true),
-    FeatureItem("music", "Music Player", "Focus & mood music", Icons.Default.MusicNote, Color(0xFFE91E63), "Entertainment", "music", isNew = true),
-    FeatureItem("mood_music", "Mood Music", "Music by your mood", Icons.Default.Psychology, Color(0xFF9C27B0), "Entertainment", "mood_music", isNew = true),
-    FeatureItem("investment_tracker", "Investments", "Track investments", Icons.Default.TrendingUp, Color(0xFF4CAF50), "Finance", "investment_tracker", isNew = true),
-    FeatureItem("net_worth", "Net Worth", "Total wealth tracking", Icons.Default.AccountBalance, Color(0xFF2196F3), "Finance", "net_worth", isNew = true),
-    FeatureItem("subscription_manager", "Subscriptions", "Manage subscriptions", Icons.Default.Subscriptions, Color(0xFFFF9800), "Finance", "subscription_manager", isNew = true),
-    FeatureItem("currency_converter", "Currency Converter", "14 currencies live", Icons.Default.CurrencyExchange, Color(0xFF00BCD4), "Finance", "currency_converter", isNew = true),
-    FeatureItem("receipt_scanner", "Receipt Scanner", "Scan with camera", Icons.Default.CameraAlt, Color(0xFF2196F3), "Finance", "receipt_scanner", isNew = true),
-    FeatureItem("changelog", "What's New", "Version history", Icons.Default.NewReleases, Color(0xFFE91E63), "Settings", "changelog", isNew = true),
-    FeatureItem("language", "Language", "Multi-language support", Icons.Default.Language, Color(0xFF607D8B), "Settings", "language_settings", isNew = true),
-    FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, Color(0xFF7C4DFF), "Settings", "advanced", isNew = true),
+    FeatureItem("settings", "Settings", "App settings", Icons.Default.Settings, SurfaceDark, "Settings", "settings"),
+    FeatureItem("notifications", "Notifications", "Notification center", Icons.Default.Notifications, ExpenseRed, "Settings", "notifications"),
+    FeatureItem("backup", "Backup & Restore", "Data backup", Icons.Default.Backup, PrimaryGreen, "Settings", "backup", isNew = true),
+    FeatureItem("investment_tracker", "Investments", "Track investments & portfolio", Icons.Default.TrendingUp, PrimaryGreen, "Finance", "investment_tracker", isNew = true),
+    FeatureItem("net_worth", "Net Worth", "Total wealth tracking", Icons.Default.AccountBalance, SavingsBlue, "Finance", "net_worth", isNew = true),
+    FeatureItem("subscription_manager", "Subscriptions", "Manage subscriptions", Icons.Default.Subscriptions, WarningOrange, "Finance", "subscription_manager", isNew = true),
+    FeatureItem("currency_converter", "Currency Converter", "14 currencies live", Icons.Default.CurrencyExchange, AccentCyan, "Finance", "currency_converter", isNew = true),
+    FeatureItem("receipt_scanner", "Receipt Scanner", "Scan with camera", Icons.Default.CameraAlt, SavingsBlue, "Finance", "receipt_scanner", isNew = true),
+    FeatureItem("changelog", "What's New", "Version history", Icons.Default.NewReleases, EntertainmentColor, "Settings", "changelog", isNew = true),
+    FeatureItem("language", "Language", "Multi-language support", Icons.Default.Language, SurfaceDark, "Settings", "language_settings", isNew = true),
+    FeatureItem("advanced", "Advanced Features", "AI & smart features", Icons.Default.AutoAwesome, AccentPurple, "Settings", "advanced_features", isNew = true),
 )
 
 val featureCategories = listOf(
@@ -182,7 +180,7 @@ fun FeaturesScreen(navController: NavController?) {
                     containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 ),
                 elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             ) {
                 Row(
                     modifier = Modifier
@@ -203,7 +201,7 @@ fun FeaturesScreen(navController: NavController?) {
                     FeatureStatColumn(
                         value = allFeatures.count { it.isNew }.toString(),
                         label = "New",
-                        color = Color(0xFF4CAF50)
+                        color = PrimaryGreen
                     )
                 }
             }
@@ -275,7 +273,7 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -360,7 +358,7 @@ fun ModernFeatureCard(feature: FeatureItem, onClick: () -> Unit) {
                     }
                     if (feature.isBeta) {
                         Surface(
-                            color = Color(0xFFFF9800),
+                            color = WarningOrange,
                             shape = RoundedCornerShape(6.dp)
                         ) {
                             Text(
@@ -389,7 +387,7 @@ fun ModernFeatureListItem(feature: FeatureItem, onClick: () -> Unit) {
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier

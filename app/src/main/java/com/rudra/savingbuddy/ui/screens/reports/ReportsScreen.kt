@@ -59,7 +59,12 @@ fun ReportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reports", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Reports", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("Analytics & insights", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
@@ -68,16 +73,40 @@ fun ReportsScreen(
                         Icon(Icons.Default.FilterList, contentDescription = "Filter")
                     }
                     IconButton(onClick = { showExportDialog = true }) {
-                        Icon(Icons.Default.FileDownload, contentDescription = "Export")
+                        Icon(Icons.Default.FileDownload, contentDescription = "Export", tint = IncomeGreen)
                     }
                 }
             )
         }
     ) { padding ->
         Column(modifier = Modifier.fillMaxSize().padding(padding)) {
-            TabRow(selectedTabIndex = selectedTab) {
-                Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Overview") }, icon = { Icon(Icons.Outlined.PieChart, null, modifier = Modifier.size(18.dp)) })
-                Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Logs (${uiState.logCount})") }, icon = { Icon(Icons.Outlined.Receipt, null, modifier = Modifier.size(18.dp)) })
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+            ) {
+                Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                    listOf(Triple(0, "Overview", Icons.Outlined.PieChart), Triple(1, "Logs (${uiState.logCount})", Icons.Outlined.Receipt)).forEach { (index, label, icon) ->
+                        val isSelected = selectedTab == index
+                        Surface(
+                            modifier = Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).clickable { selectedTab = index },
+                            color = if (isSelected) IncomeGreen else Color.Transparent,
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp), horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically) {
+                                Icon(icon, null, modifier = Modifier.size(18.dp),
+                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(label, style = MaterialTheme.typography.labelMedium,
+                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal)
+                            }
+                        }
+                    }
+                }
             }
 
             when (selectedTab) {

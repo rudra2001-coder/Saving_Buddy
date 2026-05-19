@@ -6,6 +6,7 @@ import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.InvestmentDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import com.rudra.savingbuddy.data.local.dao.AccountDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
@@ -23,6 +24,7 @@ import com.rudra.savingbuddy.data.repository.SettingsRepositoryImpl
 import com.rudra.savingbuddy.data.repository.AccountRepositoryImpl
 import com.rudra.savingbuddy.data.repository.TransferRepositoryImpl
 import com.rudra.savingbuddy.data.repository.FusionRepositoryImpl
+import com.rudra.savingbuddy.data.repository.InvestmentRepositoryImpl
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
 import com.rudra.savingbuddy.domain.repository.BillReminderRepository
 import com.rudra.savingbuddy.domain.repository.SubscriptionRepository
@@ -33,6 +35,7 @@ import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.TransferRepository
 import com.rudra.savingbuddy.domain.repository.FusionRepository
+import com.rudra.savingbuddy.domain.repository.InvestmentRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -82,6 +85,10 @@ object RepositoryModule {
     @Provides
     @Singleton
     fun provideTransferRepository(transferDao: TransferDao): TransferRepository = TransferRepositoryImpl(transferDao)
+
+    @Provides
+    @Singleton
+    fun provideInvestmentRepository(investmentDao: InvestmentDao): InvestmentRepository = InvestmentRepositoryImpl(investmentDao)
 
     @Provides
     @Singleton

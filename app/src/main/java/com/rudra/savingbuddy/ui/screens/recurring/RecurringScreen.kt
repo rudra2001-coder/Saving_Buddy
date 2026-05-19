@@ -3,6 +3,7 @@ package com.rudra.savingbuddy.ui.screens.recurring
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -29,9 +31,9 @@ import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
 import com.rudra.savingbuddy.domain.model.IncomeCategory
 import com.rudra.savingbuddy.domain.model.RecurringInterval
+import com.rudra.savingbuddy.domain.model.EndCondition
 import com.rudra.savingbuddy.domain.model.RecurringStatus
-import com.rudra.savingbuddy.ui.theme.ExpenseRed
-import com.rudra.savingbuddy.ui.theme.IncomeGreen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 import java.util.Calendar
@@ -50,7 +52,12 @@ fun RecurringScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Recurring", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Recurring", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("Manage recurring transactions", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -59,11 +66,11 @@ fun RecurringScreen(
                 actions = {
                     if (uiState.isBulkMode) {
                         TextButton(onClick = { viewModel.toggleBulkMode() }) {
-                            Text("Cancel")
+                            Text("Cancel", fontWeight = FontWeight.SemiBold, color = ExpenseRed)
                         }
                     } else {
                         IconButton(onClick = { viewModel.toggleBulkMode() }) {
-                            Icon(Icons.Default.Checklist, contentDescription = "Bulk Select")
+                            Icon(Icons.Default.Checklist, contentDescription = "Bulk Select", tint = IncomeGreen)
                         }
                     }
                 },
@@ -74,21 +81,20 @@ fun RecurringScreen(
             if (!uiState.isBulkMode) {
                 FloatingActionButton(
                     onClick = { viewModel.showAddDialog() },
-                    containerColor = MaterialTheme.colorScheme.primary
+                    containerColor = IncomeGreen,
+                    shape = RoundedCornerShape(16.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Add Recurring")
+                    Icon(Icons.Default.Add, contentDescription = "Add Recurring", tint = Color.White)
                 }
             }
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
+            modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Insights Cards
+            // Insight Cards
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -111,38 +117,43 @@ fun RecurringScreen(
                 }
             }
 
-            // Net Balance
+            // Net Balance Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer
-                    )
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.06f), Color.Transparent)))
                             .padding(16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text("Net Monthly", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                CurrencyFormatter.format(uiState.totalMonthlyIncome - uiState.totalMonthlyExpense),
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = if (uiState.totalMonthlyIncome >= uiState.totalMonthlyExpense) IncomeGreen else ExpenseRed
-                            )
+                            Text("Net Monthly", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                                    .background(if (uiState.totalMonthlyIncome >= uiState.totalMonthlyExpense) IncomeGreen.copy(alpha = 0.12f) else ExpenseRed.copy(alpha = 0.12f)),
+                                    contentAlignment = Alignment.Center) {
+                                    Icon(if (uiState.totalMonthlyIncome >= uiState.totalMonthlyExpense) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                                        null, tint = if (uiState.totalMonthlyIncome >= uiState.totalMonthlyExpense) IncomeGreen else ExpenseRed,
+                                        modifier = Modifier.size(16.dp))
+                                }
+                                Text(
+                                    CurrencyFormatter.format(uiState.totalMonthlyIncome - uiState.totalMonthlyExpense),
+                                    style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold,
+                                    color = if (uiState.totalMonthlyIncome >= uiState.totalMonthlyExpense) IncomeGreen else ExpenseRed
+                                )
+                            }
                         }
                         Column(horizontalAlignment = Alignment.End) {
-                            Text("Commitments", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                CurrencyFormatter.format(uiState.commitmentsTotal),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = ExpenseRed
-                            )
+                            Text("Commitments", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(CurrencyFormatter.format(uiState.commitmentsTotal), style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold, color = ExpenseRed)
                         }
                     }
                 }
@@ -153,17 +164,19 @@ fun RecurringScreen(
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3E0))
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = WarningOrange.copy(alpha = 0.1f)),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, WarningOrange.copy(alpha = 0.3f))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(Icons.Default.Warning, null, tint = Color(0xFFFF9800))
-                            Spacer(modifier = Modifier.width(8.dp))
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Box(modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp)).background(WarningOrange.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Warning, null, tint = WarningOrange, modifier = Modifier.size(18.dp))
+                            }
                             Column {
                                 uiState.warnings.forEach { warning ->
-                                    Text(warning, style = MaterialTheme.typography.bodySmall)
+                                    Text(warning, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = WarningOrange)
                                 }
                             }
                         }
@@ -174,16 +187,14 @@ fun RecurringScreen(
             // Smart Suggestions
             if (uiState.suggestions.isNotEmpty()) {
                 item {
-                    Text(
-                        "Smart Suggestions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(AccentPurple))
+                        Icon(Icons.Default.Lightbulb, null, modifier = Modifier.size(18.dp), tint = AccentPurple)
+                        Text("Smart Suggestions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    }
                 }
                 item {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         items(uiState.suggestions) { suggestion ->
                             SuggestionCard(suggestion = suggestion)
                         }
@@ -191,49 +202,40 @@ fun RecurringScreen(
                 }
             }
 
-            // Section Header with Toggle
+            // Active Recurring Header
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "Active Recurring (${uiState.recurringItems.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(IncomeGreen))
+                        Icon(Icons.Default.Repeat, null, modifier = Modifier.size(18.dp), tint = IncomeGreen)
+                        Text("Active Recurring", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                    }
+                    Surface(shape = RoundedCornerShape(8.dp), color = IncomeGreen.copy(alpha = 0.1f)) {
+                        Text("${uiState.recurringItems.size}", modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                    }
                 }
             }
 
-            // Recurring Items
+            // Empty State
             if (uiState.recurringItems.isEmpty()) {
                 item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
+                    Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.Repeat,
-                                null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Box(modifier = Modifier.size(72.dp).clip(CircleShape).background(IncomeGreen.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.Repeat, null, modifier = Modifier.size(36.dp), tint = IncomeGreen.copy(alpha = 0.5f))
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                "No recurring transactions",
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                "Add recurring income/expenses or create from transaction patterns",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                textAlign = TextAlign.Center
-                            )
+                            Text("No recurring transactions", style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Text("Add recurring income/expenses or create from transaction patterns",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center, modifier = Modifier.padding(horizontal = 24.dp))
                         }
                     }
                 }
@@ -250,20 +252,16 @@ fun RecurringScreen(
                                 selectedItem = item
                             }
                         },
-                        onLongClick = {
-                            viewModel.toggleItemSelection(item.id)
-                        },
-                        onDelete = { itemToDelete = item },
-                        onPause = { months -> viewModel.pauseItem(item, months) },
-                        onSkip = { viewModel.skipNextOccurrence(item) }
-                    )
-                }
+                        onLongClick = { viewModel.toggleItemSelection(item.id) },
+                    onDelete = { itemToDelete = item },
+                    onPause = { months -> viewModel.pauseItem(item, months) },
+                    onSkip = { viewModel.skipNextOccurrence(item) },
+                    onApprove = { viewModel.approveItem(item) }
+                )
             }
+        }
 
-            // Bottom spacing for FAB
-            item {
-                Spacer(modifier = Modifier.height(72.dp))
-            }
+        item { Spacer(modifier = Modifier.height(72.dp)) }
         }
     }
 
@@ -293,14 +291,20 @@ fun RecurringScreen(
     itemToDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { itemToDelete = null },
-            title = { Text("Delete Recurring") },
-            text = { Text("Delete \"${item.name}\"? Future occurrences will stop.") },
+            shape = RoundedCornerShape(24.dp),
+            icon = { Icon(Icons.Default.Delete, null, tint = ExpenseRed, modifier = Modifier.size(40.dp)) },
+            title = { Text("Delete Recurring", fontWeight = FontWeight.Bold) },
+            text = { Text("Delete \"${item.name}\"? Future occurrences will stop.", color = MaterialTheme.colorScheme.onSurfaceVariant) },
             confirmButton = {
-                TextButton(onClick = { viewModel.deleteRecurring(item); itemToDelete = null }) {
-                    Text("Delete", color = ExpenseRed)
-                }
+                Button(
+                    onClick = { viewModel.deleteRecurring(item); itemToDelete = null },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
+                ) { Text("Delete", fontWeight = FontWeight.SemiBold) }
             },
-            dismissButton = { TextButton(onClick = { itemToDelete = null }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { itemToDelete = null }) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
         )
     }
 
@@ -311,7 +315,8 @@ fun RecurringScreen(
             onDismiss = { selectedItem = null },
             onPause = { months -> viewModel.pauseItem(item, months); selectedItem = null },
             onSkip = { viewModel.skipNextOccurrence(item); selectedItem = null },
-            onDelete = { itemToDelete = item; selectedItem = null }
+            onDelete = { itemToDelete = item; selectedItem = null },
+            onApprove = { viewModel.approveItem(item); selectedItem = null }
         )
     }
 }
@@ -324,21 +329,28 @@ fun InsightCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier) {
-        Column(
-            modifier = Modifier.padding(12.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(color.copy(alpha = 0.06f), Color.Transparent)))
+            .padding(14.dp))
+        {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(color.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = color, modifier = Modifier.size(14.dp))
+                }
                 Text(title, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Text(
-                CurrencyFormatter.format(amount),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = color
-            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(CurrencyFormatter.format(amount), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold, color = color)
         }
     }
 }
@@ -346,35 +358,38 @@ fun InsightCard(
 @Composable
 fun SuggestionCard(suggestion: RecurringSuggestion) {
     Card(
-        modifier = Modifier.width(180.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+        modifier = Modifier.width(200.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, AccentPurple.copy(alpha = 0.3f))
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Lightbulb, null, tint = Color(0xFFFFC107), modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Pattern Detected", style = MaterialTheme.typography.labelSmall)
+        Column(modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(AccentPurple.copy(alpha = 0.06f), Color.Transparent)))
+            .padding(14.dp))
+        {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(modifier = Modifier.size(28.dp).clip(RoundedCornerShape(8.dp)).background(AccentPurple.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(Icons.Default.Lightbulb, null, tint = AccentPurple, modifier = Modifier.size(14.dp))
+                }
+                Text("Pattern Detected", style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, color = AccentPurple)
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(suggestion.name, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Medium)
-            Text(
-                "${suggestion.occurrences}x detected • ~${suggestion.avgDaysBetween} days",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Text("${suggestion.occurrences}x detected • ~${suggestion.avgDaysBetween} days",
+                style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                CurrencyFormatter.format(suggestion.amount),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Text(CurrencyFormatter.format(suggestion.amount), style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold, color = AccentPurple)
             Spacer(modifier = Modifier.height(8.dp))
-            Button(
-                onClick = { /* Add as recurring */ },
-                modifier = Modifier.fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = AccentPurple.copy(alpha = 0.1f)
             ) {
-                Text("Add", style = MaterialTheme.typography.labelSmall)
+                Text("${(suggestion.confidence * 100).toInt()}% match", modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, color = AccentPurple)
             }
         }
     }
@@ -390,166 +405,85 @@ fun RecurringItemCard(
     onLongClick: () -> Unit,
     onDelete: () -> Unit,
     onPause: (Int) -> Unit,
-    onSkip: () -> Unit
+    onSkip: () -> Unit,
+    onApprove: () -> Unit = {}
 ) {
-    val daysUntil = ((item.nextDate - System.currentTimeMillis()) / (24 * 60 * 60 * 1000)).toInt()
-    val isUrgent = daysUntil <= 3 && item.status == RecurringStatus.ACTIVE
-    val isIncome = item.type == "Income"
-    val isPaused = item.status == RecurringStatus.PAUSED
+    val isPastDue = item.nextDate < System.currentTimeMillis()
+    val isToday = DateUtils.formatDate(item.nextDate) == DateUtils.formatDate(System.currentTimeMillis())
+    val accentColor = when {
+        item.status == RecurringStatus.PAUSED -> Color.Gray
+        isPastDue -> ExpenseRed
+        isToday -> WarningOrange
+        item.type == "Income" -> IncomeGreen
+        else -> ExpenseRed
+    }
+
+    val borderColor = when {
+        isSelected -> IncomeGreen
+        else -> MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+    }
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            ),
-        colors = CardDefaults.cardColors(
-            containerColor = when {
-                isSelected -> MaterialTheme.colorScheme.primaryContainer
-                isPaused -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                isUrgent -> MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.3f)
-                isIncome -> IncomeGreen.copy(alpha = 0.1f)
-                else -> ExpenseRed.copy(alpha = 0.1f)
-            }
-        )
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp),
+        border = androidx.compose.foundation.BorderStroke(if (isSelected) 1.5.dp else 0.5.dp, borderColor)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
+                .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Checkbox in bulk mode
             if (isBulkMode) {
                 Checkbox(
                     checked = isSelected,
-                    onCheckedChange = { onClick() }
+                    onCheckedChange = { onClick() },
+                    colors = CheckboxDefaults.colors(checkedColor = IncomeGreen),
+                    modifier = Modifier.padding(end = 8.dp)
                 )
             }
 
-            // Icon
             Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (isIncome) IncomeGreen.copy(alpha = 0.2f) 
-                        else ExpenseRed.copy(alpha = 0.2f)
-                    ),
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                    null,
-                    tint = if (isIncome) IncomeGreen else ExpenseRed,
-                    modifier = Modifier.size(22.dp)
+                    if (item.type == "Income") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                    null, tint = accentColor, modifier = Modifier.size(22.dp)
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
-            // Content
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        item.name,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    if (isPaused) {
+                    Text(item.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (item.status == RecurringStatus.PAUSED) {
                         Spacer(modifier = Modifier.width(6.dp))
-                        AssistChip(
-                            onClick = {},
-                            label = { Text("Paused", style = MaterialTheme.typography.labelSmall) },
-                            colors = AssistChipDefaults.assistChipColors(
-                                containerColor = Color(0xFFFFE0B2)
-                            ),
-                            modifier = Modifier.height(20.dp)
-                        )
-                    }
-                    if (item.isVariableAmount) {
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Icon(
-                            Icons.Default.TrendingFlat,
-                            null,
-                            modifier = Modifier.size(14.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Text("Paused", style = MaterialTheme.typography.labelSmall, color = Color.Gray)
                     }
                 }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        item.interval.displayName,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        " • ",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        item.category,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Text("${item.interval.displayName} • ${item.category}", style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                val dateText = when {
+                    isPastDue -> "Overdue"
+                    isToday -> "Today"
+                    else -> DateUtils.formatShortDate(item.nextDate)
                 }
-
-                Text(
-                    when {
-                        isPaused -> "Resumes: ${DateUtils.formatDate(item.pausedUntil ?: 0)}"
-                        daysUntil < 0 -> "Due ${-daysUntil} days ago"
-                        daysUntil == 0 -> "Due today"
-                        daysUntil == 1 -> "Due tomorrow"
-                        daysUntil <= 7 -> "Due in $daysUntil days"
-                        else -> "Next: ${DateUtils.formatDate(item.nextDate)}"
-                    },
-                    style = MaterialTheme.typography.labelSmall,
-                    color = when {
-                        daysUntil <= 1 -> ExpenseRed
-                        daysUntil <= 3 -> Color(0xFFFF9800)
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                )
+                Text("Next: $dateText", style = MaterialTheme.typography.labelSmall, color = accentColor, fontWeight = FontWeight.Medium)
             }
 
-            // Amount
             Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    CurrencyFormatter.format(item.amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isIncome) IncomeGreen else ExpenseRed
-                )
-
-                // Quick actions (only when not in bulk mode)
-                if (!isBulkMode && !isPaused) {
+                Text(CurrencyFormatter.format(item.amount), style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold, color = accentColor)
+                if (!isBulkMode) {
                     Row {
-                        IconButton(
-                            onClick = onSkip,
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.SkipNext,
-                                "Skip",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(
-                            onClick = { onPause(1) },
-                            modifier = Modifier.size(28.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Pause,
-                                "Pause",
-                                modifier = Modifier.size(16.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(Icons.Default.Delete, "Delete", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -566,36 +500,31 @@ fun BulkActionsBar(
 ) {
     var showPauseDialog by remember { mutableStateOf(false) }
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shadowElevation = 8.dp,
-        color = MaterialTheme.colorScheme.surface
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = IncomeGreen),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("$selectedCount selected", style = MaterialTheme.typography.labelMedium)
-            }
-            Row {
-                FilledTonalButton(onClick = { showPauseDialog = true }) {
-                    Icon(Icons.Default.Pause, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Pause")
-                }
-                Spacer(modifier = Modifier.width(8.dp))
+            Text("$selectedCount selected", style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold, color = Color.White)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showPauseDialog = true },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = 0.6f))
+                ) { Text("Pause", fontWeight = FontWeight.Medium) }
                 Button(
                     onClick = onDelete,
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
-                ) {
-                    Icon(Icons.Default.Delete, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Delete")
-                }
+                ) { Text("Delete", fontWeight = FontWeight.Medium) }
             }
         }
     }
@@ -603,21 +532,27 @@ fun BulkActionsBar(
     if (showPauseDialog) {
         AlertDialog(
             onDismissRequest = { showPauseDialog = false },
-            title = { Text("Pause for...") },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Pause Duration", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    listOf(1, 2, 3).forEach { months ->
-                        TextButton(
-                            onClick = { onPause(months); showPauseDialog = false },
-                            modifier = Modifier.fillMaxWidth()
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(1, 3, 6, 12).forEach { months ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { onPause(months); showPauseDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         ) {
-                            Text("$months month${if (months > 1) "s" else ""}")
+                            Text("$months month${if (months > 1) "s" else ""}",
+                                modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showPauseDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showPauseDialog = false }) { Text("Cancel") }
+            }
         )
     }
 }
@@ -629,163 +564,108 @@ fun ItemDetailsSheet(
     onDismiss: () -> Unit,
     onPause: (Int) -> Unit,
     onSkip: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onApprove: () -> Unit = {}
 ) {
-    var showEndConditionDialog by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
     var showPauseDialog by remember { mutableStateOf(false) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        shape = RoundedCornerShape(24.dp),
+        containerColor = MaterialTheme.colorScheme.surface
+    ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Header
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (item.type == "Income") IncomeGreen.copy(alpha = 0.2f)
-                            else ExpenseRed.copy(alpha = 0.2f)
-                        ),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        if (item.type == "Income") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                        null,
-                        tint = if (item.type == "Income") IncomeGreen else ExpenseRed
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Box(modifier = Modifier.size(48.dp).clip(RoundedCornerShape(16.dp))
+                    .background(if (item.type == "Income") IncomeGreen.copy(alpha = 0.12f) else ExpenseRed.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center) {
+                    Icon(if (item.type == "Income") Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                        null, tint = if (item.type == "Income") IncomeGreen else ExpenseRed, modifier = Modifier.size(24.dp))
                 }
-                Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(item.name, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(item.category, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(
-                    CurrencyFormatter.format(item.amount),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = if (item.type == "Income") IncomeGreen else ExpenseRed
-                )
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Details
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    DetailRow(label = "Interval", value = item.interval.displayName)
-                    DetailRow(label = "Next Due", value = DateUtils.formatDate(item.nextDate))
-                    if (item.isVariableAmount) {
-                        DetailRow(label = "Variable Amount", value = "Yes (avg ₹${item.averageAmount})")
-                    }
-                    item.notes?.let { DetailRow(label = "Notes", value = it) }
+                Column {
+                    Text(item.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("${item.type} • ${item.category}", style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
 
-            // Actions
-            Text("Actions", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedButton(onClick = onSkip, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.SkipNext, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Skip Next")
-                }
-                OutlinedButton(onClick = { showPauseDialog = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Default.Pause, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("Pause")
-                }
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column { Text("Amount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(CurrencyFormatter.format(item.amount), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = if (item.type == "Income") IncomeGreen else ExpenseRed) }
+                Column(horizontalAlignment = Alignment.End) { Text("Interval", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.interval.displayName, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium) }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Column { Text("Next Date", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(DateUtils.formatDate(item.nextDate), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium) }
 
-            OutlinedButton(
-                onClick = { showEndConditionDialog = true },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Icon(Icons.Default.EventBusy, null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Set End Condition")
+            if (!item.notes.isNullOrBlank()) {
+                Column { Text("Notes", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(item.notes, style = MaterialTheme.typography.bodyMedium) }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (item.status == RecurringStatus.NEEDS_APPROVAL) {
+                Button(
+                    onClick = { onApprove(); onDismiss() },
+                    modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen)
+                ) { Text("Approve & Add", fontWeight = FontWeight.SemiBold) }
+            }
+
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { showPauseDialog = true },
+                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)
+                ) { Text("Pause", fontWeight = FontWeight.Medium) }
+                OutlinedButton(
+                    onClick = { onSkip(); onDismiss() },
+                    modifier = Modifier.weight(1f), shape = RoundedCornerShape(14.dp)
+                ) { Text("Skip Next", fontWeight = FontWeight.Medium) }
+            }
 
             Button(
-                onClick = onDelete,
-                modifier = Modifier.fillMaxWidth(),
+                onClick = { onDelete(); onDismiss() },
+                modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
-            ) {
-                Icon(Icons.Default.Delete, null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Delete Recurring")
-            }
+            ) { Text("Delete Recurring", fontWeight = FontWeight.SemiBold) }
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // Pause Dialog
     if (showPauseDialog) {
         AlertDialog(
             onDismissRequest = { showPauseDialog = false },
-            title = { Text("Pause Recurring") },
-            text = { Text("Pause this recurring transaction temporarily?") },
-            confirmButton = {
-                TextButton(onClick = { onPause(1); showPauseDialog = false }) {
-                    Text("1 Month")
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { showPauseDialog = false }) { Text("Cancel") }
-                }
-            }
-        )
-    }
-
-    // End Condition Dialog
-    if (showEndConditionDialog) {
-        AlertDialog(
-            onDismissRequest = { showEndConditionDialog = false },
-            title = { Text("End Condition") },
+            shape = RoundedCornerShape(24.dp),
+            title = { Text("Pause Duration", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    listOf("Never", "After 6 months", "After 12 months", "On specific date").forEach { option ->
-                        TextButton(
-                            onClick = { showEndConditionDialog = false },
-                            modifier = Modifier.fillMaxWidth()
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    listOf(1, 3, 6, 12).forEach { months ->
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { onPause(months); showPauseDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                         ) {
-                            Text(option)
+                            Text("$months month${if (months > 1) "s" else ""}",
+                                modifier = Modifier.padding(12.dp), style = MaterialTheme.typography.bodyMedium)
                         }
                     }
                 }
             },
             confirmButton = {},
-            dismissButton = { TextButton(onClick = { showEndConditionDialog = false }) { Text("Cancel") } }
+            dismissButton = {
+                TextButton(onClick = { showPauseDialog = false }) { Text("Cancel") }
+            }
         )
-    }
-}
-
-@Composable
-fun DetailRow(label: String, value: String) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -793,194 +673,145 @@ fun DetailRow(label: String, value: String) {
 @Composable
 fun AddRecurringDialog(
     onDismiss: () -> Unit,
-    onSaveIncome: (String, Double, IncomeCategory, RecurringInterval, String?, com.rudra.savingbuddy.domain.model.EndCondition, Long?, Int?) -> Unit,
-    onSaveExpense: (String, Double, ExpenseCategory, RecurringInterval, String?, com.rudra.savingbuddy.domain.model.EndCondition, Long?, Int?) -> Unit
+    onSaveIncome: (String, Double, IncomeCategory, RecurringInterval, String?, EndCondition, Long?, Int?) -> Unit,
+    onSaveExpense: (String, Double, ExpenseCategory, RecurringInterval, String?, EndCondition, Long?, Int?) -> Unit
 ) {
-    var selectedType by remember { mutableStateOf("Expense") }
+    var isIncome by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
-    var selectedIncomeCategory by remember { mutableStateOf(IncomeCategory.SALARY) }
-    var selectedExpenseCategory by remember { mutableStateOf(ExpenseCategory.FOOD) }
+    var selectedCategory by remember { mutableStateOf("") }
     var selectedInterval by remember { mutableStateOf(RecurringInterval.MONTHLY) }
     var notes by remember { mutableStateOf("") }
-    var isVariableAmount by remember { mutableStateOf(false) }
-    var needsApproval by remember { mutableStateOf(false) }
-    var incomeCategoryExpanded by remember { mutableStateOf(false) }
-    var expenseCategoryExpanded by remember { mutableStateOf(false) }
+    var categoryExpanded by remember { mutableStateOf(false) }
     var intervalExpanded by remember { mutableStateOf(false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add Recurring") },
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.Repeat, null, tint = IncomeGreen, modifier = Modifier.size(22.dp))
+                Text("Add Recurring", fontWeight = FontWeight.Bold)
+            }
+        },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Type Toggle
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = selectedType == "Income",
-                        onClick = { selectedType = "Income" },
-                        label = { Text("Income") },
-                        leadingIcon = { Icon(Icons.Default.TrendingUp, null, modifier = Modifier.size(16.dp)) },
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilterChip(
-                        selected = selectedType == "Expense",
-                        onClick = { selectedType = "Expense" },
-                        label = { Text("Expense") },
-                        leadingIcon = { Icon(Icons.Default.TrendingDown, null, modifier = Modifier.size(16.dp)) },
-                        modifier = Modifier.weight(1f)
-                    )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Income/Expense Toggle
+                Card(
+                    shape = RoundedCornerShape(14.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Row(modifier = Modifier.fillMaxWidth().padding(4.dp)) {
+                        listOf(Triple(true, "Income", IncomeGreen), Triple(false, "Expense", ExpenseRed)).forEach { (isInc, label, color) ->
+                            Surface(
+                                modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).clickable { isIncome = isInc },
+                                color = if (isIncome == isInc) color else Color.Transparent,
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text(label, modifier = Modifier.padding(vertical = 10.dp).fillMaxWidth(),
+                                    textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold,
+                                    color = if (isIncome == isInc) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                    }
                 }
 
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
-                    label = { Text("Name") },
-                    placeholder = { Text("e.g., Netflix, Rent, Salary") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    label = { Text(if (isIncome) "Income Source" else "Expense Name") },
+                    leadingIcon = { Icon(if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown, null, tint = if (isIncome) IncomeGreen else ExpenseRed) },
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), cursorColor = if (isIncome) IncomeGreen else ExpenseRed)
                 )
 
                 OutlinedTextField(
                     value = amount,
-                    onValueChange = { if (it.isEmpty() || it.matches(Regex("^\\d*\\.?\\d*$"))) amount = it },
+                    onValueChange = { amount = it },
                     label = { Text("Amount") },
+                    leadingIcon = { Text("৳", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = if (isIncome) IncomeGreen else ExpenseRed) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    leadingIcon = { Text("₹", style = MaterialTheme.typography.bodyLarge) }
+                    modifier = Modifier.fillMaxWidth(), singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 )
 
-                // Variable Amount Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Variable Amount", style = MaterialTheme.typography.bodyMedium)
-                    Spacer(modifier = Modifier.weight(1f))
-                    Switch(checked = isVariableAmount, onCheckedChange = { isVariableAmount = it })
-                }
-
-                // Category
-                if (selectedType == "Income") {
-                    ExposedDropdownMenuBox(expanded = incomeCategoryExpanded, onExpandedChange = { incomeCategoryExpanded = it }) {
-                        OutlinedTextField(
-                            value = selectedIncomeCategory.displayName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Category") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = incomeCategoryExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
-                        )
-                        ExposedDropdownMenu(expanded = incomeCategoryExpanded, onDismissRequest = { incomeCategoryExpanded = false }) {
-                            IncomeCategory.entries.forEach { cat ->
-                                DropdownMenuItem(
-                                    text = { Text(cat.displayName) },
-                                    onClick = { selectedIncomeCategory = cat; incomeCategoryExpanded = false }
-                                )
-                            }
-                        }
-                    }
-                } else {
-                    ExposedDropdownMenuBox(expanded = expenseCategoryExpanded, onExpandedChange = { expenseCategoryExpanded = it }) {
-                        OutlinedTextField(
-                            value = selectedExpenseCategory.displayName,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Category") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expenseCategoryExpanded) },
-                            modifier = Modifier.fillMaxWidth().menuAnchor()
-                        )
-                        ExposedDropdownMenu(expanded = expenseCategoryExpanded, onDismissRequest = { expenseCategoryExpanded = false }) {
-                            ExpenseCategory.entries.forEach { cat ->
-                                DropdownMenuItem(
-                                    text = { Text(cat.displayName) },
-                                    onClick = { selectedExpenseCategory = cat; expenseCategoryExpanded = false }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Interval
+                // Interval Picker
                 ExposedDropdownMenuBox(expanded = intervalExpanded, onExpandedChange = { intervalExpanded = it }) {
                     OutlinedTextField(
-                        value = selectedInterval.displayName,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Repeat") },
+                        value = selectedInterval.displayName, onValueChange = {}, readOnly = true,
+                        label = { Text("Interval") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = intervalExpanded) },
-                        modifier = Modifier.fillMaxWidth().menuAnchor()
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                     )
                     ExposedDropdownMenu(expanded = intervalExpanded, onDismissRequest = { intervalExpanded = false }) {
                         RecurringInterval.entries.forEach { interval ->
-                            DropdownMenuItem(
-                                text = { Text(interval.displayName) },
-                                onClick = { selectedInterval = interval; intervalExpanded = false }
-                            )
+                            DropdownMenuItem(text = { Text(interval.displayName) },
+                                onClick = { selectedInterval = interval; intervalExpanded = false })
                         }
                     }
                 }
 
-                // Needs Approval Toggle
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Needs Approval", style = MaterialTheme.typography.bodyMedium)
-                        Text("Review before adding", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                // Category Picker
+                ExposedDropdownMenuBox(expanded = categoryExpanded, onExpandedChange = { categoryExpanded = it }) {
+                    OutlinedTextField(
+                        value = selectedCategory, onValueChange = {}, readOnly = true,
+                        label = { Text("Category") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = categoryExpanded) },
+                        modifier = Modifier.fillMaxWidth().menuAnchor(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                    )
+                    ExposedDropdownMenu(expanded = categoryExpanded, onDismissRequest = { categoryExpanded = false }) {
+                        val cats = if (isIncome) IncomeCategory.entries.map { it.displayName }
+                        else ExpenseCategory.entries.map { it.displayName }
+                        cats.forEach { cat ->
+                            DropdownMenuItem(text = { Text(cat) },
+                                onClick = { selectedCategory = cat; categoryExpanded = false })
+                        }
                     }
-                    Switch(checked = needsApproval, onCheckedChange = { needsApproval = it })
                 }
 
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
                     label = { Text("Notes (optional)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2
+                    modifier = Modifier.fillMaxWidth(), maxLines = 2,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 )
             }
         },
         confirmButton = {
-            TextButton(
+            Button(
                 onClick = {
-                    val amountValue = amount.toDoubleOrNull() ?: 0.0
-                    if (amountValue > 0) {
-                        if (selectedType == "Income") {
-                            onSaveIncome(
-                                name.ifBlank { selectedIncomeCategory.displayName },
-                                amountValue,
-                                selectedIncomeCategory,
-                                selectedInterval,
-                                notes.ifBlank { null },
-                                com.rudra.savingbuddy.domain.model.EndCondition.NEVER,
-                                null,
-                                null
-                            )
+                    val amountVal = amount.toDoubleOrNull() ?: 0.0
+                    if (name.isNotBlank() && amountVal > 0 && selectedCategory.isNotBlank()) {
+                        if (isIncome) {
+                            val category = IncomeCategory.entries.find { it.displayName == selectedCategory } ?: IncomeCategory.OTHERS
+                            onSaveIncome(name, amountVal, category, selectedInterval, notes.ifBlank { null }, EndCondition.NEVER, null, null)
                         } else {
-                            onSaveExpense(
-                                name.ifBlank { selectedExpenseCategory.displayName },
-                                amountValue,
-                                selectedExpenseCategory,
-                                selectedInterval,
-                                notes.ifBlank { null },
-                                com.rudra.savingbuddy.domain.model.EndCondition.NEVER,
-                                null,
-                                null
-                            )
+                            val category = ExpenseCategory.entries.find { it.displayName == selectedCategory } ?: ExpenseCategory.OTHERS
+                            onSaveExpense(name, amountVal, category, selectedInterval, notes.ifBlank { null }, EndCondition.NEVER, null, null)
                         }
                     }
                 },
-                enabled = amount.isNotBlank()
-            ) {
-                Text("Save")
-            }
+                enabled = name.isNotBlank() && amount.toDoubleOrNull() != null && selectedCategory.isNotBlank(),
+                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = if (isIncome) IncomeGreen else ExpenseRed)
+            ) { Text("Add", fontWeight = FontWeight.SemiBold) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
     )
 }

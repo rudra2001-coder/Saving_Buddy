@@ -1,9 +1,11 @@
 package com.rudra.savingbuddy.ui.screens.calculator
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -30,7 +32,12 @@ fun CalculatorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Financial Calculator", fontWeight = FontWeight.Bold) },
+                title = { 
+                Column {
+                    Text("Financial Calculator", fontWeight = FontWeight.Bold)
+                    Text("Loan, Investment & Savings", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -103,11 +110,15 @@ private fun LoanCalculatorTab(viewModel: CalculatorViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Loan Calculator",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(24.dp), tint = SavingsBlue)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Loan Calculator",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Calculate monthly payments for loans",
@@ -185,11 +196,15 @@ private fun InvestmentCalculatorTab(viewModel: CalculatorViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Investment Calculator",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(24.dp), tint = IncomeGreen)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Investment Calculator",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Calculate compound interest growth",
@@ -279,11 +294,15 @@ private fun SavingsGoalCalculatorTab(viewModel: CalculatorViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Savings Goal Calculator",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Flag, contentDescription = null, modifier = Modifier.size(24.dp), tint = SavingsBlue)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Savings Goal Calculator",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Calculate monthly savings needed",
@@ -362,11 +381,15 @@ private fun RetirementCalculatorTab(viewModel: CalculatorViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Retirement Calculator",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.BeachAccess, contentDescription = null, modifier = Modifier.size(24.dp), tint = IncomeGreen)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Retirement Calculator",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Plan your retirement savings",
@@ -467,11 +490,15 @@ private fun BudgetCalculatorTab(viewModel: CalculatorViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
-        Text(
-            text = "Budget Calculator",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null, modifier = Modifier.size(24.dp), tint = SavingsBlue)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Budget Calculator",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+        }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
             text = "Based on 50-30-20 budget rule",
@@ -530,6 +557,8 @@ private fun ResultsCard(viewModel: CalculatorViewModel) {
     if (uiState.calculations.isNotEmpty()) {
         Card(
             modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             colors = CardDefaults.cardColors(
                 containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
             )

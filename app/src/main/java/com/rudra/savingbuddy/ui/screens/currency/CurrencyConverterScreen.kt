@@ -66,7 +66,12 @@ fun CurrencyConverterScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Currency Converter", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text("Currency Converter", fontWeight = FontWeight.Bold)
+                        Text("Real-time exchange rates", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -289,7 +294,11 @@ fun CurrencyConverterScreen(
             }
 
             item {
-                Text("All Currencies", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Language, contentDescription = null, modifier = Modifier.size(20.dp), tint = PrimaryGreen)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("All Currencies", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = TextPrimary)
+                }
             }
 
             items(currencies) { currency ->

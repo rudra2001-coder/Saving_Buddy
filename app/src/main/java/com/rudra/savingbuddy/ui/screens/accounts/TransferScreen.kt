@@ -26,7 +26,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.Account
-import com.rudra.savingbuddy.domain.model.AccountProvider
 import com.rudra.savingbuddy.domain.model.AccountType
 import com.rudra.savingbuddy.domain.model.TransferResult
 import com.rudra.savingbuddy.ui.navigation.Screen
@@ -54,73 +53,76 @@ fun TransferScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { },
+                title = {
+                    Column {
+                        Text("Transfer", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("Move money between accounts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
             )
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            item { Spacer(modifier = Modifier.height(8.dp)) }
+            item { Spacer(modifier = Modifier.height(4.dp)) }
 
-            item {
-                Text(
-                    "Transfer Money",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-
+            // Hero Amount Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                    )
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.12f), IncomeGreen.copy(alpha = 0.03f))))
+                            .padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Text(
-                            "Total Amount",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            CurrencyFormatter.formatBDT(animatedAmount.toDouble()),
-                            style = MaterialTheme.typography.displaySmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        )
+                        Text("Total Amount", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp)).background(IncomeGreen.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("৳", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                            }
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                CurrencyFormatter.formatBDT(animatedAmount.toDouble()),
+                                style = MaterialTheme.typography.displaySmall,
+                                fontWeight = FontWeight.Bold,
+                                color = IncomeGreen
+                            )
+                        }
                         if (uiState.fee > 0) {
                             Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                "Fee: ${CurrencyFormatter.formatBDT(uiState.fee)}",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Fee: ${CurrencyFormatter.formatBDT(uiState.fee)}",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
             }
 
+            // From Account
             item {
-                Column {
-                    Text("FROM", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(IncomeGreen))
+                        Icon(Icons.Outlined.Output, null, modifier = Modifier.size(16.dp), tint = IncomeGreen)
+                        Text("Source", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = IncomeGreen)
+                    }
                     AccountSelectorCard(
                         account = uiState.fromAccount,
                         icon = Icons.Outlined.Output,
@@ -130,10 +132,36 @@ fun TransferScreen(
                 }
             }
 
+            // Swap Button
             item {
-                Column {
-                    Text("TO", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.tertiary)
-                    Spacer(modifier = Modifier.height(8.dp))
+                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    IconButton(
+                        onClick = {
+                            val from = uiState.fromAccount
+                            val to = uiState.toAccount
+                            viewModel.setFromAccount(to ?: return@IconButton)
+                            viewModel.setToAccount(from ?: return@IconButton)
+                        },
+                        enabled = uiState.fromAccount != null && uiState.toAccount != null
+                    ) {
+                        Box(
+                            modifier = Modifier.size(40.dp).clip(CircleShape).background(IncomeGreen.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.SwapVert, null, tint = IncomeGreen, modifier = Modifier.size(22.dp))
+                        }
+                    }
+                }
+            }
+
+            // To Account
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Box(modifier = Modifier.size(6.dp).clip(CircleShape).background(SavingsBlue))
+                        Icon(Icons.Outlined.Input, null, modifier = Modifier.size(16.dp), tint = SavingsBlue)
+                        Text("Destination", style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = SavingsBlue)
+                    }
                     AccountSelectorCard(
                         account = uiState.toAccount,
                         icon = Icons.Outlined.Input,
@@ -143,113 +171,177 @@ fun TransferScreen(
                 }
             }
 
-            item {
-                OutlinedTextField(
-                    value = uiState.amount,
-                    onValueChange = { newValue ->
-                        if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
-                            viewModel.updateAmount(newValue)
-                        }
-                    },
-                    label = { Text("Amount") },
-                    leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp)
-                )
-            }
-
+            // Amount Field
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Fee", style = MaterialTheme.typography.bodyMedium)
-                            Text(
-                                if (uiState.fee == 0.0) "Free" else CurrencyFormatter.formatBDT(uiState.fee),
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.Medium
-                            )
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.TrendingUp, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                            Text("Amount", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                         }
-                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                        Row(
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.amount,
+                            onValueChange = { newValue ->
+                                if (newValue.isEmpty() || newValue.matches(Regex("^\\d*\\.?\\d*$"))) {
+                                    viewModel.updateAmount(newValue)
+                                }
+                            },
+                            label = { Text("Amount") },
+                            placeholder = { Text("0") },
+                            leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = IncomeGreen) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text(
-                                CurrencyFormatter.formatBDT(uiState.totalAmount),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = IncomeGreen,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                cursorColor = IncomeGreen
                             )
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Quick Amount Chips
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            listOf("100", "500", "1000", "5000").forEach { preset ->
+                                Surface(
+                                    modifier = Modifier.clickable { viewModel.updateAmount(preset) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = IncomeGreen.copy(alpha = 0.1f)
+                                ) {
+                                    Text("৳$preset", modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                        style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, color = IncomeGreen)
+                                }
+                            }
                         }
                     }
                 }
             }
 
+            // Fee Summary
             item {
-                OutlinedTextField(
-                    value = uiState.note,
-                    onValueChange = { viewModel.updateNote(it) },
-                    label = { Text("Note (optional)") },
+                Card(
                     modifier = Modifier.fillMaxWidth(),
-                    maxLines = 2,
-                    shape = RoundedCornerShape(16.dp)
-                )
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.06f), IncomeGreen.copy(alpha = 0.01f))))
+                        .padding(16.dp))
+                    {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Receipt, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                            Text("Summary", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Fee", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(if (uiState.fee == 0.0) "Free" else CurrencyFormatter.formatBDT(uiState.fee),
+                                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface)
+                        }
+                        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text(CurrencyFormatter.formatBDT(uiState.totalAmount),
+                                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                        }
+                    }
+                }
             }
 
+            // Note
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Notes, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                            Text("Note", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.note,
+                            onValueChange = { viewModel.updateNote(it) },
+                            label = { Text("Note (optional)") },
+                            placeholder = { Text("e.g., Monthly savings transfer") },
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 2,
+                            singleLine = false,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = IncomeGreen,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                cursorColor = IncomeGreen
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Error
             uiState.error?.let { error ->
                 item {
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.1f)),
-                        shape = RoundedCornerShape(12.dp)
+                        colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.12f)),
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, ExpenseRed.copy(alpha = 0.3f))
                     ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                Icons.Default.Error,
-                                contentDescription = null,
-                                tint = ExpenseRed,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                error,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = ExpenseRed
-                            )
+                        Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Error, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                            Text(error, style = MaterialTheme.typography.bodySmall, color = ExpenseRed)
                         }
                     }
                 }
             }
 
+            // Transfer Button
             item {
                 Button(
                     onClick = { showConfirmation = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    enabled = uiState.amount.isNotBlank() && uiState.fromAccount != null && uiState.toAccount != null && !uiState.isLoading,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    enabled = uiState.canTransfer && !uiState.isLoading,
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = IncomeGreen,
+                        disabledContainerColor = IncomeGreen.copy(alpha = 0.5f)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
                 ) {
-                    Icon(Icons.Default.SwapHoriz, null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Transfer ${CurrencyFormatter.formatBDT(uiState.totalAmount)}", fontWeight = FontWeight.Bold)
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(22.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Default.SwapHoriz, null, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Transfer ${CurrencyFormatter.formatBDT(uiState.totalAmount)}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
 
-            item { Spacer(modifier = Modifier.height(24.dp)) }
+            item { Spacer(modifier = Modifier.height(16.dp)) }
         }
     }
 
@@ -282,30 +374,51 @@ fun TransferScreen(
     if (showConfirmation) {
         AlertDialog(
             onDismissRequest = { showConfirmation = false },
-            title = { Text("Confirm Transfer") },
+            shape = RoundedCornerShape(24.dp),
+            icon = { Icon(Icons.Default.SwapHoriz, null, tint = IncomeGreen, modifier = Modifier.size(40.dp)) },
+            title = { Text("Confirm Transfer", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    Text("Transfer ${CurrencyFormatter.formatBDT(uiState.totalAmount)} from:")
-                    Text("${uiState.fromAccount?.name}", fontWeight = FontWeight.Bold)
-                    Text("to:")
-                    Text("${uiState.toAccount?.name}", fontWeight = FontWeight.Bold)
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = IncomeGreen.copy(alpha = 0.08f))
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Outlined.Output, null, tint = IncomeGreen, modifier = Modifier.size(16.dp))
+                                Text(uiState.fromAccount?.name ?: "", fontWeight = FontWeight.Medium)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Icon(Icons.Default.ArrowDownward, null, tint = IncomeGreen, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Icon(Icons.Outlined.Input, null, tint = SavingsBlue, modifier = Modifier.size(16.dp))
+                                Text(uiState.toAccount?.name ?: "", fontWeight = FontWeight.Medium)
+                            }
+                        }
+                    }
+                    Text("Amount: ${CurrencyFormatter.formatBDT(uiState.totalAmount)}", fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium, color = IncomeGreen)
                     if (uiState.note.isNotBlank()) {
-                        Text("Note: ${uiState.note}")
+                        Text("Note: ${uiState.note}", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             },
             confirmButton = {
-                Button(onClick = {
-                    viewModel.executeTransfer()
-                    showConfirmation = false
-                }) {
-                    Text("Confirm")
-                }
+                Button(
+                    onClick = {
+                        viewModel.executeTransfer()
+                        showConfirmation = false
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen)
+                ) { Text("Confirm Transfer", fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
-                TextButton(onClick = { showConfirmation = false }) {
-                    Text("Cancel")
-                }
+                TextButton(onClick = { showConfirmation = false }) { Text("Cancel") }
             }
         )
     }
@@ -313,28 +426,46 @@ fun TransferScreen(
     // Success Dialog
     if (uiState.transferResult?.success == true) {
         AlertDialog(
-            onDismissRequest = { 
+            onDismissRequest = {
                 viewModel.reset()
                 navController.popBackStack()
             },
-            icon = { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF4CAF50), modifier = Modifier.size(48.dp)) },
-            title = { Text("Transfer Successful!") },
+            shape = RoundedCornerShape(24.dp),
+            icon = { Icon(Icons.Default.CheckCircle, null, tint = IncomeGreen, modifier = Modifier.size(48.dp)) },
+            title = { Text("Transfer Successful!", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    Text("${CurrencyFormatter.formatBDT(uiState.totalAmount)} moved")
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text("${CurrencyFormatter.formatBDT(uiState.totalAmount)} moved successfully",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("New balances:")
-                    Text("${uiState.fromAccount?.name}: ${CurrencyFormatter.formatBDT(uiState.transferResult?.fromAccountNewBalance ?: 0.0)}")
-                    Text("${uiState.toAccount?.name}: ${CurrencyFormatter.formatBDT(uiState.transferResult?.toAccountNewBalance ?: 0.0)}")
+                    Card(
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(uiState.fromAccount?.name ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(CurrencyFormatter.formatBDT(uiState.transferResult?.fromAccountNewBalance ?: 0.0),
+                                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium)
+                            }
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(uiState.toAccount?.name ?: "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(CurrencyFormatter.formatBDT(uiState.transferResult?.toAccountNewBalance ?: 0.0),
+                                    style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.Medium, color = IncomeGreen)
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
-                Button(onClick = { 
-                    viewModel.reset()
-                    navController.popBackStack()
-                }) {
-                    Text("Done")
-                }
+                Button(
+                    onClick = {
+                        viewModel.reset()
+                        navController.popBackStack()
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen)
+                ) { Text("Done", fontWeight = FontWeight.SemiBold) }
             }
         )
     }
@@ -344,28 +475,30 @@ fun TransferScreen(
         val suggestion = uiState.goalSuggestion!!
         AlertDialog(
             onDismissRequest = { viewModel.dismissGoalSuggestion() },
-            icon = { Icon(Icons.Default.Savings, null, tint = Color(0xFF9C27B0), modifier = Modifier.size(48.dp)) },
-            title = { Text("Save to Goal?") },
+            shape = RoundedCornerShape(24.dp),
+            icon = { Icon(Icons.Default.Savings, null, tint = SavingsBlue, modifier = Modifier.size(44.dp)) },
+            title = { Text("Save to Goal?", fontWeight = FontWeight.Bold) },
             text = {
-                Column {
-                    Text("You just transferred ৳${CurrencyFormatter.formatBDT(uiState.totalAmount)}")
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Would you like to add ৳${CurrencyFormatter.formatBDT(suggestion.suggestedAmount)} to your ${suggestion.goalName} goal?")
-                    Spacer(modifier = Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("You just transferred ${CurrencyFormatter.formatBDT(uiState.totalAmount)}")
+                    Text("Would you like to add ${CurrencyFormatter.formatBDT(suggestion.suggestedAmount)} to your ${suggestion.goalName} goal?",
+                        style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Card(
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFF9C27B0).copy(alpha = 0.1f))
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = SavingsBlue.copy(alpha = 0.1f))
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
                             Text("Goal Progress:", style = MaterialTheme.typography.labelSmall)
+                            Spacer(modifier = Modifier.height(6.dp))
                             LinearProgressIndicator(
                                 progress = { (suggestion.currentAmount / suggestion.targetAmount).toFloat() },
-                                modifier = Modifier.fillMaxWidth(),
-                                color = Color(0xFF9C27B0),
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                color = SavingsBlue,
+                                trackColor = SavingsBlue.copy(alpha = 0.15f)
                             )
-                            Text(
-                                "${CurrencyFormatter.formatBDT(suggestion.currentAmount)} / ${CurrencyFormatter.formatBDT(suggestion.targetAmount)}",
-                                style = MaterialTheme.typography.bodySmall
-                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("${CurrencyFormatter.formatBDT(suggestion.currentAmount)} / ${CurrencyFormatter.formatBDT(suggestion.targetAmount)}",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -373,15 +506,12 @@ fun TransferScreen(
             confirmButton = {
                 Button(
                     onClick = { viewModel.allocateToGoalFromSuggestion() },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF9C27B0))
-                ) {
-                    Text("Yes, Save!")
-                }
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SavingsBlue)
+                ) { Text("Yes, Save!", fontWeight = FontWeight.SemiBold) }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.dismissGoalSuggestion() }) {
-                    Text("Not Now")
-                }
+                TextButton(onClick = { viewModel.dismissGoalSuggestion() }) { Text("Not Now") }
             }
         )
     }
@@ -395,58 +525,38 @@ private fun AccountSelectorCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (account != null) Color(account.iconColor).copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.primaryContainer
-                    ),
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp))
+                    .background(if (account != null) Color(account.iconColor).copy(alpha = 0.12f) else IncomeGreen.copy(alpha = 0.08f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = account?.let { getAccountIcon(it.type) } ?: icon,
                     contentDescription = null,
-                    tint = if (account != null) Color(account.iconColor) else MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (account != null) Color(account.iconColor) else IncomeGreen,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    account?.name ?: label,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium
-                )
+                Text(account?.name ?: label, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium,
+                    color = if (account != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
                 account?.let {
-                    Text(
-                        "Balance: ${CurrencyFormatter.formatBDT(it.balance)}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Text("Balance: ${CurrencyFormatter.formatBDT(it.balance)}",
+                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Icon(
-                Icons.Default.KeyboardArrowDown,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            Icon(Icons.Default.KeyboardArrowDown, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -472,59 +582,41 @@ fun AccountPickerDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Bold) },
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Default.AccountBalanceWallet, null, tint = IncomeGreen, modifier = Modifier.size(20.dp))
+                Text(title, fontWeight = FontWeight.Bold)
+            }
+        },
         text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(accounts) { account ->
                     Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onSelect(account) },
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(
-                            containerColor = Color(account.iconColor).copy(alpha = 0.08f)
-                        )
+                        modifier = Modifier.fillMaxWidth().clickable { onSelect(account) },
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(account.iconColor).copy(alpha = 0.15f)),
+                                modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(Color(account.iconColor).copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = getAccountIcon(account.type),
-                                    contentDescription = null,
-                                    tint = Color(account.iconColor),
-                                    modifier = Modifier.size(20.dp)
-                                )
+                                Icon(getAccountIcon(account.type), null, tint = Color(account.iconColor), modifier = Modifier.size(20.dp))
                             }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    account.name,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
-                                )
-                                Text(
-                                    CurrencyFormatter.formatBDT(account.balance),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                                Text(account.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(CurrencyFormatter.formatBDT(account.balance), style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
-                            Icon(
-                                Icons.Default.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
+                                modifier = Modifier.size(18.dp))
                         }
                     }
                 }
@@ -532,7 +624,9 @@ fun AccountPickerDialog(
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) {
+                Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     )
 }

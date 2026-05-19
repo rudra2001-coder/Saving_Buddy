@@ -253,12 +253,9 @@ class DashboardViewModel @Inject constructor(
                 val offset = i * 30L * 24 * 60 * 60 * 1000
                 val ms     = DateUtils.getStartOfMonth(now - offset)
                 val me     = DateUtils.getEndOfMonth(now - offset)
-                combine(
-                    incomeRepository.getTotalIncomeByDateRange(ms, me),
-                    expenseRepository.getTotalExpensesByDateRange(ms, me)
-                ) { inc, exp -> (inc as? Double ?: 0.0) - (exp as? Double ?: 0.0) }
-                    .first()
-                    .let { trend.add(it) }
+                val inc = incomeRepository.getTotalIncomeByDateRange(ms, me).first() ?: 0.0
+                val exp = expenseRepository.getTotalExpensesByDateRange(ms, me).first() ?: 0.0
+                trend.add(inc - exp)
             }
             _uiState.update { it.copy(monthlyTrend = trend) }
         }

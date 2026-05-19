@@ -100,11 +100,6 @@ fun SettingsScreen(
             SettingsItem("Privacy Mode", "Hide amounts", Icons.Outlined.VisibilityOff, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.privacyModeEnabled, onCheckedChange = { viewModel.setPrivacyMode(it) }) }),
             SettingsItem("Biometric Lock", "Fingerprint unlock", Icons.Outlined.Fingerprint, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.biometricLockEnabled, onCheckedChange = { viewModel.setBiometricLock(it) }) })
         )),
-        SettingsSection("Music & Audio", Icons.Default.MusicNote, listOf(
-            SettingsItem("Background Music", "Focus & mood player", Icons.Default.MusicNote, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.musicEnabled, onCheckedChange = { viewModel.setMusicEnabled(it) }) }),
-            SettingsItem("Auto-Play Music", "Play on app open", Icons.Default.PlayCircle, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.musicAutoPlay, onCheckedChange = { viewModel.setMusicAutoPlay(it) }) }),
-            SettingsItem("Open Music Player", "Browse & play tracks", Icons.Default.QueueMusic, Color(0xFFE91E63), SettingsAction.Navigation)
-        )),
         SettingsSection("Language", Icons.Default.Language, listOf(
             SettingsItem("App Language", uiState.language, Icons.Default.Language, Color(0xFF607D8B), SettingsAction.Navigation)
         )),
@@ -138,7 +133,7 @@ fun SettingsScreen(
             item { Spacer(modifier = Modifier.height(8.dp)) }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
                     Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)))).padding(24.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                             QuickStatItem(icon = Icons.Default.AccountBalanceWallet, value = "${uiState.accountCount}", label = "Accounts", color = Color.White)
@@ -173,7 +168,6 @@ fun SettingsScreen(
                         "Contact Support" -> viewModel.contactSupport()
                         "Privacy Policy" -> navController?.navigate("privacy_policy")
                         "Terms of Service" -> navController?.navigate("terms_of_service")
-                        "Open Music Player" -> navController?.navigate("music")
                         "App Language" -> navController?.navigate("language_settings")
                         "Investment Tracking" -> navController?.navigate("investment_tracker")
                     }
@@ -181,7 +175,7 @@ fun SettingsScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))) {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
                     Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Outlined.Savings, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
                         Spacer(modifier = Modifier.height(8.dp))
@@ -328,7 +322,7 @@ private fun QuickStatItem(icon: ImageVector, value: String, label: String, color
 
 @Composable
 private fun SettingsSectionCard(title: String, icon: ImageVector, items: List<SettingsItem>, isExpanded: Boolean, onToggle: () -> Unit, onItemClick: (SettingsItem) -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(20.dp)) {
+    Card(modifier = Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
         Column(modifier = Modifier.fillMaxWidth()) {
             Row(modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

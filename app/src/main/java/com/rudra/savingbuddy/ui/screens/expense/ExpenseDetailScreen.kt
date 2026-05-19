@@ -1,8 +1,11 @@
 package com.rudra.savingbuddy.ui.screens.expense
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -11,7 +14,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.rudra.savingbuddy.ui.theme.ExpenseRed
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 
@@ -34,7 +37,12 @@ fun ExpenseDetailScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Expense Details", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Expense Details", fontWeight = FontWeight.Bold)
+                        Text("Transaction details", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController?.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -53,7 +61,8 @@ fun ExpenseDetailScreen(
             ) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp)
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -83,9 +92,14 @@ fun ExpenseDetailScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Date", style = MaterialTheme.typography.bodyMedium)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Date", style = MaterialTheme.typography.bodyMedium)
+                            }
                             Text(
                                 DateUtils.formatDate(expense.date),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -96,9 +110,14 @@ fun ExpenseDetailScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text("Notes", style = MaterialTheme.typography.bodyMedium)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Outlined.Notes, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("Notes", style = MaterialTheme.typography.bodyMedium)
+                                }
                                 Text(notes, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
                             }
                         }

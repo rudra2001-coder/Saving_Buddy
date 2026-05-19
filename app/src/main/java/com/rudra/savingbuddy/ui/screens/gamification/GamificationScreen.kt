@@ -52,7 +52,12 @@ fun GamificationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Achievements", fontWeight = FontWeight.Bold) },
+                title = { 
+                Column {
+                    Text("Achievements", fontWeight = FontWeight.Bold)
+                    Text("Badges, streaks & levels", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -86,6 +91,7 @@ private fun TabRow(tabs: List<String>, icons: List<androidx.compose.ui.graphics.
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
     ) {
         Row(
@@ -110,15 +116,16 @@ private fun LazyListScope.BadgesTabContent(badges: List<Badge>, stats: Achieveme
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFD700).copy(alpha = 0.15f))
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            colors = CardDefaults.cardColors(containerColor = WarningOrange.copy(alpha = 0.15f))
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(20.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Icon(Icons.Default.EmojiEvents, null, tint = Color(0xFFFFD700), modifier = Modifier.size(48.dp))
+                Icon(Icons.Default.EmojiEvents, null, tint = WarningOrange, modifier = Modifier.size(48.dp))
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(" / ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                Text(" / ", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold, color = WarningOrange)
                 Text("Badges Unlocked", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -161,7 +168,8 @@ private fun LazyListScope.StreaksTabContent(streak: StreakData) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFF5722))
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            colors = CardDefaults.cardColors(containerColor = ExpenseRed)
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(24.dp),
@@ -179,6 +187,7 @@ private fun LazyListScope.StreaksTabContent(streak: StreakData) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
             Row(
@@ -186,11 +195,11 @@ private fun LazyListScope.StreaksTabContent(streak: StreakData) {
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color(0xFFFF5722))
+                    Text("", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = ExpenseRed)
                     Text("Current", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
+                    Text("", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = WarningOrange)
                     Text("Best", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -205,6 +214,7 @@ private fun LazyListScope.StreaksTabContent(streak: StreakData) {
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
@@ -217,7 +227,7 @@ private fun LazyListScope.StreaksTabContent(streak: StreakData) {
                             Surface(
                                 modifier = Modifier.size(36.dp),
                                 shape = CircleShape,
-                                color = if (logged) Color(0xFFFF5722) else MaterialTheme.colorScheme.surfaceVariant
+                                color = if (logged) ExpenseRed else MaterialTheme.colorScheme.surfaceVariant
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
@@ -243,6 +253,7 @@ private fun LazyListScope.LevelTabContent(stats: AchievementStats, levelProgress
         Card(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(20.dp),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent)
         ) {
             Box(
@@ -288,7 +299,8 @@ private fun LazyListScope.LevelTabContent(stats: AchievementStats, levelProgress
     item {
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Top Category", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
@@ -313,10 +325,10 @@ private fun BadgeCard(badge: Badge, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
         shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(
             containerColor = if (badge.isUnlocked) badge.color.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        ),
-        border = if (!badge.isUnlocked && badge.progress > 0) BorderStroke(1.dp, badge.color.copy(alpha = 0.3f)) else null
+        )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(12.dp),

@@ -1,9 +1,11 @@
 package com.rudra.savingbuddy.ui.screens.notifications
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -16,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import com.rudra.savingbuddy.domain.model.AppNotification
 import com.rudra.savingbuddy.domain.model.NotificationFilter
 import com.rudra.savingbuddy.domain.model.NotificationType
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.DateUtils
 
 private val sampleNotifications = emptyList<AppNotification>()
@@ -38,11 +41,14 @@ fun NotificationsScreen() {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Notifications",
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Column {
+                        Text(
+                            text = "Notifications",
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("Stay updated", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 },
                 actions = {
                     IconButton(onClick = { showUnreadOnly = !showUnreadOnly }) {
@@ -197,6 +203,8 @@ fun NotificationCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(
             containerColor = if (notification.isRead) 
                 MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
@@ -311,12 +319,12 @@ fun getNotificationIcon(type: NotificationType) = when (type) {
 }
 
 fun getNotificationColor(type: NotificationType): Color = when (type) {
-    NotificationType.BUDGET_ALERT -> Color(0xFFFF9800)
-    NotificationType.BILL_REMINDER -> Color(0xFFF44336)
-    NotificationType.SUBSCRIPTION_REMINDER -> Color(0xFF9C27B0)
-    NotificationType.GOAL_COMPLETE -> Color(0xFF4CAF50)
-    NotificationType.SAVINGS_STREAK -> Color(0xFFFF5722)
-    NotificationType.ACHIEVEMENT -> Color(0xFFFFD700)
-    NotificationType.RECURRING_TRANSACTION -> Color(0xFF2196F3)
-    NotificationType.SYSTEM -> Color(0xFF9E9E9E)
+    NotificationType.BUDGET_ALERT -> WarningOrange
+    NotificationType.BILL_REMINDER -> ExpenseRed
+    NotificationType.SUBSCRIPTION_REMINDER -> AccentPurple
+    NotificationType.GOAL_COMPLETE -> PrimaryGreen
+    NotificationType.SAVINGS_STREAK -> ExpenseRed
+    NotificationType.ACHIEVEMENT -> WarningOrange
+    NotificationType.RECURRING_TRANSACTION -> SavingsBlue
+    NotificationType.SYSTEM -> SurfaceMedium
 }

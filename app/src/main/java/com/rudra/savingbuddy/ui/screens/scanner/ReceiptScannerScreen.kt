@@ -177,7 +177,12 @@ fun ReceiptScannerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Receipt Scanner", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text("Receipt Scanner", fontWeight = FontWeight.Bold)
+                        Text("Extract data from receipts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")

@@ -66,7 +66,12 @@ fun SubscriptionManagerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Subscription Manager", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text("Subscription Manager", fontWeight = FontWeight.Bold)
+                        Text("Track recurring payments", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")

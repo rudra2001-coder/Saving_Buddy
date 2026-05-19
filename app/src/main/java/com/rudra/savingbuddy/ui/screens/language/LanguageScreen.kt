@@ -33,7 +33,12 @@ fun LanguageScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Language", fontWeight = FontWeight.Bold) },
+                title = { 
+                    Column {
+                        Text("Language", fontWeight = FontWeight.Bold)
+                        Text("Choose your preference", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")

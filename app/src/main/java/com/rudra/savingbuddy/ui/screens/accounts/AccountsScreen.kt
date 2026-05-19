@@ -26,9 +26,14 @@ import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.Account
 import com.rudra.savingbuddy.domain.model.AccountType
 import com.rudra.savingbuddy.ui.navigation.Screen
-import com.rudra.savingbuddy.ui.theme.IncomeGreen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+
+private val Blue600 = Color(0xFF185FA5)
+private val Blue50 = Color(0xFFE6F1FB)
+private val Green600 = Color(0xFF3B6D11)
+private val Green50 = Color(0xFFEAF3DE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,18 +46,25 @@ fun AccountsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Accounts", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Accounts", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.headlineSmall)
+                        Text("Manage your accounts", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { navController.navigate(Screen.AddAccount.route) }) {
-                        Icon(Icons.Default.Add, contentDescription = "Add Account")
-                    }
                     IconButton(onClick = { navController.navigate(Screen.Transfer.route) }) {
-                        Icon(Icons.Default.SwapHoriz, contentDescription = "Transfer")
+                        Icon(Icons.Default.SwapHoriz, contentDescription = "Transfer",
+                            tint = Blue600)
+                    }
+                    IconButton(onClick = { navController.navigate(Screen.AddAccount.route) }) {
+                        Icon(Icons.Default.Add, contentDescription = "Add Account",
+                            tint = Green600)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -64,30 +76,21 @@ fun AccountsScreen(
                 .fillMaxSize()
                 .padding(padding),
             contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             // Net Worth Card
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(
-                                        IncomeGreen.copy(alpha = 0.15f),
-                                        IncomeGreen.copy(alpha = 0.05f)
-                                    )
-                                )
-                            )
-                            .padding(24.dp)
+                        modifier = Modifier.fillMaxWidth()
+                            .background(Brush.verticalGradient(listOf(IncomeGreen.copy(alpha = 0.1f), IncomeGreen.copy(alpha = 0.03f))))
+                            .padding(20.dp)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -96,32 +99,27 @@ fun AccountsScreen(
                         ) {
                             Column {
                                 Text(
-                                    "Main Balance",
-                                    style = MaterialTheme.typography.bodyMedium,
+                                    "Total Balance",
+                                    style = MaterialTheme.typography.labelMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                                 Text(
                                     CurrencyFormatter.formatBDT(uiState.netWorth),
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.Bold,
                                     color = IncomeGreen
                                 )
+                                Text(
+                                    "${uiState.accounts.size} account${if (uiState.accounts.size != 1) "s" else ""}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
                             Box(
-                                modifier = Modifier
-                                    .size(56.dp)
-                                    .background(
-                                        IncomeGreen.copy(alpha = 0.2f),
-                                        CircleShape
-                                    ),
+                                modifier = Modifier.size(52.dp).clip(RoundedCornerShape(16.dp)).background(IncomeGreen.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    Icons.Default.AccountBalanceWallet,
-                                    null,
-                                    tint = IncomeGreen,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                                Icon(Icons.Default.AccountBalanceWallet, null, tint = IncomeGreen, modifier = Modifier.size(26.dp))
                             }
                         }
                     }
@@ -138,13 +136,17 @@ fun AccountsScreen(
                         title = "Transfer",
                         icon = Icons.Default.SwapHoriz,
                         onClick = { navController.navigate(Screen.Transfer.route) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        color = Blue600,
+                        bgColor = Blue50
                     )
                     QuickActionCard(
                         title = "Add Account",
                         icon = Icons.Default.Add,
                         onClick = { navController.navigate(Screen.AddAccount.route) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        color = Green600,
+                        bgColor = Green50
                     )
                 }
             }
@@ -152,10 +154,7 @@ fun AccountsScreen(
             // Wallets Section
             if (uiState.wallets.isNotEmpty()) {
                 item {
-                    SectionHeader(
-                        title = "WALLETS",
-                        icon = Icons.Default.AccountBalanceWallet
-                    )
+                    SectionHeader(title = "WALLETS", icon = Icons.Default.AccountBalanceWallet, count = uiState.wallets.size)
                 }
                 items(uiState.wallets) { account ->
                     AccountCard(
@@ -168,10 +167,7 @@ fun AccountsScreen(
             // Bank Accounts Section
             if (uiState.bankAccounts.isNotEmpty()) {
                 item {
-                    SectionHeader(
-                        title = "BANK ACCOUNTS",
-                        icon = Icons.Default.AccountBalance
-                    )
+                    SectionHeader(title = "BANK ACCOUNTS", icon = Icons.Default.AccountBalance, count = uiState.bankAccounts.size)
                 }
                 items(uiState.bankAccounts) { account ->
                     AccountCard(
@@ -184,10 +180,7 @@ fun AccountsScreen(
             // Mobile Banking Section
             if (uiState.mobileBanking.isNotEmpty()) {
                 item {
-                    SectionHeader(
-                        title = "MOBILE BANKING",
-                        icon = Icons.Default.PhoneAndroid
-                    )
+                    SectionHeader(title = "MOBILE BANKING", icon = Icons.Default.PhoneAndroid, count = uiState.mobileBanking.size)
                 }
                 items(uiState.mobileBanking) { account ->
                     AccountCard(
@@ -200,10 +193,7 @@ fun AccountsScreen(
             // Digital Wallets Section
             if (uiState.digitalWallets.isNotEmpty()) {
                 item {
-                    SectionHeader(
-                        title = "DIGITAL WALLETS",
-                        icon = Icons.Default.CreditCard
-                    )
+                    SectionHeader(title = "DIGITAL WALLETS", icon = Icons.Default.CreditCard, count = uiState.digitalWallets.size)
                 }
                 items(uiState.digitalWallets) { account ->
                     AccountCard(
@@ -217,30 +207,29 @@ fun AccountsScreen(
             if (uiState.accounts.isEmpty() && !uiState.isLoading) {
                 item {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(32.dp),
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                Icons.Default.AccountBalanceWallet,
-                                null,
-                                modifier = Modifier.size(64.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text("No accounts yet")
-                            Text(
-                                "Add your first account to track your money",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Button(onClick = { navController.navigate(Screen.AddAccount.route) }) {
-                                Icon(Icons.Default.Add, null)
+                            Box(
+                                modifier = Modifier.size(72.dp).clip(CircleShape).background(Blue600.copy(alpha = 0.08f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.AccountBalanceWallet, null, modifier = Modifier.size(36.dp), tint = Blue600.copy(alpha = 0.5f))
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Text("No accounts yet", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Add your first account to track your money", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Spacer(modifier = Modifier.height(20.dp))
+                            Button(
+                                onClick = { navController.navigate(Screen.AddAccount.route) },
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Blue600)
+                            ) {
+                                Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text("Add Account")
+                                Text("Add Account", fontWeight = FontWeight.SemiBold)
                             }
                         }
                     }
@@ -250,47 +239,35 @@ fun AccountsScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuickActionCard(
     title: String,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    color: Color = Blue600,
+    bgColor: Color = Blue50
 ) {
-    val buttonScale by animateFloatAsState(
-        targetValue = 1f,
-        animationSpec = tween(100),
-        label = "button_scale"
-    )
-    
     Card(
-        modifier = modifier
-            .scale(buttonScale)
-            .clickable { onClick() },
+        modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        )
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(
-                icon, null, 
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(20.dp)
-            )
+            Box(
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(10.dp)).background(bgColor),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
+            }
             Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
-            )
+            Text(title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -298,25 +275,30 @@ fun QuickActionCard(
 @Composable
 fun SectionHeader(
     title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    count: Int = 0
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Icon(
-            icon,
-            null,
-            modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant
+        Box(
+            modifier = Modifier.size(6.dp).clip(CircleShape).background(Blue600)
         )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        Icon(icon, null, modifier = Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(title, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+        if (count > 0) {
+            Surface(shape = RoundedCornerShape(8.dp), color = Blue50) {
+                Text(
+                    "$count",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Blue600,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                )
+            }
+        }
     }
 }
 
@@ -326,22 +308,18 @@ fun AccountCard(
     onClick: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Account Icon
             Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(Color(account.iconColor).copy(alpha = 0.2f)),
+                modifier = Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(Color(account.iconColor).copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
@@ -352,49 +330,42 @@ fun AccountCard(
                         AccountType.DIGITAL_WALLET -> "💳"
                         AccountType.CREDIT_CARD -> "💳"
                     },
-                    style = MaterialTheme.typography.titleLarge
+                    style = MaterialTheme.typography.titleMedium
                 )
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    account.name,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    account.accountNumber,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Text(
-                    "Updated: ${DateUtils.formatDate(account.lastUpdated)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(account.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(account.accountNumber, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("•", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(account.type.displayName, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("Updated: ${DateUtils.formatShortDate(account.lastUpdated)}", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
 
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    CurrencyFormatter.formatBDT(account.balance),
+                    CurrencyFormatter.formatCompact(account.balance),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
+                    color = if (account.balance >= 0) IncomeGreen else ExpenseRed
                 )
                 account.dailyLimit?.let { limit ->
                     if (limit > 0) {
-                        val used = account.usedToday
-                        val remaining = limit - used
+                        val remaining = limit - account.usedToday
                         Text(
-                            "Limit: ${CurrencyFormatter.formatBDT(remaining)}",
+                            "${CurrencyFormatter.formatCompact(remaining)} left",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
             }
+            Spacer(modifier = Modifier.width(4.dp))
+            Icon(Icons.Default.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f), modifier = Modifier.size(18.dp))
         }
     }
 }

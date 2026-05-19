@@ -74,24 +74,17 @@ fun FusionScreen(
             topBar = {
                 TopAppBar(
                     title = {
-                        Text(
-                            "Fusion Timeline",
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
+                        Column {
+                            Text("Fusion", fontWeight = FontWeight.Bold)
+                            Text("Smart timeline & net worth", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(
-                                Icons.Default.ArrowBack,
-                                contentDescription = "Back",
-                                tint = MaterialTheme.colorScheme.onSurface
-                            )
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
             }
         ) { paddingValues ->
@@ -148,45 +141,32 @@ private fun SimpleTabRow(
     selectedTab: Int,
     onTabSelected: (Int) -> Unit
 ) {
-    TabRow(
-        selectedTabIndex = selectedTab,
-        containerColor = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.primary
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        TabItem(0, selectedTab, onTabSelected, "Timeline", Icons.Default.Timeline)
-        TabItem(1, selectedTab, onTabSelected, "Net Worth", Icons.Default.AccountBalance)
-        TabItem(2, selectedTab, onTabSelected, "Insights", Icons.Default.Lightbulb)
-    }
-}
-
-@Composable
-private fun TabItem(
-    index: Int,
-    selectedTab: Int,
-    onTabSelected: (Int) -> Unit,
-    text: String,
-    icon: ImageVector
-) {
-    Tab(
-        selected = selectedTab == index,
-        onClick = { onTabSelected(index) }
-    ) {
-        Row(
-            modifier = Modifier.padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(20.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = text,
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal
-            )
+        listOf("Timeline" to Icons.Default.Timeline, "Net Worth" to Icons.Default.AccountBalance, "Insights" to Icons.Default.Lightbulb).forEachIndexed { index, (label, icon) ->
+            val isSelected = selectedTab == index
+            Surface(
+                onClick = { onTabSelected(index) },
+                shape = RoundedCornerShape(14.dp),
+                color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Icon(icon, null, modifier = Modifier.size(16.dp), tint = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(label, style = MaterialTheme.typography.labelLarge, fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium, color = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
         }
     }
 }
@@ -522,7 +502,8 @@ private fun SimpleEmptyCard() {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier
@@ -759,7 +740,8 @@ private fun SimpleAssetItem(
         colors = CardDefaults.cardColors(
             containerColor = color.copy(alpha = 0.08f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Row(
             modifier = Modifier
@@ -1056,7 +1038,8 @@ private fun SimpleEmptyInsights() {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
         Column(
             modifier = Modifier

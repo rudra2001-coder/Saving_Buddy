@@ -58,13 +58,6 @@ private val onboardingPages = listOf(
         AccentPurple
     ),
     OnboardingPage(
-        Icons.Default.MusicNote,
-        "Focus & Relax",
-        "Built-in music player with mood-based playlists. Listen while you manage your finances.",
-        listOf(EntertainmentColor, AccentPurple),
-        EntertainmentColor
-    ),
-    OnboardingPage(
         Icons.Default.Language,
         "14 Languages Supported",
         "Use the app in your preferred language with full multi-currency support and global accessibility.",

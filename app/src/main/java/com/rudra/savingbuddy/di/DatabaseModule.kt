@@ -11,6 +11,7 @@ import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.InvestmentDao
 import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
@@ -67,6 +68,9 @@ object DatabaseModule {
 
     @Provides
     fun provideAccountBalanceHistoryDao(database: SavingBuddyDatabase): AccountBalanceHistoryDao = database.accountBalanceHistoryDao()
+
+    @Provides
+    fun provideInvestmentDao(database: SavingBuddyDatabase): InvestmentDao = database.investmentDao()
 
     @Provides
     @Singleton

@@ -42,8 +42,6 @@ data class SettingsUiState(
     val accountCount: Int = 0,
     val goalCount: Int = 0,
     val billCount: Int = 0,
-    val musicEnabled: Boolean = true,
-    val musicAutoPlay: Boolean = false,
     val language: String = "English",
     val languageCode: String = "en",
     val investmentTracking: Boolean = false,
@@ -121,14 +119,6 @@ class SettingsViewModel @Inject constructor(
         privacyModeEnabled = _uiState.value.privacyModeEnabled,
         biometricLockEnabled = _uiState.value.biometricLockEnabled
     )
-
-    fun setMusicEnabled(enabled: Boolean) {
-        _uiState.update { it.copy(musicEnabled = enabled) }
-    }
-
-    fun setMusicAutoPlay(enabled: Boolean) {
-        _uiState.update { it.copy(musicAutoPlay = enabled) }
-    }
 
     fun setInvestmentTracking(enabled: Boolean) {
         _uiState.update { it.copy(investmentTracking = enabled) }

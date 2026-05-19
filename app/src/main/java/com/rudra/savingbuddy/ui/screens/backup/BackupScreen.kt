@@ -9,10 +9,13 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.rudra.savingbuddy.ui.theme.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.rudra.savingbuddy.data.models.*
@@ -55,7 +58,16 @@ fun BackupScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Backup & Restore", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Backup & Restore", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Manage cloud & local backups",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -78,8 +90,10 @@ fun BackupScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     colors = CardDefaults.cardColors(
-                        containerColor = if (uiState.isEnabled) Color(0xFF4CAF50) else MaterialTheme.colorScheme.surfaceVariant
+                        containerColor = if (uiState.isEnabled) PrimaryGreen else MaterialTheme.colorScheme.surfaceVariant
                     )
                 ) {
                     Row(
@@ -111,12 +125,25 @@ fun BackupScreen(
 
             if (uiState.isEnabled) {
                 item {
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                    ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text("Schedule", fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.Schedule,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = PrimaryGreen
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Schedule", fontWeight = FontWeight.Bold)
+                            }
                             
                             Box {
                                 OutlinedCard(
@@ -233,8 +260,13 @@ fun BackupScreen(
             item {
                 Button(
                     onClick = { viewModel.createBackup() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isBackingUp
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    enabled = !uiState.isBackingUp,
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = PrimaryGreen,
+                        disabledContainerColor = PrimaryGreen.copy(alpha = 0.5f)
+                    )
                 ) {
                     if (uiState.isBackingUp) {
                         CircularProgressIndicator(
@@ -250,17 +282,28 @@ fun BackupScreen(
             }
 
             item {
-                Text(
-                    "Recent Backups",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = MaterialTheme.typography.titleMedium.fontSize
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Folder,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = PrimaryGreen
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Recent Backups",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = MaterialTheme.typography.titleMedium.fontSize
+                    )
+                }
             }
 
             if (backupList.isEmpty()) {
                 item {
                     Card(
                         modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.surfaceVariant
                         )
@@ -275,14 +318,14 @@ fun BackupScreen(
                                 Icons.Default.FolderOpen,
                                 contentDescription = null,
                                 modifier = Modifier.size(48.dp),
-                                tint = Color.Gray
+                                tint = TextSecondary
                             )
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text("No backups found", color = Color.Gray)
+                            Text("No backups found", color = TextSecondary)
                             Text(
                                 "Tap 'Backup Now' to create your first backup",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+                                color = TextSecondary
                             )
                         }
                     }
@@ -313,7 +356,7 @@ fun BackupScreen(
                         showDeleteDialog = null
                     }
                 ) {
-                    Text("Delete", color = Color.Red)
+                    Text("Delete", color = ExpenseRed)
                 }
             },
             dismissButton = {
@@ -331,7 +374,11 @@ private fun BackupItemCard(
     onRestore: () -> Unit,
     onDelete: () -> Unit
 ) {
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

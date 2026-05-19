@@ -15,7 +15,6 @@ data class BackupData(
     val expenseList: List<ExpenseBackup> = emptyList(),
     val subscriptions: List<SubscriptionBackup> = emptyList(),
     val investments: List<InvestmentBackup> = emptyList(),
-    val musicFavorites: List<MusicFavoriteBackup> = emptyList(),
     val gamification: GamificationBackup? = null,
     val settings: BackupSettings = BackupSettings()
 )
@@ -170,15 +169,6 @@ data class InvestmentBackup(
     val returns: Double,
     val returnPercentage: Double,
     val notes: String? = null
-)
-
-@Serializable
-data class MusicFavoriteBackup(
-    val trackId: Int,
-    val title: String,
-    val artist: String,
-    val genre: String,
-    val addedAt: Long
 )
 
 @Serializable

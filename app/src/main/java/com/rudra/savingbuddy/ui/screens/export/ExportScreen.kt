@@ -1,6 +1,7 @@
 package com.rudra.savingbuddy.ui.screens.export
 
 import android.content.Intent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -20,8 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.Income
-import com.rudra.savingbuddy.ui.theme.ExpenseRed
-import com.rudra.savingbuddy.ui.theme.IncomeGreen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 import com.rudra.savingbuddy.util.ExportFormat
@@ -265,7 +265,16 @@ fun ExportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Export Data", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text("Export Data", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Download your data",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = TextSecondary
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, "Back")
@@ -287,6 +296,8 @@ fun ExportScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     colors = CardDefaults.cardColors(
                         containerColor = MaterialTheme.colorScheme.primaryContainer
                     )
@@ -299,7 +310,7 @@ fun ExportScreen(
                             Icons.Default.FileDownload,
                             contentDescription = null,
                             modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = PrimaryGreen
                         )
                         Spacer(modifier = Modifier.height(12.dp))
                         Text(
@@ -310,14 +321,18 @@ fun ExportScreen(
                         Text(
                             text = "Download in CSV, Text, or JSON format",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = TextSecondary
                         )
                     }
                 }
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -406,6 +421,8 @@ fun ExportScreen(
                 ) {
                     Card(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         colors = CardDefaults.cardColors(containerColor = IncomeGreen.copy(alpha = 0.1f))
                     ) {
                         Column(
@@ -433,6 +450,8 @@ fun ExportScreen(
 
                     Card(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.1f))
                     ) {
                         Column(
@@ -460,6 +479,8 @@ fun ExportScreen(
 
                     Card(
                         modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                     ) {
                         Column(
@@ -483,21 +504,43 @@ fun ExportScreen(
             }
 
             item {
-                Text(
-                    text = "Export Options",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.FileDownload,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = PrimaryGreen
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Export Options",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Select Data Type",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.SwapVert,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = SavingsBlue
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Select Data Type",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -524,13 +567,26 @@ fun ExportScreen(
             }
 
             item {
-                Card(modifier = Modifier.fillMaxWidth()) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Export Format",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.Medium
-                        )
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                Icons.Default.Code,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp),
+                                tint = PrimaryGreen
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Export Format",
+                                style = MaterialTheme.typography.labelMedium,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -568,6 +624,8 @@ fun ExportScreen(
             item {
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
                     onClick = { showExportDialog = true }
                 ) {
                     Row(
@@ -679,7 +737,9 @@ fun ExportScreen(
                         }
                         viewModel.setExportSuccess(true)
                         showExportDialog = false
-                    }
+                    },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
                 ) {
                     Icon(Icons.Default.Download, null)
                     Spacer(modifier = Modifier.width(8.dp))
@@ -800,6 +860,12 @@ private fun AssistButton(
     OutlinedButton(
         onClick = onClick,
         modifier = modifier,
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.outlinedButtonColors(
+            containerColor = PrimaryGreen.copy(alpha = 0.1f),
+            contentColor = PrimaryGreen
+        ),
+        border = BorderStroke(1.5.dp, PrimaryGreen),
         content = content
     )
 }

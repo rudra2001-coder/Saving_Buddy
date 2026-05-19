@@ -1,7 +1,6 @@
 package com.rudra.savingbuddy.ui.screens.add
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -24,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -44,6 +45,11 @@ import com.rudra.savingbuddy.ui.screens.income.IncomeViewModel
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+
+private val Green600 = Color(0xFF3B6D11)
+private val Green50 = Color(0xFFEAF3DE)
+private val Blue600 = Color(0xFF185FA5)
+private val Blue50 = Color(0xFFE6F1FB)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,11 +108,18 @@ fun AddIncomeScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        "Add Income",
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleLarge
-                    )
+                    Column {
+                        Text(
+                            "Add Income",
+                            fontWeight = FontWeight.Bold,
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                        Text(
+                            "Record your earnings",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
@@ -138,11 +151,12 @@ fun AddIncomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(20.dp),
+                shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
             ) {
                 Column(
                     modifier = Modifier
@@ -150,23 +164,34 @@ fun AddIncomeScreen(
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
-                                    IncomeGreen.copy(alpha = 0.15f),
-                                    IncomeGreen.copy(alpha = 0.05f)
+                                    IncomeGreen.copy(alpha = 0.12f),
+                                    IncomeGreen.copy(alpha = 0.04f)
                                 )
                             )
                         )
-                        .padding(24.dp),
+                        .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "How much did you receive?",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = IncomeGreen,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Text(
+                            text = "How much did you receive?",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Large Amount Input
                     OutlinedTextField(
                         value = amount,
                         onValueChange = { newValue ->
@@ -185,7 +210,7 @@ fun AddIncomeScreen(
                                 "0",
                                 style = MaterialTheme.typography.displaySmall.copy(
                                     fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
                                 ),
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.fillMaxWidth()
@@ -197,17 +222,26 @@ fun AddIncomeScreen(
                             fontSize = 42.sp
                         ),
                         leadingIcon = {
-                            Text(
-                                selectedCurrency.symbol,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = IncomeGreen
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(IncomeGreen.copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    selectedCurrency.symbol,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = IncomeGreen
+                                )
+                            }
                         },
                         trailingIcon = {
                             if (amount.isNotEmpty()) {
                                 IconButton(onClick = { amount = "" }) {
-                                    Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                    Icon(Icons.Default.Clear, contentDescription = "Clear",
+                                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                 }
                             }
                         },
@@ -217,57 +251,60 @@ fun AddIncomeScreen(
                             imeAction = ImeAction.Next
                         ),
                         keyboardActions = KeyboardActions(
-                            onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                            onNext = { focusManager.moveFocus(FocusDirection.Down) }
                         ),
                         singleLine = true,
                         isError = amountError != null,
                         supportingText = amountError?.let { { Text(it, color = MaterialTheme.colorScheme.error) } },
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = IncomeGreen,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
-                            focusedLeadingIconColor = IncomeGreen
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                            cursorColor = IncomeGreen,
+                            focusedLeadingIconColor = IncomeGreen,
+                            focusedTextColor = MaterialTheme.colorScheme.onSurface
                         ),
                         shape = RoundedCornerShape(16.dp)
                     )
 
                     Spacer(modifier = Modifier.height(20.dp))
 
-                    // Quick Amount Chips
                     LazyRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         items(quickAmounts) { quickAmount ->
-                            FilterChip(
-                                selected = amount.toDoubleOrNull() == quickAmount.toDouble(),
+                            val isSelected = amount.toDoubleOrNull() == quickAmount.toDouble()
+                            Surface(
                                 onClick = {
                                     amount = quickAmount.toString()
                                     amountError = null
-                                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                 },
-                                label = { Text("${selectedCurrency.symbol}$quickAmount") },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = IncomeGreen.copy(alpha = 0.2f),
-                                    selectedLabelColor = IncomeGreen
-                                ),
-                                border = FilterChipDefaults.filterChipBorder(
-                                    borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                    selectedBorderColor = IncomeGreen,
-                                    enabled = true,
-                                    selected = amount.toDoubleOrNull() == quickAmount.toDouble()
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) IncomeGreen.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isSelected) IncomeGreen.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
                                 )
-                            )
+                            ) {
+                                Text(
+                                    "${selectedCurrency.symbol}$quickAmount",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Content Section
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Source Input
                 OutlinedTextField(
@@ -275,11 +312,22 @@ fun AddIncomeScreen(
                     onValueChange = { source = it },
                     label = { Text("Source / Title") },
                     placeholder = { Text("e.g., Salary, Freelance work") },
-                    leadingIcon = { Icon(Icons.Default.Work, contentDescription = null, tint = IncomeGreen) },
+                    leadingIcon = {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(IncomeGreen.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Work, contentDescription = null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
+                        }
+                    },
                     trailingIcon = {
                         if (source.isNotEmpty()) {
                             IconButton(onClick = { source = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Clear")
+                                Icon(Icons.Default.Clear, contentDescription = "Clear",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
                     },
@@ -288,11 +336,13 @@ fun AddIncomeScreen(
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = IncomeGreen,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        cursorColor = IncomeGreen,
                         focusedLeadingIconColor = IncomeGreen
                     ),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                     keyboardActions = KeyboardActions(
-                        onNext = { focusManager.moveFocus(androidx.compose.ui.focus.FocusDirection.Down) }
+                        onNext = { focusManager.moveFocus(FocusDirection.Down) }
                     )
                 )
 
@@ -301,17 +351,30 @@ fun AddIncomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "Add to Account",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = Blue600,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = "Add to Account",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(10.dp))
                         IncomeAccountSelector(
                             selectedAccount = selectedAccount,
                             accounts = accounts,
@@ -322,11 +385,23 @@ fun AddIncomeScreen(
                 }
 
                 // Category Selection
-                Text(
-                    text = "Category",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Category,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Category",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
 
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -335,31 +410,32 @@ fun AddIncomeScreen(
                         val isSelected = selectedCategory == category
                         val categoryColor = categoryColors[category] ?: IncomeGreen
 
-                        FilterChip(
-                            selected = isSelected,
+                        Surface(
                             onClick = {
                                 selectedCategory = category
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
-                            label = {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(categoryEmojis[category] ?: "💵")
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(category.displayName)
-                                }
-                            },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = categoryColor.copy(alpha = 0.2f),
-                                selectedLabelColor = categoryColor
-                            ),
-                            border = FilterChipDefaults.filterChipBorder(
-                                borderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                selectedBorderColor = categoryColor,
-                                enabled = true,
-                                selected = isSelected
-                            ),
-                            modifier = Modifier.height(40.dp)
-                        )
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isSelected) categoryColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (isSelected) categoryColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            )
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Text(categoryEmojis[category] ?: "💵", fontSize = 16.sp)
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    category.displayName,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                    color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
                     }
                 }
 
@@ -372,10 +448,14 @@ fun AddIncomeScreen(
                         value = DateUtils.formatDate(selectedDate),
                         onValueChange = {},
                         label = { Text("Date") },
-                        leadingIcon = { Icon(Icons.Default.CalendarToday, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(Icons.Default.CalendarToday, contentDescription = null,
+                                modifier = Modifier.size(18.dp))
+                        },
                         trailingIcon = {
                             IconButton(onClick = { showDatePicker = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Select Date")
+                                Icon(Icons.Default.Edit, contentDescription = "Select Date",
+                                    modifier = Modifier.size(18.dp))
                             }
                         },
                         modifier = Modifier
@@ -386,7 +466,7 @@ fun AddIncomeScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -397,10 +477,14 @@ fun AddIncomeScreen(
                         value = DateUtils.formatTime(selectedDate),
                         onValueChange = {},
                         label = { Text("Time") },
-                        leadingIcon = { Icon(Icons.Default.Schedule, contentDescription = null) },
+                        leadingIcon = {
+                            Icon(Icons.Default.Schedule, contentDescription = null,
+                                modifier = Modifier.size(18.dp))
+                        },
                         trailingIcon = {
                             IconButton(onClick = { showTimePicker = true }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Select Time")
+                                Icon(Icons.Default.Edit, contentDescription = "Select Time",
+                                    modifier = Modifier.size(18.dp))
                             }
                         },
                         modifier = Modifier
@@ -411,7 +495,7 @@ fun AddIncomeScreen(
                         shape = RoundedCornerShape(16.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             disabledTextColor = MaterialTheme.colorScheme.onSurface,
-                            disabledBorderColor = MaterialTheme.colorScheme.outline,
+                            disabledBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                             disabledLeadingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             disabledTrailingIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
                             disabledLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
@@ -424,32 +508,43 @@ fun AddIncomeScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Repeat,
-                                contentDescription = null,
-                                tint = if (isRecurring) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (isRecurring) IncomeGreen.copy(alpha = 0.12f) else MaterialTheme.colorScheme.surfaceVariant),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    Icons.Default.Repeat,
+                                    contentDescription = null,
+                                    tint = if (isRecurring) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
                             Column {
                                 Text(
                                     "Recurring Income",
-                                    style = MaterialTheme.typography.bodyLarge,
-                                    fontWeight = FontWeight.Medium
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     if (isRecurring) selectedInterval.displayName else "Set up recurring",
-                                    style = MaterialTheme.typography.bodySmall,
+                                    style = MaterialTheme.typography.labelSmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
@@ -458,7 +553,7 @@ fun AddIncomeScreen(
                             checked = isRecurring,
                             onCheckedChange = {
                                 isRecurring = it
-                                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             },
                             colors = SwitchDefaults.colors(
                                 checkedThumbColor = IncomeGreen,
@@ -471,17 +566,33 @@ fun AddIncomeScreen(
                 // Advanced Section
                 if (showAdvanced) {
                     AnimatedVisibility(visible = true) {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                             // Notes
                             OutlinedTextField(
                                 value = notes,
                                 onValueChange = { notes = it },
                                 label = { Text("Notes (optional)") },
                                 placeholder = { Text("Add details...") },
-                                leadingIcon = { Icon(Icons.Default.Notes, contentDescription = null) },
+                                leadingIcon = {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(Blue600.copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(Icons.Default.Notes, contentDescription = null,
+                                            tint = Blue600, modifier = Modifier.size(18.dp))
+                                    }
+                                },
                                 modifier = Modifier.fillMaxWidth(),
                                 maxLines = 3,
-                                shape = RoundedCornerShape(16.dp)
+                                shape = RoundedCornerShape(16.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = Blue600,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    cursorColor = Blue600
+                                )
                             )
 
                             // Currency Selection
@@ -494,12 +605,28 @@ fun AddIncomeScreen(
                                     onValueChange = {},
                                     readOnly = true,
                                     label = { Text("Currency") },
-                                    leadingIcon = { Icon(Icons.Default.CurrencyExchange, contentDescription = null) },
+                                    leadingIcon = {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(36.dp)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(Blue600.copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(Icons.Default.CurrencyExchange, contentDescription = null,
+                                                tint = Blue600, modifier = Modifier.size(18.dp))
+                                        }
+                                    },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = currencyExpanded) },
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .menuAnchor(),
-                                    shape = RoundedCornerShape(16.dp)
+                                    shape = RoundedCornerShape(16.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = Blue600,
+                                        unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                        cursorColor = Blue600
+                                    )
                                 )
                                 ExposedDropdownMenu(
                                     expanded = currencyExpanded,
@@ -520,7 +647,7 @@ fun AddIncomeScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
                 // Save Button
                 val buttonScale by animateFloatAsState(
@@ -528,6 +655,8 @@ fun AddIncomeScreen(
                     animationSpec = tween(200),
                     label = "button_scale"
                 )
+
+                val isValid = amount.isNotBlank() && source.isNotBlank()
 
                 Button(
                     onClick = {
@@ -541,7 +670,7 @@ fun AddIncomeScreen(
                         }
 
                         isSaving = true
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
                         val sourceValue = source.ifBlank { selectedCategory.displayName }
                         viewModel.saveIncome(
@@ -558,13 +687,13 @@ fun AddIncomeScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(60.dp)
+                        .height(56.dp)
                         .scale(buttonScale),
-                    enabled = !isSaving && amount.isNotBlank() && source.isNotBlank(),
+                    enabled = !isSaving && isValid,
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = IncomeGreen,
-                        disabledContainerColor = IncomeGreen.copy(alpha = 0.5f)
+                        disabledContainerColor = IncomeGreen.copy(alpha = 0.4f)
                     ),
                     elevation = ButtonDefaults.buttonElevation(
                         defaultElevation = 4.dp,
@@ -573,22 +702,22 @@ fun AddIncomeScreen(
                 ) {
                     if (isSaving) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                             color = Color.White,
                             strokeWidth = 2.dp
                         )
                     } else {
-                        Icon(Icons.Default.Savings, contentDescription = null)
+                        Icon(Icons.Default.Savings, contentDescription = null, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             "Save Income",
-                            style = MaterialTheme.typography.titleMedium,
+                            style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -664,7 +793,11 @@ fun IncomeAccountSelector(
         OutlinedCard(
             onClick = { expanded = true },
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(14.dp),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+            )
         ) {
             Row(
                 modifier = Modifier
@@ -675,8 +808,8 @@ fun IncomeAccountSelector(
                 Box(
                     modifier = Modifier
                         .size(40.dp)
-                        .clip(CircleShape)
-                        .background(IncomeGreen.copy(alpha = 0.2f)),
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(IncomeGreen.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -695,19 +828,20 @@ fun IncomeAccountSelector(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = selectedAccount?.name ?: "Select Account",
-                        style = MaterialTheme.typography.bodyLarge,
-                        fontWeight = FontWeight.Medium
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     selectedAccount?.let {
                         Text(
                             text = "Balance: ${CurrencyFormatter.formatBDT(it.balance)}",
-                            style = MaterialTheme.typography.bodySmall,
+                            style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 Icon(
-                    Icons.Default.ArrowDropDown,
+                    Icons.Default.KeyboardArrowDown,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -732,9 +866,13 @@ fun IncomeAccountSelector(
                                 },
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            Spacer(modifier = Modifier.width(8.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
                             Column {
-                                Text(account.name, fontWeight = FontWeight.Medium)
+                                Text(
+                                    account.name,
+                                    fontWeight = FontWeight.Medium,
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
                                 Text(
                                     CurrencyFormatter.formatBDT(account.balance),
                                     style = MaterialTheme.typography.bodySmall,

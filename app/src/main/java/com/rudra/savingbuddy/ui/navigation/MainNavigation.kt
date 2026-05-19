@@ -173,29 +173,9 @@ fun MainNavigation() {
                     onNavigateBack = { navController.popBackStack() }
                 )
             }
-            composable("add_goal") {
-                GoalsScreen()
-            }
-            composable("subscriptions") {
-                BudgetScreen()
-            }
-            composable("advanced") {
-                AdvancedFeaturesScreen(
-                    navController = navController,
-                    onNavigateBack = { navController.popBackStack() }
-                )
-            }
-            composable(Screen.Transactions.route) {
-                TransactionHistoryScreen(navController = navController)
-            }
             composable(Screen.ExpenseDetail.route + "/{expenseId}") { backStackEntry ->
                 val expenseId = backStackEntry.arguments?.getString("expenseId")?.toLongOrNull() ?: 0L
                 ExpenseDetailScreen(navController = navController, expenseId = expenseId)
-            }
-            composable(Screen.Music.route) {
-                com.rudra.savingbuddy.ui.screens.music.MusicScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
             }
             composable(Screen.LanguageSettings.route) {
                 com.rudra.savingbuddy.ui.screens.language.LanguageScreen(
@@ -208,9 +188,7 @@ fun MainNavigation() {
                 )
             }
             composable(Screen.NetWorth.route) {
-                com.rudra.savingbuddy.ui.screens.investment.InvestmentScreen(
-                    onNavigateBack = { navController.popBackStack() }
-                )
+                FusionScreen(onNavigateBack = { navController.popBackStack() })
             }
             composable(Screen.SubscriptionManager.route) {
                 com.rudra.savingbuddy.ui.screens.subscriptions.SubscriptionManagerScreen(
