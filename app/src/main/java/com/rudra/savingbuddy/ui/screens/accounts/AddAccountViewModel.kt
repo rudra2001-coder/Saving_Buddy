@@ -21,7 +21,9 @@ data class AddAccountUiState(
     val initialBalance: String = "0",
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val editingAccountId: Long? = null,
+    val existingBalance: Double = 0.0
 ) {
     val canSave: Boolean
         get() = selectedType != null && 
@@ -31,6 +33,9 @@ data class AddAccountUiState(
     
     val showCustomProviderName: Boolean
         get() = selectedProvider?.isCustom == true
+
+    val isEditMode: Boolean
+        get() = editingAccountId != null
 }
 
 @HiltViewModel
@@ -40,6 +45,31 @@ class AddAccountViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(AddAccountUiState())
     val uiState: StateFlow<AddAccountUiState> = _uiState.asStateFlow()
+
+    fun loadAccount(accountId: Long) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val account = accountRepository.getAccount(accountId)
+            if (account != null) {
+                val provider = AccountProvider.entries.find { it.name == account.provider }
+                _uiState.update {
+                    it.copy(
+                        editingAccountId = accountId,
+                        selectedType = account.type,
+                        selectedProvider = provider,
+                        customProviderName = if (provider?.isCustom == true) account.provider else "",
+                        accountNumber = account.accountNumber,
+                        nickname = account.name,
+                        initialBalance = account.balance.toBigDecimal().stripTrailingZeros().toPlainString(),
+                        existingBalance = account.balance,
+                        isLoading = false
+                    )
+                }
+            } else {
+                _uiState.update { it.copy(isLoading = false, error = "Account not found") }
+            }
+        }
+    }
 
     fun selectType(type: AccountType) {
         _uiState.update { 
@@ -85,29 +115,46 @@ class AddAccountViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
 
             try {
-                val initialBalance = state.initialBalance.toDoubleOrNull() ?: 0.0
+                val newBalance = state.initialBalance.toDoubleOrNull() ?: 0.0
                 val providerDisplayName = if (state.selectedProvider?.isCustom == true && state.customProviderName.isNotBlank()) {
                     state.customProviderName
                 } else {
                     state.selectedProvider?.displayName ?: "Account"
                 }
-                val account = Account(
-                    name = state.nickname.ifBlank { providerDisplayName },
-                    type = state.selectedType!!,
-                    provider = if (state.selectedProvider?.isCustom == true && state.customProviderName.isNotBlank()) {
-                        state.customProviderName.uppercase().replace(" ", "_")
-                    } else {
-                        state.selectedProvider!!.name
-                    },
-                    accountNumber = state.accountNumber,
-                    balance = initialBalance,
-                    initialBalance = initialBalance,
-                    currency = "BDT",
-                    iconColor = generateIconColor(),
-                    dailyLimit = state.selectedProvider!!.dailyTransferLimit.takeIf { it > 0 }
-                )
+                val providerName = if (state.selectedProvider?.isCustom == true && state.customProviderName.isNotBlank()) {
+                    state.customProviderName.uppercase().replace(" ", "_")
+                } else {
+                    state.selectedProvider!!.name
+                }
 
-                accountRepository.insertAccount(account)
+                if (state.isEditMode) {
+                    val existingAccount = accountRepository.getAccount(state.editingAccountId!!)
+                    if (existingAccount != null) {
+                        val updatedAccount = existingAccount.copy(
+                            name = state.nickname.ifBlank { providerDisplayName },
+                            type = state.selectedType!!,
+                            provider = providerName,
+                            accountNumber = state.accountNumber,
+                            iconColor = generateIconColor(),
+                            dailyLimit = state.selectedProvider!!.dailyTransferLimit.takeIf { it > 0 },
+                            lastUpdated = System.currentTimeMillis()
+                        )
+                        accountRepository.updateAccount(updatedAccount)
+                    }
+                } else {
+                    val account = Account(
+                        name = state.nickname.ifBlank { providerDisplayName },
+                        type = state.selectedType!!,
+                        provider = providerName,
+                        accountNumber = state.accountNumber,
+                        balance = newBalance,
+                        initialBalance = newBalance,
+                        currency = "BDT",
+                        iconColor = generateIconColor(),
+                        dailyLimit = state.selectedProvider!!.dailyTransferLimit.takeIf { it > 0 }
+                    )
+                    accountRepository.insertAccount(account)
+                }
                 _uiState.update { it.copy(isLoading = false, isSaved = true) }
             } catch (e: Exception) {
                 _uiState.update { 

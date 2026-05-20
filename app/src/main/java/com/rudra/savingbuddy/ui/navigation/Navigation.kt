@@ -28,6 +28,9 @@ sealed class Screen(
     data object Transfer : Screen("transfer", "Transfer", Icons.Default.SwapHoriz)
     data object AddAccount : Screen("add_account", "Add Account", Icons.Default.Add)
     data object AccountDetail : Screen("account_detail", "Account Detail", Icons.Default.Info)
+    data object EditAccount : Screen("edit_account", "Edit Account", Icons.Default.Edit) {
+        fun createRoute(accountId: Long) = "edit_account/$accountId"
+    }
     data object Fusion : Screen("fusion", "Fusion", Icons.Default.JoinFull)
     data object Backup : Screen("backup", "Backup", Icons.Default.Backup)
     data object Calculator : Screen("calculator", "Calculator", Icons.Default.Calculate)

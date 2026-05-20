@@ -17,6 +17,7 @@ interface AccountRepository {
     suspend fun addMoneyToAccount(id: Long, amount: Double, note: String? = null): TransferResult
     suspend fun withdrawMoneyFromAccount(id: Long, amount: Double, note: String? = null): TransferResult
     suspend fun deleteAccount(id: Long)
+    suspend fun deleteAccountWithTransfer(accountId: Long, targetAccountId: Long): TransferResult
     
     suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, note: String?): TransferResult
     suspend fun getTransfersForAccount(accountId: Long): List<Transfer>

@@ -70,6 +70,8 @@ fun AddExpenseScreen(
     var accounts by remember { mutableStateOf<List<Account>>(emptyList()) }
     var selectedAccount by remember { mutableStateOf<Account?>(null) }
     var isSaving by remember { mutableStateOf(false) }
+    var showInsufficientBalanceWarning by remember { mutableStateOf(false) }
+    var pendingExpenseAmount by remember { mutableStateOf(0.0) }
 
     val focusManager = LocalFocusManager.current
     val haptic = LocalHapticFeedback.current
@@ -710,6 +712,12 @@ fun AddExpenseScreen(
                             return@Button
                         }
 
+                        if (selectedAccount != null && amountValue > selectedAccount!!.balance) {
+                            pendingExpenseAmount = amountValue
+                            showInsufficientBalanceWarning = true
+                            return@Button
+                        }
+
                         isSaving = true
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
 
@@ -784,6 +792,94 @@ fun AddExpenseScreen(
         ) {
             DatePicker(state = datePickerState)
         }
+    }
+
+    // Insufficient Balance Warning Dialog
+    if (showInsufficientBalanceWarning) {
+        AlertDialog(
+            onDismissRequest = { showInsufficientBalanceWarning = false },
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(Icons.Default.Warning, null, tint = ExpenseRed, modifier = Modifier.size(48.dp))
+            },
+            title = { Text("Insufficient Balance", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(ExpenseRed.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.AccountBalanceWallet, null, tint = ExpenseRed, modifier = Modifier.size(20.dp))
+                        }
+                        Column {
+                            Text(selectedAccount?.name ?: "Account", fontWeight = FontWeight.Medium, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Balance: ${CurrencyFormatter.formatBDT(selectedAccount?.balance ?: 0.0)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Icon(Icons.Default.TrendingDown, null, tint = ExpenseRed, modifier = Modifier.size(16.dp))
+                                Text("Expense Amount", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                CurrencyFormatter.formatBDT(pendingExpenseAmount),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = ExpenseRed
+                            )
+                        }
+                    }
+
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = IncomeGreen.copy(alpha = 0.08f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(Icons.Default.AccountBalance, null, tint = IncomeGreen, modifier = Modifier.size(16.dp))
+                            Text(
+                                "Account Balance: ${CurrencyFormatter.formatBDT(selectedAccount?.balance ?: 0.0)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Text(
+                        "Please add more money to this account or select a different account with sufficient balance before adding this expense.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { showInsufficientBalanceWarning = false },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed)
+                ) {
+                    Text("Got it", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
     }
 
     // Time Picker Dialog

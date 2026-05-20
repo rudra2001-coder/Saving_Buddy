@@ -34,6 +34,7 @@ import com.rudra.savingbuddy.ui.screens.accounts.AccountsScreen
 import com.rudra.savingbuddy.ui.screens.accounts.TransferScreen
 import com.rudra.savingbuddy.ui.screens.accounts.AddAccountScreen
 import com.rudra.savingbuddy.ui.screens.accounts.AccountDetailScreen
+import com.rudra.savingbuddy.ui.screens.accounts.EditAccountScreen
 import com.rudra.savingbuddy.ui.screens.fusion.FusionScreen
 import com.rudra.savingbuddy.ui.screens.backup.BackupScreen
 import com.rudra.savingbuddy.ui.screens.calculator.CalculatorScreen
@@ -139,6 +140,10 @@ fun MainNavigation() {
             composable(Screen.AccountDetail.route + "/{accountId}") { backStackEntry ->
                 val accountId = backStackEntry.arguments?.getString("accountId")?.toLongOrNull() ?: 0L
                 AccountDetailScreen(navController = navController, accountId = accountId)
+            }
+            composable(Screen.EditAccount.route + "/{accountId}") { backStackEntry ->
+                val accountId = backStackEntry.arguments?.getString("accountId")?.toLongOrNull() ?: 0L
+                EditAccountScreen(navController = navController, accountId = accountId)
             }
             composable(Screen.Fusion.route) {
                 FusionScreen(onNavigateBack = { navController.popBackStack() })

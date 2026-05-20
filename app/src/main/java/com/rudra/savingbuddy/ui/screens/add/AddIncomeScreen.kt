@@ -403,37 +403,47 @@ fun AddIncomeScreen(
                     )
                 }
 
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    items(IncomeCategory.entries.toList()) { category ->
-                        val isSelected = selectedCategory == category
-                        val categoryColor = categoryColors[category] ?: IncomeGreen
-
-                        Surface(
-                            onClick = {
-                                selectedCategory = category
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            },
-                            shape = RoundedCornerShape(14.dp),
-                            color = if (isSelected) categoryColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = androidx.compose.foundation.BorderStroke(
-                                1.dp,
-                                if (isSelected) categoryColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
-                            )
+                    IncomeCategory.entries.chunked(3).forEach { rowCategories ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)
-                            ) {
-                                Text(categoryEmojis[category] ?: "💵", fontSize = 16.sp)
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    category.displayName,
-                                    style = MaterialTheme.typography.labelMedium,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            rowCategories.forEach { category ->
+                                val isSelected = selectedCategory == category
+                                val categoryColor = categoryColors[category] ?: IncomeGreen
+
+                                Surface(
+                                    onClick = {
+                                        selectedCategory = category
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (isSelected) categoryColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSelected) categoryColor.copy(alpha = 0.5f) else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                                    )
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 10.dp)
+                                    ) {
+                                        Text(categoryEmojis[category] ?: "💵", fontSize = 16.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            category.displayName,
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = if (isSelected) categoryColor else MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -651,21 +661,18 @@ fun AddIncomeScreen(
 
                 // Save Button
                 val buttonScale by animateFloatAsState(
-                    targetValue = if (amount.isNotBlank() && amount.toDoubleOrNull()?.let { it > 0 } == true && source.isNotBlank()) 1f else 0.98f,
+                    targetValue = if (amount.isNotBlank() && amount.toDoubleOrNull()?.let { it > 0 } == true) 1f else 0.98f,
                     animationSpec = tween(200),
                     label = "button_scale"
                 )
 
-                val isValid = amount.isNotBlank() && source.isNotBlank()
+                val isValid = amount.isNotBlank()
 
                 Button(
                     onClick = {
                         val amountValue = amount.toDoubleOrNull()
                         if (amountValue == null || amountValue <= 0) {
                             amountError = "Please enter a valid amount"
-                            return@Button
-                        }
-                        if (source.isBlank()) {
                             return@Button
                         }
 

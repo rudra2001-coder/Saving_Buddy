@@ -1,5 +1,6 @@
 package com.rudra.savingbuddy.ui.screens.accounts
 
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -34,6 +35,8 @@ private val Blue600 = Color(0xFF185FA5)
 private val Blue50 = Color(0xFFE6F1FB)
 private val Green600 = Color(0xFF3B6D11)
 private val Green50 = Color(0xFFEAF3DE)
+private val Red600 = Color(0xFFD32F2F)
+private val Red50 = Color(0xFFFFEBEE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -42,6 +45,13 @@ fun AccountsScreen(
     viewModel: AccountsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+
+    LaunchedEffect(uiState.showDeleteSuccess) {
+        if (uiState.showDeleteSuccess) {
+            kotlinx.coroutines.delay(2000)
+            viewModel.dismissDeleteSuccess()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -156,9 +166,14 @@ fun AccountsScreen(
                 item {
                     SectionHeader(title = "WALLETS", icon = Icons.Default.AccountBalanceWallet, count = uiState.wallets.size)
                 }
-                items(uiState.wallets) { account ->
-                    AccountCard(
+                items(uiState.wallets, key = { it.id }) { account ->
+                    SwipeAccountCard(
                         account = account,
+                        onEdit = {
+                            viewModel.onSwipeEdit(account)
+                            navController.navigate(Screen.EditAccount.createRoute(account.id))
+                        },
+                        onDelete = { viewModel.onSwipeDelete(account) },
                         onClick = { navController.navigate(Screen.AccountDetail.route + "/${account.id}") }
                     )
                 }
@@ -169,9 +184,14 @@ fun AccountsScreen(
                 item {
                     SectionHeader(title = "BANK ACCOUNTS", icon = Icons.Default.AccountBalance, count = uiState.bankAccounts.size)
                 }
-                items(uiState.bankAccounts) { account ->
-                    AccountCard(
+                items(uiState.bankAccounts, key = { it.id }) { account ->
+                    SwipeAccountCard(
                         account = account,
+                        onEdit = {
+                            viewModel.onSwipeEdit(account)
+                            navController.navigate(Screen.EditAccount.createRoute(account.id))
+                        },
+                        onDelete = { viewModel.onSwipeDelete(account) },
                         onClick = { navController.navigate(Screen.AccountDetail.route + "/${account.id}") }
                     )
                 }
@@ -182,9 +202,14 @@ fun AccountsScreen(
                 item {
                     SectionHeader(title = "MOBILE BANKING", icon = Icons.Default.PhoneAndroid, count = uiState.mobileBanking.size)
                 }
-                items(uiState.mobileBanking) { account ->
-                    AccountCard(
+                items(uiState.mobileBanking, key = { it.id }) { account ->
+                    SwipeAccountCard(
                         account = account,
+                        onEdit = {
+                            viewModel.onSwipeEdit(account)
+                            navController.navigate(Screen.EditAccount.createRoute(account.id))
+                        },
+                        onDelete = { viewModel.onSwipeDelete(account) },
                         onClick = { navController.navigate(Screen.AccountDetail.route + "/${account.id}") }
                     )
                 }
@@ -195,9 +220,14 @@ fun AccountsScreen(
                 item {
                     SectionHeader(title = "DIGITAL WALLETS", icon = Icons.Default.CreditCard, count = uiState.digitalWallets.size)
                 }
-                items(uiState.digitalWallets) { account ->
-                    AccountCard(
+                items(uiState.digitalWallets, key = { it.id }) { account ->
+                    SwipeAccountCard(
                         account = account,
+                        onEdit = {
+                            viewModel.onSwipeEdit(account)
+                            navController.navigate(Screen.EditAccount.createRoute(account.id))
+                        },
+                        onDelete = { viewModel.onSwipeDelete(account) },
                         onClick = { navController.navigate(Screen.AccountDetail.route + "/${account.id}") }
                     )
                 }
@@ -237,6 +267,274 @@ fun AccountsScreen(
             }
         }
     }
+
+    // Delete Confirmation Dialog (for zero-balance accounts)
+    if (uiState.showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDialogs() },
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(Icons.Default.Warning, null, tint = ExpenseRed, modifier = Modifier.size(48.dp))
+            },
+            title = { Text("Delete Account?", fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    "Are you sure you want to delete ${uiState.swipeTargetAccount?.name ?: "this account"}? This action cannot be undone.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmDeleteZeroBalance() },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                    enabled = !uiState.isProcessing
+                ) {
+                    if (uiState.isProcessing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Delete", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDialogs() }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    // Transfer Dialog (for accounts with balance > 0)
+    if (uiState.showTransferDialog) {
+        val targetAccount = uiState.swipeTargetAccount
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDialogs() },
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(Icons.Default.SwapHoriz, null, tint = Blue600, modifier = Modifier.size(48.dp))
+            },
+            title = { Text("Transfer Balance", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "${targetAccount?.name ?: "This account"} has a balance of ${CurrencyFormatter.formatBDT(targetAccount?.balance ?: 0.0)}. Select an account to transfer the balance before deletion:",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+
+                    if (uiState.otherAccounts.isEmpty()) {
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.08f)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Info, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                                Text("No other accounts available to transfer balance to.",
+                                    color = ExpenseRed, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    } else {
+                        uiState.otherAccounts.forEach { account ->
+                            val isSelected = uiState.transferTargetAccount?.id == account.id
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { viewModel.selectTransferTarget(account) },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) Blue600.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    if (isSelected) 1.5.dp else 0.5.dp,
+                                    if (isSelected) Blue600 else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Box(
+                                        modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(Color(account.iconColor).copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            when (account.type) {
+                                                AccountType.WALLET -> "💵"
+                                                AccountType.BANK -> "🏦"
+                                                AccountType.MOBILE_BANKING -> "📱"
+                                                AccountType.DIGITAL_WALLET -> "💳"
+                                                AccountType.CREDIT_CARD -> "💳"
+                                            },
+                                            style = MaterialTheme.typography.titleSmall
+                                        )
+                                    }
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(account.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                        Text(CurrencyFormatter.formatBDT(account.balance), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    if (isSelected) {
+                                        Icon(Icons.Default.CheckCircle, null, tint = Blue600, modifier = Modifier.size(20.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    uiState.error?.let { error ->
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.12f)),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(Icons.Default.Error, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                                Text(error, color = ExpenseRed, style = MaterialTheme.typography.bodySmall)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.confirmDeleteWithTransfer() },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = ExpenseRed),
+                    enabled = uiState.transferTargetAccount != null && !uiState.isProcessing
+                ) {
+                    if (uiState.isProcessing) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    } else {
+                        Text("Transfer & Delete", fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.dismissDialogs() }) {
+                    Text("Cancel", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+        )
+    }
+
+    // Delete Success Snackbar
+    if (uiState.showDeleteSuccess) {
+        AlertDialog(
+            onDismissRequest = { viewModel.dismissDeleteSuccess() },
+            shape = RoundedCornerShape(24.dp),
+            icon = {
+                Icon(Icons.Default.CheckCircle, null, tint = IncomeGreen, modifier = Modifier.size(48.dp))
+            },
+            title = { Text("Account Deleted", fontWeight = FontWeight.Bold) },
+            text = {
+                Text("The account has been removed successfully.",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.dismissDeleteSuccess() },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen)
+                ) {
+                    Text("Done", fontWeight = FontWeight.SemiBold)
+                }
+            }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SwipeAccountCard(
+    account: Account,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit,
+    onClick: () -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            when (value) {
+                SwipeToDismissBoxValue.StartToEnd -> {
+                    onEdit()
+                    false
+                }
+                SwipeToDismissBoxValue.EndToStart -> {
+                    onDelete()
+                    false
+                }
+                SwipeToDismissBoxValue.Settled -> true
+            }
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        enableDismissFromStartToEnd = true,
+        enableDismissFromEndToStart = true,
+        backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val scale by animateFloatAsState(
+                targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.Settled) 0.75f else 1f,
+                animationSpec = tween(200),
+                label = "swipe_scale"
+            )
+
+            val color by animateColorAsState(
+                targetValue = when (direction) {
+                    SwipeToDismissBoxValue.StartToEnd -> Blue600
+                    SwipeToDismissBoxValue.EndToStart -> Red600
+                    SwipeToDismissBoxValue.Settled -> Color.Transparent
+                },
+                animationSpec = tween(200),
+                label = "swipe_bg_color"
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(color)
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (direction == SwipeToDismissBoxValue.StartToEnd)
+                    Arrangement.Start else Arrangement.End
+            ) {
+                if (direction == SwipeToDismissBoxValue.StartToEnd) {
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = "Edit",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp).scale(scale)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Edit", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                } else {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp).scale(scale)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Delete", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+        },
+        content = {
+            AccountCard(
+                account = account,
+                onClick = onClick
+            )
+        }
+    )
 }
 
 @Composable

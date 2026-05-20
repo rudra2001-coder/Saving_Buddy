@@ -126,6 +126,56 @@ class AccountRepositoryImpl @Inject constructor(
         accountDao.deleteAccountById(id)
     }
 
+    override suspend fun deleteAccountWithTransfer(accountId: Long, targetAccountId: Long): TransferResult {
+        val account = accountDao.getAccountById(accountId)?.toDomain()
+            ?: return TransferResult(success = false, errorMessage = "Account not found")
+
+        val targetAccount = accountDao.getAccountById(targetAccountId)?.toDomain()
+            ?: return TransferResult(success = false, errorMessage = "Target account not found")
+
+        if (account.id == targetAccount.id) {
+            return TransferResult(success = false, errorMessage = "Cannot transfer to the same account")
+        }
+
+        if (account.balance > 0) {
+            val newFromBalance = 0.0
+            val newToBalance = targetAccount.balance + account.balance
+
+            accountDao.updateBalance(accountId, newFromBalance)
+            accountDao.updateBalance(targetAccountId, newToBalance)
+
+            val transfer = Transfer(
+                fromAccountId = accountId,
+                toAccountId = targetAccountId,
+                amount = account.balance,
+                fee = 0.0,
+                note = "Balance transferred before account deletion",
+                status = TransferStatus.COMPLETED,
+                reference = generateReference()
+            )
+            transferDao.insertTransfer(transfer.toEntity())
+
+            balanceHistoryDao.insertBalanceHistory(
+                AccountBalanceHistoryEntity(
+                    accountId = accountId,
+                    date = System.currentTimeMillis(),
+                    balance = newFromBalance
+                )
+            )
+            balanceHistoryDao.insertBalanceHistory(
+                AccountBalanceHistoryEntity(
+                    accountId = targetAccountId,
+                    date = System.currentTimeMillis(),
+                    balance = newToBalance
+                )
+            )
+        }
+
+        accountDao.deleteAccountById(accountId)
+
+        return TransferResult(success = true, transactionId = "DEL${System.currentTimeMillis()}")
+    }
+
     override suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, note: String?): TransferResult {
         val fromAccount = accountDao.getAccountById(fromId)?.toDomain()
             ?: return TransferResult(success = false, errorMessage = "Source account not found")
