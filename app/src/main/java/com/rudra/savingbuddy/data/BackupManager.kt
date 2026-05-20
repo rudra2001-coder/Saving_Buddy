@@ -17,6 +17,7 @@ import com.rudra.savingbuddy.data.local.dao.IncomeDao
 import com.rudra.savingbuddy.data.local.dao.InvestmentDao
 import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
+import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import com.rudra.savingbuddy.data.local.entity.*
 import com.rudra.savingbuddy.data.models.*
 import kotlinx.coroutines.Dispatchers
@@ -41,7 +42,8 @@ class BackupManager @Inject constructor(
     private val transferDao: TransferDao,
     private val balanceHistoryDao: AccountBalanceHistoryDao,
     private val subscriptionDao: SubscriptionDao,
-    private val investmentDao: InvestmentDao
+    private val investmentDao: InvestmentDao,
+    private val userSettingsDao: UserSettingsDao
 ) {
     private val json = Json {
         prettyPrint = true
@@ -124,6 +126,8 @@ class BackupManager @Inject constructor(
         val transfers = transferDao.getAllTransfers().first()
         val subscriptions = subscriptionDao.getAllSubscriptions().first()
         val investments = investmentDao.getAllInvestments().first()
+        val userSettings = userSettingsDao.getAllSettings().first()
+        val balanceHistory = balanceHistoryDao.getAllBalanceHistory().first()
 
         return BackupData(
             version = 2,
@@ -136,7 +140,9 @@ class BackupManager @Inject constructor(
             billReminders = billReminders.map { it.toBillReminderBackup() },
             transactions = transfers.map { it.toTransactionBackup() },
             subscriptions = subscriptions.map { it.toSubscriptionBackup() },
-            investments = investments.map { it.toInvestmentBackup() }
+            investments = investments.map { it.toInvestmentBackup() },
+            userSettings = userSettings.map { it.toUserSettingsBackup() },
+            balanceHistory = balanceHistory.map { it.toBalanceHistoryBackup() }
         )
     }
 
@@ -149,8 +155,11 @@ class BackupManager @Inject constructor(
                 goalDao.deleteAll()
                 budgetDao.deleteAll()
                 transferDao.deleteAll()
-                subscriptionDao.getAllSubscriptions().first().forEach { subscriptionDao.deleteSubscription(it) }
+                billReminderDao.deleteAll()
+                subscriptionDao.deleteAll()
                 investmentDao.deleteAll()
+                userSettingsDao.deleteAllSettings()
+                balanceHistoryDao.deleteAll()
             }
 
             backupData.accounts.forEach { acc ->
@@ -180,6 +189,13 @@ class BackupManager @Inject constructor(
             backupData.investments.forEach { inv ->
                 investmentDao.insertInvestment(inv.toInvestmentEntity())
             }
+            backupData.userSettings.forEach { setting ->
+                userSettingsDao.insertSettings(setting.toUserSettingsEntity())
+            }
+            backupData.balanceHistory.forEach { history ->
+                balanceHistoryDao.insertBalanceHistory(history.toBalanceHistoryEntity())
+            }
+
             val prefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
             prefs.edit().apply {
                 putBoolean("backup_enabled", backupData.settings.isEnabled)
@@ -469,6 +485,24 @@ class BackupManager @Inject constructor(
         currentValue = amount + returns,
         purchaseDate = System.currentTimeMillis(),
         notes = notes, createdAt = System.currentTimeMillis()
+    )
+
+    private fun UserSettingsEntity.toUserSettingsBackup() = UserSettingsBackup(
+        key = key, value = value, updatedAt = updatedAt
+    )
+
+    private fun UserSettingsBackup.toUserSettingsEntity() = UserSettingsEntity(
+        key = key, value = value, updatedAt = updatedAt
+    )
+
+    private fun AccountBalanceHistoryEntity.toBalanceHistoryBackup() = BalanceHistoryBackup(
+        id = id, accountId = accountId, date = date,
+        balance = balance, changeAmount = changeAmount, changeType = changeType
+    )
+
+    private fun BalanceHistoryBackup.toBalanceHistoryEntity() = AccountBalanceHistoryEntity(
+        id = if (id == 0L) 0 else id, accountId = accountId, date = date,
+        balance = balance, changeAmount = changeAmount, changeType = changeType
     )
 }
 

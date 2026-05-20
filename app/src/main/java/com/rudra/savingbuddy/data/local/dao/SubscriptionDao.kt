@@ -41,4 +41,7 @@ interface SubscriptionDao {
 
     @Query("UPDATE subscriptions SET notifyDaysBefore = :days WHERE id = :id")
     suspend fun updateNotifyDaysBefore(id: Long, days: Int)
+
+    @Query("DELETE FROM subscriptions")
+    suspend fun deleteAll()
 }

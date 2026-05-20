@@ -49,9 +49,18 @@ interface AccountBalanceHistoryDao {
     @Query("SELECT * FROM account_balance_history WHERE accountId = :accountId ORDER BY date DESC LIMIT :limit")
     fun getBalanceHistory(accountId: Long, limit: Int = 30): Flow<List<AccountBalanceHistoryEntity>>
 
+    @Query("SELECT * FROM account_balance_history ORDER BY date DESC")
+    fun getAllBalanceHistory(): Flow<List<AccountBalanceHistoryEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBalanceHistory(history: AccountBalanceHistoryEntity)
 
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAllBalanceHistory(historyList: List<AccountBalanceHistoryEntity>)
+
     @Query("DELETE FROM account_balance_history WHERE accountId = :accountId")
     suspend fun deleteHistoryForAccount(accountId: Long)
+
+    @Query("DELETE FROM account_balance_history")
+    suspend fun deleteAll()
 }

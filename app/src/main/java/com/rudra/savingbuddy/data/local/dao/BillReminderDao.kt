@@ -35,4 +35,7 @@ interface BillReminderDao {
 
     @Query("UPDATE bill_reminders SET isPaid = :isPaid, lastPaidDate = :lastPaidDate WHERE id = :id")
     suspend fun updatePaidStatus(id: Long, isPaid: Boolean, lastPaidDate: Long?)
+
+    @Query("DELETE FROM bill_reminders")
+    suspend fun deleteAll()
 }

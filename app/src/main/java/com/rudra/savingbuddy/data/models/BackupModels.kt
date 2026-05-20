@@ -15,6 +15,8 @@ data class BackupData(
     val expenseList: List<ExpenseBackup> = emptyList(),
     val subscriptions: List<SubscriptionBackup> = emptyList(),
     val investments: List<InvestmentBackup> = emptyList(),
+    val userSettings: List<UserSettingsBackup> = emptyList(),
+    val balanceHistory: List<BalanceHistoryBackup> = emptyList(),
     val gamification: GamificationBackup? = null,
     val settings: BackupSettings = BackupSettings()
 )
@@ -179,6 +181,23 @@ data class GamificationBackup(
     val longestStreak: Int = 0,
     val unlockedBadgeIds: List<String> = emptyList(),
     val lastLogDate: Long? = null
+)
+
+@Serializable
+data class UserSettingsBackup(
+    val key: String,
+    val value: String,
+    val updatedAt: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class BalanceHistoryBackup(
+    val id: Long = 0,
+    val accountId: Long,
+    val date: Long,
+    val balance: Double,
+    val changeAmount: Double? = null,
+    val changeType: String? = null
 )
 
 @Serializable
