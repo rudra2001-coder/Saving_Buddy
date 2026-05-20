@@ -71,9 +71,9 @@ sealed class Screen(
 
 val bottomNavItems = listOf(
     Screen.Dashboard,
+    Screen.Accounts,
     Screen.Features,
     Screen.Reports,
-    Screen.InvestmentTracker,
     Screen.Settings,
 )
 
