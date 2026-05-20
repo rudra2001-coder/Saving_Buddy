@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.navigation.compose)
     implementation(libs.work.runtime)
     implementation(libs.biometric)
+    implementation(libs.documentfile)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.coroutines.android)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")

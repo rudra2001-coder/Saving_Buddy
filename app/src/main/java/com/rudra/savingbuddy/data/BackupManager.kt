@@ -2,8 +2,10 @@ package com.rudra.savingbuddy.data
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Environment
 import androidx.core.content.FileProvider
+import androidx.documentfile.provider.DocumentFile
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.rudra.savingbuddy.data.local.dao.AccountBalanceHistoryDao
 import com.rudra.savingbuddy.data.local.dao.AccountDao
@@ -47,46 +49,95 @@ class BackupManager @Inject constructor(
         ignoreUnknownKeys = true
     }
 
-    suspend fun exportAllData(location: BackupLocation = BackupLocation.DOWNLOADS): BackupResult = withContext(Dispatchers.IO) {
+    suspend fun exportAllData(location: BackupLocation = BackupLocation.DOWNLOADS, customPath: String? = null): BackupResult = withContext(Dispatchers.IO) {
         try {
-            val incomes = incomeDao.getAllIncomes().first()
-            val expenses = expenseDao.getAllExpenses().first()
-            val accounts = accountDao.getAllAccounts().first()
-            val goals = goalDao.getAllGoals().first()
-            val budgets = budgetDao.getAllBudgets().first()
-            val billReminders = billReminderDao.getAllBillReminders().first()
-            val transfers = transferDao.getAllTransfers().first()
-            val subscriptions = subscriptionDao.getAllSubscriptions().first()
-            val investments = investmentDao.getAllInvestments().first()
-
-            val backupData = BackupData(
-                version = 2,
-                timestamp = System.currentTimeMillis(),
-                incomeList = incomes.map { it.toIncomeBackup() },
-                expenseList = expenses.map { it.toExpenseBackup() },
-                accounts = accounts.map { it.toAccountBackup() },
-                goals = goals.map { it.toGoalBackup() },
-                budgets = budgets.map { it.toBudgetBackup() },
-                billReminders = billReminders.map { it.toBillReminderBackup() },
-                transactions = transfers.map { it.toTransactionBackup() },
-                subscriptions = subscriptions.map { it.toSubscriptionBackup() },
-                investments = investments.map { it.toInvestmentBackup() }
-            )
-
+            val backupData = collectAllData()
+            val jsonString = json.encodeToString(BackupData.serializer(), backupData)
             val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
             val filename = "savings_backup_${dateFormat.format(Date(backupData.timestamp))}.json"
-            val jsonString = json.encodeToString(BackupData.serializer(), backupData)
-            val backupFile = getBackupFile(filename, location)
-            backupFile.parentFile?.mkdirs()
-            backupFile.writeText(jsonString)
+
+            val resultPath = if (location == BackupLocation.CUSTOM && customPath != null) {
+                val treeUri = Uri.parse(customPath)
+                val dirDocument = DocumentFile.fromTreeUri(context, treeUri)
+                if (dirDocument == null || !dirDocument.exists()) {
+                    return@withContext BackupResult.Error("Selected folder is not available")
+                }
+                val file = dirDocument.createFile("application/json", filename.replace(".json", ""))
+                if (file == null) {
+                    return@withContext BackupResult.Error("Could not create backup file in selected folder")
+                }
+                context.contentResolver.openOutputStream(file.uri)?.use { outputStream ->
+                    outputStream.write(jsonString.toByteArray())
+                }
+                file.uri.toString()
+            } else {
+                val backupFile = getBackupFile(filename, location)
+                backupFile.parentFile?.mkdirs()
+                backupFile.writeText(jsonString)
+                backupFile.absolutePath
+            }
 
             val prefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
             prefs.edit().putLong("last_backup_time", System.currentTimeMillis()).apply()
 
-            BackupResult.Success(backupFile.absolutePath)
+            BackupResult.Success(resultPath)
         } catch (e: Exception) {
             BackupResult.Error(e.message ?: "Backup failed")
         }
+    }
+
+    suspend fun exportAllDataToUri(directoryUri: Uri): BackupResult = withContext(Dispatchers.IO) {
+        try {
+            val backupData = collectAllData()
+            val jsonString = json.encodeToString(BackupData.serializer(), backupData)
+            val dateFormat = SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.getDefault())
+            val filename = "savings_backup_${dateFormat.format(Date(backupData.timestamp))}.json"
+
+            val dirDocument = DocumentFile.fromTreeUri(context, directoryUri)
+            if (dirDocument == null || !dirDocument.exists()) {
+                return@withContext BackupResult.Error("Selected folder is not available")
+            }
+            val file = dirDocument.createFile("application/json", filename.replace(".json", ""))
+            if (file == null) {
+                return@withContext BackupResult.Error("Could not create backup file in selected folder")
+            }
+            context.contentResolver.openOutputStream(file.uri)?.use { outputStream ->
+                outputStream.write(jsonString.toByteArray())
+            }
+
+            val prefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
+            prefs.edit().putLong("last_backup_time", System.currentTimeMillis()).apply()
+
+            BackupResult.Success(file.uri.toString())
+        } catch (e: Exception) {
+            BackupResult.Error(e.message ?: "Backup failed")
+        }
+    }
+
+    private suspend fun collectAllData(): BackupData {
+        val incomes = incomeDao.getAllIncomes().first()
+        val expenses = expenseDao.getAllExpenses().first()
+        val accounts = accountDao.getAllAccounts().first()
+        val goals = goalDao.getAllGoals().first()
+        val budgets = budgetDao.getAllBudgets().first()
+        val billReminders = billReminderDao.getAllBillReminders().first()
+        val transfers = transferDao.getAllTransfers().first()
+        val subscriptions = subscriptionDao.getAllSubscriptions().first()
+        val investments = investmentDao.getAllInvestments().first()
+
+        return BackupData(
+            version = 2,
+            timestamp = System.currentTimeMillis(),
+            incomeList = incomes.map { it.toIncomeBackup() },
+            expenseList = expenses.map { it.toExpenseBackup() },
+            accounts = accounts.map { it.toAccountBackup() },
+            goals = goals.map { it.toGoalBackup() },
+            budgets = budgets.map { it.toBudgetBackup() },
+            billReminders = billReminders.map { it.toBillReminderBackup() },
+            transactions = transfers.map { it.toTransactionBackup() },
+            subscriptions = subscriptions.map { it.toSubscriptionBackup() },
+            investments = investments.map { it.toInvestmentBackup() }
+        )
     }
 
     suspend fun importAllData(backupData: BackupData, replaceExisting: Boolean = true): RestoreResult = withContext(Dispatchers.IO) {
@@ -177,14 +228,37 @@ class BackupManager @Inject constructor(
 
     suspend fun listBackups(): List<BackupFileInfo> = withContext(Dispatchers.IO) {
         val locations = listOf(BackupLocation.DOWNLOADS, BackupLocation.INTERNAL)
-        locations.flatMap { loc ->
+        val fileBackups = locations.flatMap { loc ->
             val dir = getBackupDirectory(loc)
             if (!dir.exists()) return@flatMap emptyList()
             dir.listFiles()?.toList() ?: emptyList()
         }
             .filter { it.name.startsWith("savings_backup_") && it.extension == "json" }
             .map { BackupFileInfo(it.name, it.absolutePath, it.length(), it.lastModified()) }
-            .sortedByDescending { it.modifiedDate }
+
+        val customUri = try {
+            val prefs = context.getSharedPreferences("backup_prefs", Context.MODE_PRIVATE)
+            prefs.getString("custom_backup_path", null)
+        } catch (_: Exception) { null }
+
+        val customBackups = if (customUri != null) {
+            try {
+                val treeUri = Uri.parse(customUri)
+                val dirDocument = DocumentFile.fromTreeUri(context, treeUri)
+                dirDocument?.listFiles()?.toList().orEmpty()
+                    .filter { it.name?.startsWith("savings_backup_") == true && it.name?.endsWith(".json") == true }
+                    .map { docFile ->
+                        BackupFileInfo(
+                            name = docFile.name ?: "unknown",
+                            path = docFile.uri.toString(),
+                            size = docFile.length(),
+                            modifiedDate = docFile.lastModified()
+                        )
+                    }
+            } catch (_: Exception) { emptyList() }
+        } else emptyList()
+
+        (fileBackups + customBackups).sortedByDescending { it.modifiedDate }
     }
 
     suspend fun deleteBackup(filePath: String) = withContext(Dispatchers.IO) {
@@ -205,6 +279,7 @@ class BackupManager @Inject constructor(
             backupLocation = try {
                 BackupLocation.valueOf(prefs.getString("backup_location", "DOWNLOADS") ?: "DOWNLOADS")
             } catch (_: Exception) { BackupLocation.DOWNLOADS },
+            customBackupPath = prefs.getString("custom_backup_path", null),
             lastBackupTime = prefs.getLong("last_backup_time", 0)
         )
     }
@@ -216,6 +291,8 @@ class BackupManager @Inject constructor(
             putString("backup_frequency", settings.frequency.name)
             settings.backupDay?.let { putString("backup_day", it.name) }
             putString("backup_location", settings.backupLocation.name)
+            if (settings.customBackupPath != null) putString("custom_backup_path", settings.customBackupPath)
+            else remove("custom_backup_path")
             putLong("last_backup_time", settings.lastBackupTime)
             apply()
         }
@@ -232,6 +309,7 @@ class BackupManager @Inject constructor(
                 File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "SavingBuddy Backups")
                     .also { it.mkdirs() }
             }
+            BackupLocation.CUSTOM -> File(context.filesDir, "backups")
         }
     }
 

@@ -22,7 +22,11 @@ class BackupWorker @AssistedInject constructor(
 
     override suspend fun doWork(): Result {
         return try {
-            val result = backupManager.exportAllData(BackupLocation.DOWNLOADS)
+            val settings = backupManager.loadSettings()
+            val result = backupManager.exportAllData(
+                location = settings.backupLocation,
+                customPath = if (settings.backupLocation == BackupLocation.CUSTOM) settings.customBackupPath else null
+            )
             when (result) {
                 is BackupResult.Success -> Result.success()
                 is BackupResult.Error -> Result.retry()

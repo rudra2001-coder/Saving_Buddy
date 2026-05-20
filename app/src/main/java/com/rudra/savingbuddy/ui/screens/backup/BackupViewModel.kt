@@ -23,6 +23,7 @@ data class BackupUiState(
     val backupDay: BackupDay? = null,
     val backupFormat: BackupFormat = BackupFormat.JSON,
     val backupLocation: BackupLocation = BackupLocation.DOWNLOADS,
+    val customBackupPath: String? = null,
     val lastBackupTime: Long = 0,
     val isBackingUp: Boolean = false,
     val isRestoring: Boolean = false,
@@ -57,6 +58,7 @@ class BackupViewModel @Inject constructor(
                     backupDay = settings.backupDay,
                     backupFormat = settings.backupFormat,
                     backupLocation = settings.backupLocation,
+                    customBackupPath = settings.customBackupPath,
                     lastBackupTime = settings.lastBackupTime
                 )
             }
@@ -103,9 +105,30 @@ class BackupViewModel @Inject constructor(
 
     fun updateLocation(location: BackupLocation) {
         viewModelScope.launch {
-            _uiState.update { it.copy(backupLocation = location) }
+            _uiState.update {
+                it.copy(
+                    backupLocation = location,
+                    customBackupPath = if (location != BackupLocation.CUSTOM) null else it.customBackupPath
+                )
+            }
             val settings = _uiState.value.toBackupSettings()
             backupManager.saveSettings(settings)
+        }
+    }
+
+    fun updateCustomBackupFolder(uri: Uri) {
+        viewModelScope.launch {
+            val uriString = uri.toString()
+            _uiState.update { it.copy(customBackupPath = uriString, backupLocation = BackupLocation.CUSTOM) }
+            val settings = _uiState.value.toBackupSettings()
+            backupManager.saveSettings(settings)
+            // Take persistable permission
+            try {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            } catch (_: Exception) { }
         }
     }
 
@@ -113,10 +136,34 @@ class BackupViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isBackingUp = true, error = null, success = null) }
             try {
-                val result = backupManager.exportAllData(_uiState.value.backupLocation)
+                val state = _uiState.value
+                val result = backupManager.exportAllData(
+                    location = state.backupLocation,
+                    customPath = if (state.backupLocation == BackupLocation.CUSTOM) state.customBackupPath else null
+                )
                 when (result) {
                     is BackupResult.Success -> {
-                        _uiState.update { it.copy(isBackingUp = false, success = "Backup saved to Downloads/SavingBuddy Backups/") }
+                        _uiState.update { it.copy(isBackingUp = false, success = "backup is complete application is now ready to use") }
+                        loadBackupList()
+                    }
+                    is BackupResult.Error -> {
+                        _uiState.update { it.copy(isBackingUp = false, error = result.message) }
+                    }
+                }
+            } catch (e: Exception) {
+                _uiState.update { it.copy(isBackingUp = false, error = e.message) }
+            }
+        }
+    }
+
+    fun exportToFolder(directoryUri: Uri) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isBackingUp = true, error = null, success = null) }
+            try {
+                val result = backupManager.exportAllDataToUri(directoryUri)
+                when (result) {
+                    is BackupResult.Success -> {
+                        _uiState.update { it.copy(isBackingUp = false, success = "backup is complete application is now ready to use") }
                         loadBackupList()
                     }
                     is BackupResult.Error -> {
@@ -204,6 +251,7 @@ class BackupViewModel @Inject constructor(
         backupDay = backupDay,
         backupFormat = backupFormat,
         backupLocation = backupLocation,
+        customBackupPath = customBackupPath,
         lastBackupTime = lastBackupTime
     )
 }

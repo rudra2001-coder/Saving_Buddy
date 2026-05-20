@@ -188,6 +188,7 @@ data class BackupSettings(
     val backupDay: BackupDay? = null,
     val backupFormat: BackupFormat = BackupFormat.JSON,
     val backupLocation: BackupLocation = BackupLocation.DOWNLOADS,
+    val customBackupPath: String? = null,
     val lastBackupTime: Long = 0
 )
 
@@ -208,5 +209,5 @@ enum class BackupFormat {
 
 @Serializable
 enum class BackupLocation {
-    INTERNAL, DOWNLOADS
+    INTERNAL, DOWNLOADS, CUSTOM
 }

@@ -446,12 +446,17 @@ Each entity has a corresponding mapper in `data/local/converter/`:
 ### Backup System (`BackupManager.kt`)
 - Full export/import of ALL entities to JSON
 - Uses `kotlinx.serialization`
-- Backup locations: INTERNAL, DOWNLOADS
+- Backup locations: INTERNAL, DOWNLOADS, **CUSTOM** (user picks any folder via SAF `OpenDocumentTree`)
 - Backup frequencies: DAILY, WEEKLY, MONTHLY
 - Creates shareable JSON files via FileProvider
 - Backup data includes versioning (v2), all accounts/transactions/goals/budgets/bills/subscriptions/investments
 - Settings restore included
-- Auto-backup via WorkManager (`BackupWorker`)
+- Auto-backup via WorkManager (`BackupWorker`) — uses saved location settings (not hardcoded)
+- Custom folder persisted via SAF tree URI with `takePersistableUriPermission`; writes via `DocumentFile`
+- **Manual export**: "Quick Backup" saves to configured location; "Export to Folder" lets user pick destination via SAF
+- **Manual import**: "Import Backup (JSON)" uses `OpenDocument` to pick any JSON file from any folder
+- **Success message**: "backup is complete application is now ready to use" shown on completion
+- Dependency: `androidx.documentfile:documentfile:1.0.1`
 
 ---
 

@@ -45,11 +45,25 @@ fun BackupScreen(
     var showFrequencyMenu by remember { mutableStateOf(false) }
     var showDayMenu by remember { mutableStateOf(false) }
     var showLocationMenu by remember { mutableStateOf(false) }
+    var showChooseFolderDialog by remember { mutableStateOf(false) }
+    var showManualExportDialog by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.OpenDocument()
     ) { uri: Uri? ->
         uri?.let { viewModel.importBackup(it) }
+    }
+
+    val autoFolderPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.updateCustomBackupFolder(it) }
+    }
+
+    val manualExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        uri?.let { viewModel.exportToFolder(it) }
     }
 
     LaunchedEffect(uiState.error, uiState.success) {
@@ -106,7 +120,8 @@ fun BackupScreen(
                     showDayMenu = showDayMenu,
                     onShowDayMenu = { showDayMenu = it },
                     showLocationMenu = showLocationMenu,
-                    onShowLocationMenu = { showLocationMenu = it }
+                    onShowLocationMenu = { showLocationMenu = it },
+                    onChooseFolderClick = { showChooseFolderDialog = true }
                 )
             }
 
@@ -127,10 +142,30 @@ fun BackupScreen(
                         } else {
                             Icon(Icons.Default.Backup, null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Export Backup")
+                            Text("Quick Backup")
                         }
                     }
 
+                    Button(
+                        onClick = { showManualExportDialog = true },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        enabled = !uiState.isBackingUp,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SavingsBlue)
+                    ) {
+                        if (uiState.isBackingUp) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
+                        } else {
+                            Icon(Icons.Default.FolderOpen, null)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Export to Folder")
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(modifier = Modifier.fillMaxWidth()) {
                     OutlinedButton(
                         onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) },
                         modifier = Modifier.weight(1f).height(52.dp),
@@ -144,7 +179,7 @@ fun BackupScreen(
                         } else {
                             Icon(Icons.Default.RestorePage, null)
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Import Backup")
+                            Text("Import Backup (JSON)")
                         }
                     }
                 }
@@ -254,6 +289,48 @@ fun BackupScreen(
             }
         )
     }
+
+    if (showChooseFolderDialog) {
+        AlertDialog(
+            onDismissRequest = { showChooseFolderDialog = false },
+            icon = { Icon(Icons.Default.CreateNewFolder, null, tint = PrimaryGreen) },
+            title = { Text("Choose Auto Backup Folder") },
+            text = { Text("Select a folder where automatic backups will be saved. This is where your backup files will be stored if the app is deleted or crashes.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showChooseFolderDialog = false
+                        autoFolderPickerLauncher.launch(null)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                ) { Text("Choose Folder") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showChooseFolderDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
+
+    if (showManualExportDialog) {
+        AlertDialog(
+            onDismissRequest = { showManualExportDialog = false },
+            icon = { Icon(Icons.Default.FolderOpen, null, tint = SavingsBlue) },
+            title = { Text("Export Backup to Folder") },
+            text = { Text("Select a folder to save your backup file. Choose any location on your device.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showManualExportDialog = false
+                        manualExportLauncher.launch(null)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = SavingsBlue)
+                ) { Text("Choose Folder") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showManualExportDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
@@ -272,7 +349,8 @@ private fun AutoBackupCard(
     showDayMenu: Boolean,
     onShowDayMenu: (Boolean) -> Unit,
     showLocationMenu: Boolean,
-    onShowLocationMenu: (Boolean) -> Unit
+    onShowLocationMenu: (Boolean) -> Unit,
+    onChooseFolderClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -399,6 +477,7 @@ private fun AutoBackupCard(
                     value = when (backupLocation) {
                         BackupLocation.DOWNLOADS -> "Downloads"
                         BackupLocation.INTERNAL -> "Internal Storage"
+                        BackupLocation.CUSTOM -> "Custom Folder"
                     },
                     icon = Icons.Default.Folder,
                     expanded = showLocationMenu,
@@ -415,6 +494,33 @@ private fun AutoBackupCard(
                         onClick = { onLocationChange(BackupLocation.INTERNAL); onShowLocationMenu(false) },
                         leadingIcon = { if (backupLocation == BackupLocation.INTERNAL) Icon(Icons.Default.Check, null, tint = PrimaryGreen) }
                     )
+                    DropdownMenuItem(
+                        text = { Text("Custom Folder", color = if (backupLocation == BackupLocation.CUSTOM) PrimaryGreen else Color.Unspecified) },
+                        onClick = { onLocationChange(BackupLocation.CUSTOM); onShowLocationMenu(false) },
+                        leadingIcon = { if (backupLocation == BackupLocation.CUSTOM) Icon(Icons.Default.Check, null, tint = PrimaryGreen) }
+                    )
+                }
+
+                if (backupLocation == BackupLocation.CUSTOM) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedCard(
+                        onClick = onChooseFolderClick,
+                        colors = CardDefaults.outlinedCardColors(containerColor = Color.White.copy(alpha = 0.1f)),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.2f))
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.CreateNewFolder, null, modifier = Modifier.size(18.dp), tint = Color.White.copy(alpha = 0.8f))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Choose Backup Folder", color = Color.White, style = MaterialTheme.typography.bodyMedium)
+                            }
+                            Icon(Icons.Default.ChevronRight, null, tint = Color.White.copy(alpha = 0.6f))
+                        }
+                    }
                 }
             }
         }
