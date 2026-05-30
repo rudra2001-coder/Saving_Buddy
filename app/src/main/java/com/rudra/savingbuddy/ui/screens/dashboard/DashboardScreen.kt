@@ -999,11 +999,13 @@ private fun AnimatedFabMenu(
             Column(
                 horizontalAlignment = Alignment.End,
                 modifier            = Modifier.padding(bottom = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FabMenuItem("Add account", Icons.Default.AccountBalanceWallet, Blue600,  onAddAccount)
-                FabMenuItem("Add expense", Icons.Default.TrendingDown,         Red600,   onAddExpense)
                 FabMenuItem("Add income",  Icons.Default.TrendingUp,           Green600, onAddIncome)
+
+                FabMenuItem("Add expense", Icons.Default.TrendingDown,         Red600,   onAddExpense)
+
+                FabMenuItem("Add account", Icons.Default.AccountBalanceWallet, Blue600,  onAddAccount)
             }
         }
 
