@@ -18,6 +18,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -1001,11 +1003,15 @@ private fun AnimatedFabMenu(
                 modifier            = Modifier.padding(bottom = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                FabMenuItem("Add income",  Icons.Default.TrendingUp,           Green600, onAddIncome)
+                FabMenuItem("Add income",
+                    Icons.AutoMirrored.Filled.TrendingUp,           Green600, onAddIncome)
 
-                FabMenuItem("Add expense", Icons.Default.TrendingDown,         Red600,   onAddExpense)
+                FabMenuItem("Add expense",
+                    Icons.AutoMirrored.Filled.TrendingDown,         Red600,   onAddExpense)
 
-                FabMenuItem("Add account", Icons.Default.AccountBalanceWallet, Blue600,  onAddAccount)
+                FabMenuItem("Add account",
+                    Icons.Default.AccountBalanceWallet, Blue600,  onAddAccount)
+
             }
         }
 
