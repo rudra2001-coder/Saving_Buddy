@@ -4,6 +4,7 @@ import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.ExpenseCategory
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.domain.model.IncomeCategory
+import com.rudra.savingbuddy.domain.model.TransactionType
 
 object SmsTransactionParser {
     private val expensePatterns = listOf(
@@ -102,8 +103,3 @@ data class ParsedTransaction(
     val category: ExpenseCategory?,
     val date: Long
 )
-
-enum class TransactionType {
-    INCOME,
-    EXPENSE
-}

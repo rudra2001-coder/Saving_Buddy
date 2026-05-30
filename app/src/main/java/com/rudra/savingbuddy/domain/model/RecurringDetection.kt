@@ -13,7 +13,6 @@ data class DetectedTransaction(
     val occurrences: Int
 )
 
-enum class TransactionType { INCOME, EXPENSE }
 
 data class DetectionResult(
     val patterns: List<DetectedTransaction>,
