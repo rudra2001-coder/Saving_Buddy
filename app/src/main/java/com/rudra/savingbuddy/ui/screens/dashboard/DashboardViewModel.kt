@@ -21,7 +21,9 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-// ─── UI state ─────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// UI STATE
+// ─────────────────────────────────────────────────────────────────────────────
 
 data class DashboardUiState(
     val todayIncome: Double = 0.0,
@@ -57,7 +59,7 @@ data class DashboardUiState(
 
 data class TransactionItem(
     val id: Long,
-    val type: String,       // "INCOME" | "EXPENSE"
+    val type: String,   // "INCOME" | "EXPENSE"
     val title: String,
     val amount: Double,
     val category: String,
@@ -71,7 +73,9 @@ data class AccountSelection(
     val iconColor: Long
 )
 
-// ─── ViewModel ────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// VIEW MODEL
+// ─────────────────────────────────────────────────────────────────────────────
 
 @HiltViewModel
 class DashboardViewModel @Inject constructor(
@@ -101,13 +105,15 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             accountRepository.getAllAccounts().collect { accounts ->
                 if (accounts.isEmpty()) {
-                    _uiState.update { it.copy(
-                        availableAccounts = emptyList(),
-                        selectedAccountId = null,
-                        selectedAccountName = "Wallet",
-                        selectedAccountBalance = 0.0,
-                        mainBalance = 0.0
-                    )}
+                    _uiState.update {
+                        it.copy(
+                            availableAccounts = emptyList(),
+                            selectedAccountId = null,
+                            selectedAccountName = "Wallet",
+                            selectedAccountBalance = 0.0,
+                            mainBalance = 0.0
+                        )
+                    }
                     return@collect
                 }
 
@@ -126,13 +132,15 @@ class DashboardViewModel @Inject constructor(
                     else        -> accounts.find { it.name == "Wallet" } ?: accounts.first()
                 }
 
-                _uiState.update { it.copy(
-                    availableAccounts = list,
-                    selectedAccountId = selected?.id,
-                    selectedAccountName = selected?.name ?: list.first().name,
-                    selectedAccountBalance = selected?.balance ?: 0.0,
-                    mainBalance = selected?.balance ?: list.first().balance
-                )}
+                _uiState.update {
+                    it.copy(
+                        availableAccounts = list,
+                        selectedAccountId = selected?.id,
+                        selectedAccountName = selected?.name ?: list.first().name,
+                        selectedAccountBalance = selected?.balance ?: 0.0,
+                        mainBalance = selected?.balance ?: list.first().balance
+                    )
+                }
             }
         }
     }
@@ -140,12 +148,14 @@ class DashboardViewModel @Inject constructor(
     fun selectAccount(accountId: Long) {
         val account = _uiState.value.availableAccounts.find { it.id == accountId } ?: return
         prefs.edit().putLong("dashboard_selected_account_id", accountId).apply()
-        _uiState.update { it.copy(
-            selectedAccountId = accountId,
-            selectedAccountName = account.name,
-            selectedAccountBalance = account.balance,
-            mainBalance = account.balance
-        )}
+        _uiState.update {
+            it.copy(
+                selectedAccountId = accountId,
+                selectedAccountName = account.name,
+                selectedAccountBalance = account.balance,
+                mainBalance = account.balance
+            )
+        }
     }
 
     fun clearAccountSelection() {
@@ -161,18 +171,20 @@ class DashboardViewModel @Inject constructor(
                 settingsRepository.getSettings(),
                 goalRepository.getActiveGoals()
             ) { settings, goals ->
-                val enabled = settings?.roundUpEnabled ?: false
-                val goalId = settings?.roundUpGoalId
-                val goal = if (goalId != null) goals.firstOrNull { it.id == goalId }
-                    else goals.firstOrNull { it.id == settings?.roundUpGoalId }
-                Triple(enabled, goal, settings?.totalRoundUpSaved ?: 0.0)
+                val enabled  = settings?.roundUpEnabled ?: false
+                val goalId   = settings?.roundUpGoalId
+                val goal     = if (goalId != null) goals.firstOrNull { it.id == goalId } else null
+                val saved    = settings?.totalRoundUpSaved ?: 0.0
+                Triple(enabled, goal, saved)
             }.collect { (enabled, goal, totalSaved) ->
-                _uiState.update { it.copy(
-                    roundUpEnabled = enabled,
-                    roundUpGoalName = goal?.name,
-                    totalRoundUpSaved = totalSaved,
-                    roundUpGoalProgress = goal?.progress ?: 0f
-                )}
+                _uiState.update {
+                    it.copy(
+                        roundUpEnabled      = enabled,
+                        roundUpGoalName     = goal?.name,
+                        totalRoundUpSaved   = totalSaved,
+                        roundUpGoalProgress = goal?.progress ?: 0f
+                    )
+                }
             }
         }
     }
@@ -197,43 +209,45 @@ class DashboardViewModel @Inject constructor(
                 expenseRepository.getExpensesByCategoryGrouped(startOfMonth, endOfMonth),
                 budgetRepository.getBudget()
             ) { values ->
-                val todayIncome      = (values[0] as? Double) ?: 0.0
-                val todayExpenses    = (values[1] as? Double) ?: 0.0
-                val monthlyIncome    = (values[2] as? Double) ?: 0.0
-                val monthlyExpenses  = (values[3] as? Double) ?: 0.0
+                val todayIncome     = (values[0] as? Double) ?: 0.0
+                val todayExpenses   = (values[1] as? Double) ?: 0.0
+                val monthlyIncome   = (values[2] as? Double) ?: 0.0
+                val monthlyExpenses = (values[3] as? Double) ?: 0.0
                 @Suppress("UNCHECKED_CAST")
-                val categories       = values[4] as List<CategoryTotal>
-                val budget           = values[5] as? com.rudra.savingbuddy.domain.model.Budget
+                val categories      = values[4] as List<CategoryTotal>
+                val budget          = values[5] as? com.rudra.savingbuddy.domain.model.Budget
 
                 val budgetAmount  = budget?.monthlyLimit ?: 0.0
                 val budgetWarning = budgetAmount > 0 && monthlyExpenses >= budgetAmount * 0.8
 
                 DashboardUiState(
-                    todayIncome     = todayIncome,
-                    todayExpenses   = todayExpenses,
-                    todaySavings    = todayIncome - todayExpenses,
-                    monthlyIncome   = monthlyIncome,
-                    monthlyExpenses = monthlyExpenses,
-                    monthlySavings  = monthlyIncome - monthlyExpenses,
-                    budget          = budgetAmount,
-                    budgetWarning   = budgetWarning,
+                    todayIncome        = todayIncome,
+                    todayExpenses      = todayExpenses,
+                    todaySavings       = todayIncome - todayExpenses,
+                    monthlyIncome      = monthlyIncome,
+                    monthlyExpenses    = monthlyExpenses,
+                    monthlySavings     = monthlyIncome - monthlyExpenses,
+                    budget             = budgetAmount,
+                    budgetWarning      = budgetWarning,
                     expensesByCategory = categories,
-                    insights        = generateInsights(monthlyIncome, monthlyExpenses, todayExpenses, startOfMonth)
+                    insights           = generateInsights(monthlyIncome, monthlyExpenses, todayExpenses)
                 )
             }.collect { partial ->
-                _uiState.update { current -> current.copy(
-                    todayIncome        = partial.todayIncome,
-                    todayExpenses      = partial.todayExpenses,
-                    todaySavings       = partial.todaySavings,
-                    monthlyIncome      = partial.monthlyIncome,
-                    monthlyExpenses    = partial.monthlyExpenses,
-                    monthlySavings     = partial.monthlySavings,
-                    budget             = partial.budget,
-                    budgetWarning      = partial.budgetWarning,
-                    expensesByCategory = partial.expensesByCategory,
-                    insights           = partial.insights,
-                    isLoading          = false
-                )}
+                _uiState.update { current ->
+                    current.copy(
+                        todayIncome        = partial.todayIncome,
+                        todayExpenses      = partial.todayExpenses,
+                        todaySavings       = partial.todaySavings,
+                        monthlyIncome      = partial.monthlyIncome,
+                        monthlyExpenses    = partial.monthlyExpenses,
+                        monthlySavings     = partial.monthlySavings,
+                        budget             = partial.budget,
+                        budgetWarning      = partial.budgetWarning,
+                        expensesByCategory = partial.expensesByCategory,
+                        insights           = partial.insights,
+                        isLoading          = false
+                    )
+                }
             }
         }
 
@@ -241,12 +255,12 @@ class DashboardViewModel @Inject constructor(
         loadGoalsAndBills()
         loadMonthlyTrend()
         loadNetWorthTrend()
-        loadAccountHealth()
+        loadFusionData()
     }
 
-    // ── Account health + net worth ────────────────────────────────────────────
+    // ── Fusion (net worth + account health) ───────────────────────────────────
 
-    private fun loadAccountHealth() {
+    private fun loadFusionData() {
         viewModelScope.launch {
             fusionRepository.getNetWorthSummary().collect { nw ->
                 _uiState.update { it.copy(netWorth = nw.netWorth, totalAssets = nw.totalAssets) }
@@ -270,13 +284,18 @@ class DashboardViewModel @Inject constructor(
         viewModelScope.launch {
             billReminderRepository.getActiveBillReminders().collect { bills ->
                 _uiState.update {
-                    it.copy(upcomingBills = bills.filter { b -> b.isActive }.sortedBy { b -> b.billingDay }.take(3))
+                    it.copy(
+                        upcomingBills = bills
+                            .filter { b -> b.isActive }
+                            .sortedBy { b -> b.billingDay }
+                            .take(3)
+                    )
                 }
             }
         }
     }
 
-    // ── Monthly trend ─────────────────────────────────────────────────────────
+    // ── Monthly trend (7 months) ──────────────────────────────────────────────
 
     private fun loadMonthlyTrend() {
         viewModelScope.launch {
@@ -286,21 +305,21 @@ class DashboardViewModel @Inject constructor(
                 val offset = i * 30L * 24 * 60 * 60 * 1000
                 val ms     = DateUtils.getStartOfMonth(now - offset)
                 val me     = DateUtils.getEndOfMonth(now - offset)
-                val inc = incomeRepository.getTotalIncomeByDateRange(ms, me).first() ?: 0.0
-                val exp = expenseRepository.getTotalExpensesByDateRange(ms, me).first() ?: 0.0
+                val inc    = incomeRepository.getTotalIncomeByDateRange(ms, me).first() ?: 0.0
+                val exp    = expenseRepository.getTotalExpensesByDateRange(ms, me).first() ?: 0.0
                 trend.add(inc - exp)
             }
             _uiState.update { it.copy(monthlyTrend = trend) }
         }
     }
 
-    // ── Net worth trend ───────────────────────────────────────────────────────
+    // ── Net worth trend (30 days) ─────────────────────────────────────────────
 
     private fun loadNetWorthTrend() {
         viewModelScope.launch {
-            val now = System.currentTimeMillis()
-            val endDate = DateUtils.getStartOfDay(now)
-            val startDate = endDate - 29 * 24 * 60 * 60 * 1000L
+            val now       = System.currentTimeMillis()
+            val endDate   = DateUtils.getStartOfDay(now)
+            val startDate = endDate - 29L * 24 * 60 * 60 * 1000
             fusionRepository.getDailyNetWorthForPeriod(startDate, endDate).collect { trend ->
                 _uiState.update { it.copy(netWorthTrend = trend) }
             }
@@ -323,7 +342,9 @@ class DashboardViewModel @Inject constructor(
                     list += TransactionItem(e.id, "EXPENSE", e.category.displayName, e.amount, e.category.displayName, e.date)
                 }
                 list.sortedByDescending { it.date }.take(10)
-            }.collect { txs -> _uiState.update { it.copy(recentTransactions = txs) } }
+            }.collect { txs ->
+                _uiState.update { it.copy(recentTransactions = txs) }
+            }
         }
     }
 
@@ -332,15 +353,16 @@ class DashboardViewModel @Inject constructor(
     private fun generateInsights(
         monthlyIncome: Double,
         monthlyExpenses: Double,
-        todayExpenses: Double,
-        @Suppress("UNUSED_PARAMETER") startOfMonth: Long
+        todayExpenses: Double
     ): List<String> = buildList {
-        if (monthlyExpenses > monthlyIncome * 0.9)
+        if (monthlyExpenses > monthlyIncome * 0.9 && monthlyIncome > 0)
             add("Warning: You've spent over 90% of your income this month")
-        if (todayExpenses > 100)
+        if (todayExpenses > 0)
             add("You spent ${String.format("৳%.2f", todayExpenses)} today")
-        if (monthlyExpenses < monthlyIncome * 0.5 && monthlyIncome > 0)
+        if (monthlyIncome > 0 && monthlyExpenses < monthlyIncome * 0.5)
             add("Great job! You're saving over 50% of your income this month")
+        if (monthlyIncome > 0 && monthlyExpenses in (monthlyIncome * 0.5)..(monthlyIncome * 0.7))
+            add("You're saving ${String.format("%.0f", (1 - monthlyExpenses / monthlyIncome) * 100)}% of income — keep it up!")
     }
 
     // ── Public actions ────────────────────────────────────────────────────────
