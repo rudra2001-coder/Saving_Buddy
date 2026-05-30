@@ -23,14 +23,58 @@ sealed class Screen(
     data object Bills : Screen("bills", "Bills", Icons.Default.Receipt)
     data object Income : Screen("income", "Income History", Icons.Default.TrendingUp)
     data object Expense : Screen("expense", "Expense History", Icons.Default.TrendingDown)
+    data object Calendar : Screen("calendar", "Calendar", Icons.Default.CalendarMonth)
+    data object Accounts : Screen("accounts", "Accounts", Icons.Default.AccountBalanceWallet)
+    data object Transfer : Screen("transfer", "Transfer", Icons.Default.SwapHoriz)
+    data object AddAccount : Screen("add_account", "Add Account", Icons.Default.Add)
+    data object AccountDetail : Screen("account_detail", "Account Detail", Icons.Default.Info)
+    data object EditAccount : Screen("edit_account", "Edit Account", Icons.Default.Edit) {
+        fun createRoute(accountId: Long) = "edit_account/$accountId"
+    }
+    data object Fusion : Screen("fusion", "Fusion", Icons.Default.JoinFull)
+    data object Backup : Screen("backup", "Backup", Icons.Default.Backup)
+    data object Calculator : Screen("calculator", "Calculator", Icons.Default.Calculate)
+    data object Export : Screen("export", "Export", Icons.Default.FileDownload)
+    data object Analytics : Screen("analytics", "Analytics", Icons.Default.Insights)
+    data object TransactionHistory : Screen("transaction_history", "Transaction History", Icons.Default.History)
+    data object PrivacyPolicy : Screen("privacy_policy", "Privacy Policy", Icons.Default.Policy)
+    data object TermsOfService : Screen("terms_of_service", "Terms of Service", Icons.Default.Description)
+    data object AdvancedFeatures : Screen("advanced_features", "Advanced", Icons.Default.AutoAwesome)
+    data object Gamification : Screen("gamification", "Achievements", Icons.Default.EmojiEvents)
+    data object SplitExpense : Screen("split_expense", "Split", Icons.Default.People)
+    data object LoanTracker : Screen("loan_tracker", "Loans", Icons.Default.AccountBalance)
+    data object CategoryBudgets : Screen("category_budgets", "Category Budgets", Icons.Default.Category)
+    data object SmartInsights : Screen("smart_insights", "Insights", Icons.Default.Insights)
+    data object SpendingPatterns : Screen("spending_patterns", "Patterns", Icons.Default.TrendingUp)
+    data object PDFExport : Screen("pdf_export", "PDF Report", Icons.Default.PictureAsPdf)
+    data object MonthlyReport : Screen("monthly_report", "Report", Icons.Default.Assessment)
+    data object SmartNotifications : Screen("smart_notifications", "Smart Alerts", Icons.Default.NotificationsActive)
+    data object AppLock : Screen("app_lock", "App Lock", Icons.Default.Lock)
+    data object AutoRecurring : Screen("auto_recurring", "Auto Add", Icons.Default.Loop)
+    data object AutoCategory : Screen("auto_category", "Auto Category", Icons.Default.AutoAwesome)
+    data object ExpenseDetail : Screen("expense_detail", "Expense Detail", Icons.Default.Receipt)
+    data object Transactions : Screen("transactions", "Transactions", Icons.Default.SwapHoriz)
+    data object ReportDetail : Screen("report_detail/{reportId}", "Report Detail", Icons.Default.Assessment) {
+        fun createRoute(reportId: String) = "report_detail/$reportId"
+    }
+    data object StatementViewer : Screen("statement_viewer", "Statement", Icons.Default.Description)
+    data object LanguageSettings : Screen("language_settings", "Language", Icons.Default.Language)
+    data object InvestmentTracker : Screen("investment_tracker", "Investments", Icons.Default.TrendingUp)
+    data object NetWorth : Screen("net_worth", "Net Worth", Icons.Default.AccountBalance)
+    data object SubscriptionManager : Screen("subscription_manager", "Subscriptions", Icons.Default.Subscriptions)
+    data object CurrencyConverter : Screen("currency_converter", "Currency", Icons.Default.CurrencyExchange)
+    data object ReceiptScanner : Screen("receipt_scanner", "Scan Receipt", Icons.Default.CameraAlt)
+    data object Onboarding : Screen("onboarding", "Welcome", Icons.Default.Star)
+    data object Changelog : Screen("changelog", "What's New", Icons.Default.NewReleases)
+    data object DarkModeSettings : Screen("dark_mode_settings", "Theme", Icons.Default.DarkMode)
 }
 
 val bottomNavItems = listOf(
     Screen.Dashboard,
+    Screen.Accounts,
     Screen.Features,
     Screen.Reports,
     Screen.Settings,
-
 )
 
 val moreMenuItems = listOf(

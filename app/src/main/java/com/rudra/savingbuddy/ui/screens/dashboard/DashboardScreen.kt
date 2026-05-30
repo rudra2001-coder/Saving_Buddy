@@ -2,7 +2,6 @@ package com.rudra.savingbuddy.ui.screens.dashboard
 
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -13,6 +12,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,15 +31,31 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
+
+// ─── Color tokens (mirrors DashboardCards.kt) ────────────────────────────────
+
+private val Blue600  = Color(0xFF185FA5)
+private val Blue50   = Color(0xFFE6F1FB)
+private val Green600 = Color(0xFF3B6D11)
+private val Green50  = Color(0xFFEAF3DE)
+private val Red600   = Color(0xFFA32D2D)
+private val Red50    = Color(0xFFFCEBEB)
+private val Amber600 = Color(0xFF854F0B)
+private val Amber50  = Color(0xFFFAEEDA)
+
+// ─── Root screen ──────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -50,144 +67,180 @@ fun DashboardScreen(
     var showFabMenu by remember { mutableStateOf(false) }
     var isRefreshing by remember { mutableStateOf(false) }
     val view = LocalView.current
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+
+    val horizontalPadding = when {
+        screenWidth < 360 -> 10.dp
+        screenWidth < 400 -> 14.dp
+        else              -> 16.dp
+    }
+    val cardSpacing = if (screenWidth < 360) 10.dp else 14.dp
 
     val pullToRefreshState = rememberPullToRefreshState()
+    val snackbarHostState  = remember { SnackbarHostState() }
 
     val fabRotation by animateFloatAsState(
         targetValue = if (showFabMenu) 45f else 0f,
-        animationSpec = tween(300),
-        label = "fab_rotation"
+        animationSpec = tween(300), label = "fab_rotation"
     )
-
     val fabScale by animateFloatAsState(
         targetValue = if (showFabMenu) 0.9f else 1f,
-        animationSpec = tween(200),
-        label = "fab_scale"
+        animationSpec = tween(200), label = "fab_scale"
     )
 
+    LaunchedEffect(uiState.isLoading) {
+        if (!uiState.isLoading && isRefreshing) isRefreshing = false
+    }
+    LaunchedEffect(uiState.error) {
+        uiState.error?.let { err ->
+            snackbarHostState.showSnackbar(err)
+            viewModel.clearError()
+        }
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
+
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = {
-                isRefreshing = true
-                view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                viewModel.refreshData()
-                isRefreshing = false
+                if (!isRefreshing) {
+                    isRefreshing = true
+                    view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
+                    viewModel.refreshData()
+                }
             },
             state = pullToRefreshState,
             modifier = Modifier.fillMaxSize()
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(20.dp)
-            ) {
-                item { Spacer(modifier = Modifier.height(8.dp)) }
-
-                // Header
-                item {
-                    DashboardHeader()
+            if (uiState.isLoading && uiState.mainBalance == 0.0) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(color = Blue600)
                 }
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = horizontalPadding),
+                    verticalArrangement = Arrangement.spacedBy(cardSpacing)
+                ) {
+                    item { Spacer(Modifier.height(4.dp)) }
 
-                // Net Balance Card - Hero Section
-                item {
-                    NetBalanceCard(
-                        netBalance = uiState.monthlyIncome - uiState.monthlyExpenses,
-                        monthlyIncome = uiState.monthlyIncome
-                    )
-                }
+                    // Header
+                    item { DashboardHeader() }
 
-                // Quick Actions
-                item {
-                    QuickActionsSection(navController = navController)
-                }
-
-                // Today's Summary - Compact Card
-                item {
-                    TodaySummaryCard(state = uiState)
-                }
-
-                // Monthly Summary - Detailed Card
-                item {
-                    MonthlySummaryCard(state = uiState)
-                }
-
-                // Active Savings Goal
-                if (uiState.activeGoal != null) {
+                    // Hero balance card
                     item {
-                        SavingsGoalCard(
-                            goal = uiState.activeGoal!!,
-                            onClick = { navController?.navigate("goals") }
+                        NetBalanceCard(
+                            netBalance = uiState.mainBalance,
+                            monthlyIncome = uiState.monthlyIncome,
+                            monthlyExpenses = uiState.monthlyExpenses,
+                            selectedAccountName = uiState.selectedAccountName,
+                            availableAccounts = uiState.availableAccounts,
+                            onAccountSelect = { viewModel.selectAccount(it) }
                         )
                     }
-                }
 
-                // Monthly Trend Sparkline
-                if (uiState.monthlyTrend.isNotEmpty()) {
+                    // Quick actions
+                    item { QuickActionsRow(navController = navController) }
+
+                    // Today + Budget (2-column)
                     item {
-                        MonthlyTrendCard(
-                            trend = uiState.monthlyTrend,
-                            onClick = { navController?.navigate("reports") }
-                        )
+                        TodayAndBudgetRow(state = uiState)
                     }
-                }
 
-                // Upcoming Bills Warning
-                if (uiState.upcomingBills.isNotEmpty()) {
-                    item {
-                        UpcomingBillsCard(
-                            bills = uiState.upcomingBills,
-                            onBillClick = { navController?.navigate("bills") }
-                        )
+                    // Account Health
+                    if (uiState.accountHealthList.isNotEmpty()) {
+                        item {
+                            AccountHealthCard(
+                                accountHealthList = uiState.accountHealthList,
+                                onAccountClick = { navController?.navigate("account_detail/$it") }
+                            )
+                        }
                     }
-                }
 
-                // Category Breakdown
-                if (uiState.expensesByCategory.isNotEmpty()) {
-                    item {
-                        CategoryBreakdownCard(
-                            categories = uiState.expensesByCategory,
-                            onCategoryClick = { category ->
-                                navController?.navigate("category/$category")
-                            }
-                        )
+                    // Net Worth
+                    if (uiState.netWorth > 0 && uiState.netWorth != uiState.monthlyIncome - uiState.monthlyExpenses) {
+                        item {
+                            NetWorthCard(
+                                netWorth = uiState.netWorth,
+                                totalAssets = uiState.totalAssets,
+                                onClick = { navController?.navigate("fusion") }
+                            )
+                        }
                     }
-                }
 
-                // Insights Card
-                if (uiState.insights.isNotEmpty()) {
-                    item {
-                        InsightsCard(insights = uiState.insights)
+                    // Monthly summary
+                    item { MonthlySummaryCard(state = uiState) }
+
+                    // Savings goal
+                    uiState.activeGoal?.let { goal ->
+                        item {
+                            SavingsGoalCard(
+                                goal = goal,
+                                onClick = { navController?.navigate("goals") }
+                            )
+                        }
                     }
-                }
 
-                // Recent Transactions
-                if (uiState.recentTransactions.isNotEmpty()) {
-                    item {
-                        RecentTransactionsCard(
-                            transactions = uiState.recentTransactions,
-                            onTransactionClick = { transaction ->
-                                if (transaction.type == "INCOME") {
-                                    navController?.navigate("income_detail/${transaction.id}")
-                                } else {
-                                    navController?.navigate("expense_detail/${transaction.id}")
-                                }
-                            },
-                            onSeeAll = { navController?.navigate("transactions") }
-                        )
+                    // Category breakdown
+                    if (uiState.expensesByCategory.isNotEmpty()) {
+                        item {
+                            CategoryBreakdownCard(
+                                categories = uiState.expensesByCategory,
+                                onCategoryClick = { navController?.navigate("transaction_history") }
+                            )
+                        }
                     }
-                }
 
-                item { Spacer(modifier = Modifier.height(100.dp)) }
+                    // Monthly trend
+                    if (uiState.monthlyTrend.isNotEmpty()) {
+                        item {
+                            MonthlyTrendCard(
+                                trend = uiState.monthlyTrend,
+                                onClick = { navController?.navigate("reports") }
+                            )
+                        }
+                    }
+
+                    // Upcoming bills
+                    if (uiState.upcomingBills.isNotEmpty()) {
+                        item {
+                            UpcomingBillsCard(
+                                bills = uiState.upcomingBills,
+                                onBillClick = { navController?.navigate("bills") }
+                            )
+                        }
+                    }
+
+                    // Insights
+                    if (uiState.insights.isNotEmpty()) {
+                        item { InsightsCard(insights = uiState.insights) }
+                    }
+
+                    // Recent transactions
+                    if (uiState.recentTransactions.isNotEmpty()) {
+                        item {
+                            RecentTransactionsCard(
+                                transactions = uiState.recentTransactions,
+                                onTransactionClick = { navController?.navigate("transaction_history") },
+                                onSeeAll = { navController?.navigate("transaction_history") }
+                            )
+                        }
+                    }
+
+                    item { Spacer(Modifier.height(96.dp)) }
+                }
             }
         }
 
-        // Floating Action Button
+        // FAB
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(16.dp),
             contentAlignment = Alignment.BottomEnd
         ) {
             AnimatedFabMenu(
@@ -208,9 +261,9 @@ fun DashboardScreen(
                     navController?.navigate("add_expense")
                     showFabMenu = false
                 },
-                onAddGoal = {
+                onAddAccount = {
                     view.performHapticFeedback(HapticFeedbackConstants.CONFIRM)
-                    navController?.navigate("add_goal")
+                    navController?.navigate("add_account")
                     showFabMenu = false
                 }
             )
@@ -218,408 +271,487 @@ fun DashboardScreen(
     }
 }
 
+// ─── Dashboard header ─────────────────────────────────────────────────────────
+
 @Composable
 private fun DashboardHeader() {
-    Column {
-        Text(
-            text = "Dashboard",
-            style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = DateUtils.formatDate(System.currentTimeMillis()),
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column {
+            Text(
+                text = "Dashboard",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = DateUtils.formatDate(System.currentTimeMillis()),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Blue50),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Sync,
+                contentDescription = "Sync",
+                tint = Blue600,
+                modifier = Modifier.size(18.dp)
+            )
+        }
     }
 }
 
+// ─── Hero balance card ────────────────────────────────────────────────────────
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun NetBalanceCard(netBalance: Double, monthlyIncome: Double) {
+private fun NetBalanceCard(
+    netBalance: Double,
+    monthlyIncome: Double,
+    monthlyExpenses: Double,
+    selectedAccountName: String,
+    availableAccounts: List<AccountSelection>,
+    onAccountSelect: (Long) -> Unit
+) {
     val isPositive = netBalance >= 0
-    val animatedBalance by animateFloatAsState(
-        targetValue = netBalance.toFloat(),
-        animationSpec = tween(1000),
-        label = "balance_animation"
-    )
+    var showPicker by remember { mutableStateOf(false) }
+
+    val gradientColors = if (isPositive)
+        listOf(Color(0xFF185FA5), Color(0xFF0C447C))
+    else
+        listOf(Color(0xFFA32D2D), Color(0xFF791F1F))
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(28.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(
-                    Brush.linearGradient(
-                        colors = if (isPositive) {
-                            listOf(
-                                MaterialTheme.colorScheme.primary,
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-                                MaterialTheme.colorScheme.tertiary.copy(alpha = 0.9f)
+                .background(Brush.linearGradient(gradientColors))
+        ) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                // Top section
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 0.dp)
+                ) {
+                    // Account picker row
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { if (availableAccounts.isNotEmpty()) showPicker = true }
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.AccountBalanceWallet,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.8f),
+                                modifier = Modifier.size(16.dp)
                             )
-                        } else {
-                            listOf(
-                                MaterialTheme.colorScheme.error,
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.85f),
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.7f)
+                            Text(
+                                text = selectedAccountName,
+                                style = MaterialTheme.typography.labelLarge,
+                                color = Color.White.copy(alpha = 0.85f)
                             )
                         }
-                    )
-                )
-                .padding(28.dp)
-        ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPositive) Icons.Default.AccountBalanceWallet else Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = Color.White.copy(alpha = 0.9f),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
+                        if (availableAccounts.isNotEmpty()) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Change account",
+                                tint = Color.White.copy(alpha = 0.6f),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(10.dp))
+
+                    // Balance
                     Text(
-                        text = "Net Balance",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White.copy(alpha = 0.9f)
+                        text = CurrencyFormatter.format(netBalance),
+                        style = MaterialTheme.typography.displaySmall.copy(fontWeight = FontWeight.Bold),
+                        color = Color.White
                     )
+                    Text(
+                        text = "Current balance",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White.copy(alpha = 0.6f)
+                    )
+
+                    Spacer(Modifier.height(16.dp))
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = CurrencyFormatter.format(netBalance.toDouble()),
-                    style = MaterialTheme.typography.displaySmall.copy(
-                        fontWeight = FontWeight.Bold
-                    ),
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Surface(
-                    color = Color.White.copy(alpha = 0.2f),
-                    shape = RoundedCornerShape(20.dp)
+                // Bottom strip
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.White.copy(alpha = 0.1f))
                 ) {
-                    Text(
-                        text = if (isPositive) {
-                            val rate = if (monthlyIncome > 0) ((netBalance / monthlyIncome) * 100).toInt() else 0
-                            "▲ Saving $rate% of income"
-                        } else {
-                            "▼ Over budget"
-                        },
-                        style = MaterialTheme.typography.labelMedium,
-                        color = Color.White,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    BalanceStrip(
+                        label = "Income",
+                        value = CurrencyFormatter.format(monthlyIncome),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(16.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .width(0.5.dp)
+                            .height(48.dp)
+                            .align(Alignment.CenterVertically)
+                            .background(Color.White.copy(alpha = 0.2f))
+                    )
+                    BalanceStrip(
+                        label = "Expenses",
+                        value = CurrencyFormatter.format(monthlyExpenses),
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(16.dp)
                     )
                 }
             }
         }
     }
+
+    // Account picker dialog
+    if (showPicker && availableAccounts.isNotEmpty()) {
+        AlertDialog(
+            onDismissRequest = { showPicker = false },
+            title = { Text("Select account", fontWeight = FontWeight.SemiBold) },
+            text = {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(availableAccounts.size) { i ->
+                        val acc = availableAccounts[i]
+                        val isSelected = acc.name == selectedAccountName
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable {
+                                onAccountSelect(acc.id)
+                                showPicker = false
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = if (isSelected) Blue50
+                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                            )
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(14.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = acc.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Text(
+                                        text = "Balance: ${CurrencyFormatter.format(acc.balance)}",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                if (isSelected) {
+                                    Icon(Icons.Default.Check, "Selected", tint = Blue600)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showPicker = false }) { Text("Cancel") }
+            }
+        )
+    }
 }
 
 @Composable
-private fun QuickActionsSection(navController: NavController?) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+private fun BalanceStrip(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = Color.White.copy(alpha = 0.6f)
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = value,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White
+        )
+    }
+}
+
+// ─── Quick actions row ────────────────────────────────────────────────────────
+
+private data class QuickAction(val label: String, val icon: ImageVector, val bg: Color, val fg: Color, val route: String)
+
+@Composable
+private fun QuickActionsRow(navController: NavController?) {
+    val actions = listOf(
+        QuickAction("Income",   Icons.Outlined.TrendingUp,     Green50,  Green600, "add_income"),
+        QuickAction("Expense",  Icons.Outlined.TrendingDown,   Red50,    Red600,   "add_expense"),
+        QuickAction("Goals",    Icons.Outlined.Flag,           Blue50,   Blue600,  "goals"),
+        QuickAction("Budget",   Icons.Outlined.PieChart,       Amber50,  Amber600, "budget"),
+        QuickAction("Bills",    Icons.Outlined.Receipt,        Red50,    Red600,   "bills"),
+        QuickAction("Export",   Icons.Outlined.FileDownload,   Blue50,   Blue600,  "export"),
+        QuickAction("Calendar", Icons.Outlined.CalendarMonth,  Amber50,  Amber600, "calendar"),
+        QuickAction("Fusion",   Icons.Outlined.JoinFull,       Blue50,   Blue600,  "fusion"),
+    )
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(horizontal = 2.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 16.dp, horizontal = 8.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            QuickActionItem(
-                icon = Icons.Outlined.QrCodeScanner,
-                label = "Scan",
-                color = MaterialTheme.colorScheme.primary,
-                onClick = { navController?.navigate("scan") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.PieChart,
-                label = "Budget",
-                color = MaterialTheme.colorScheme.tertiary,
-                onClick = { navController?.navigate("budget") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.Flag,
-                label = "Goals",
-                color = SavingsBlue,
-                onClick = { navController?.navigate("goals") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.CalendarMonth,
-                label = "Calendar",
-                color = MaterialTheme.colorScheme.secondary,
-                onClick = { navController?.navigate("calendar") }
-            )
-            QuickActionItem(
-                icon = Icons.Outlined.Receipt,
-                label = "Bills",
-                color = ExpenseRed,
-                onClick = { navController?.navigate("bills") }
+        items(actions) { action ->
+            QuickActionChip(
+                label = action.label,
+                icon = action.icon,
+                bg = action.bg,
+                fg = action.fg,
+                onClick = { navController?.navigate(action.route) }
             )
         }
     }
 }
 
 @Composable
-private fun QuickActionItem(
-    icon: ImageVector,
+private fun QuickActionChip(
     label: String,
-    color: Color,
+    icon: ImageVector,
+    bg: Color,
+    fg: Color,
     onClick: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clickable(onClick = onClick)
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 8.dp, vertical = 8.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(52.dp)
+                .size(44.dp)
                 .clip(CircleShape)
-                .background(color.copy(alpha = 0.12f)),
+                .background(bg),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(24.dp)
+                tint = fg,
+                modifier = Modifier.size(20.dp)
             )
         }
-        Spacer(modifier = Modifier.height(6.dp))
+        Spacer(Modifier.height(5.dp))
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+// ─── Today + Budget 2-column ──────────────────────────────────────────────────
+
+@Composable
+private fun TodayAndBudgetRow(state: DashboardUiState) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Today card
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = "Today",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(10.dp))
+                MiniStat("Income", CurrencyFormatter.formatCompact(state.todayIncome), Green600)
+                Spacer(Modifier.height(6.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(6.dp))
+                MiniStat("Expenses", CurrencyFormatter.formatCompact(state.todayExpenses), Red600)
+            }
+        }
+
+        // Budget card
+        val budgetProgress by animateFloatAsState(
+            targetValue = if (state.budget > 0)
+                (state.monthlyExpenses / state.budget).toFloat().coerceIn(0f, 1f)
+            else 0f,
+            animationSpec = tween(1000), label = "budget_progress"
+        )
+        val budgetPct = (budgetProgress * 100).toInt()
+        val progressColor = when {
+            state.budgetWarning -> Red600
+            budgetPct > 60      -> Amber600
+            else                -> Blue600
+        }
+
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+        ) {
+            Column(modifier = Modifier.padding(14.dp)) {
+                Text(
+                    text = "Budget used",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "$budgetPct%",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = progressColor
+                )
+                Spacer(Modifier.height(8.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(99.dp))
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(budgetProgress)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(99.dp))
+                            .background(progressColor)
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+                if (state.budget > 0) {
+                    Text(
+                        text = "${CurrencyFormatter.formatCompact(state.monthlyExpenses)} of ${CurrencyFormatter.formatCompact(state.budget)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniStat(label: String, value: String, color: Color) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-    }
-}
-
-@Composable
-private fun TodaySummaryCard(state: DashboardUiState) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Today",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = DateUtils.formatShortDate(System.currentTimeMillis()),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
-            ) {
-                SummaryChip(
-                    label = "Income",
-                    amount = state.todayIncome,
-                    icon = Icons.Default.TrendingUp,
-                    color = IncomeGreen
-                )
-                SummaryChip(
-                    label = "Expenses",
-                    amount = state.todayExpenses,
-                    icon = Icons.Default.TrendingDown,
-                    color = ExpenseRed
-                )
-                SummaryChip(
-                    label = "Net",
-                    amount = state.todaySavings,
-                    icon = if (state.todaySavings >= 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                    color = if (state.todaySavings >= 0) SavingsBlue else ExpenseRed
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryChip(
-    label: String,
-    amount: Double,
-    icon: ImageVector,
-    color: Color
-) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(16.dp)
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text(
-                text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = CurrencyFormatter.formatCompact(amount),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
+            text = value,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
             color = color
         )
     }
 }
 
+// ─── Monthly summary card ─────────────────────────────────────────────────────
+
 @Composable
 private fun MonthlySummaryCard(state: DashboardUiState) {
-    val progress by animateFloatAsState(
-        targetValue = if (state.budget > 0) (state.monthlyExpenses / state.budget).toFloat().coerceIn(0f, 1f) else 0f,
-        animationSpec = tween(1000),
-        label = "progress"
-    )
-
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "This Month",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold
+                    text = "This month",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Icon(
                     imageVector = Icons.Default.CalendarToday,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                MonthlyStatItem(
-                    label = "Income",
-                    amount = state.monthlyIncome,
-                    color = IncomeGreen
-                )
-                MonthlyStatItem(
-                    label = "Expenses",
-                    amount = state.monthlyExpenses,
-                    color = ExpenseRed
-                )
-                MonthlyStatItem(
-                    label = "Savings",
-                    amount = state.monthlySavings,
-                    color = SavingsBlue
-                )
+                MonthlyStatPill("Income", state.monthlyIncome, Green600, Green50)
+                MonthlyStatPill("Expenses", state.monthlyExpenses, Red600, Red50)
+                MonthlyStatPill("Savings", state.monthlySavings, Blue600, Blue50)
             }
 
-            if (state.budget > 0) {
-                Spacer(modifier = Modifier.height(20.dp))
-                Divider(color = MaterialTheme.colorScheme.outlineVariant)
-                Spacer(modifier = Modifier.height(16.dp))
-
+            if (state.budgetWarning) {
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Spacer(Modifier.height(10.dp))
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Icon(Icons.Default.Warning, null, tint = Red600, modifier = Modifier.size(14.dp))
                     Text(
-                        text = "Budget Progress",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Text(
-                        text = "${CurrencyFormatter.format(state.monthlyExpenses)} / ${CurrencyFormatter.format(state.budget)}",
+                        text = "You've used over 80% of your monthly budget",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Red600
                     )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .clip(RoundedCornerShape(5.dp)),
-                    color = if (state.budgetWarning) ExpenseRed else MaterialTheme.colorScheme.primary,
-                    trackColor = MaterialTheme.colorScheme.surfaceVariant,
-                )
-
-                if (state.budgetWarning) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = ExpenseRed,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = "You've used ${(progress * 100).toInt()}% of your budget",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ExpenseRed
-                        )
-                    }
                 }
             }
         }
@@ -627,77 +759,90 @@ private fun MonthlySummaryCard(state: DashboardUiState) {
 }
 
 @Composable
-private fun MonthlyStatItem(label: String, amount: Double, color: Color) {
+private fun MonthlyStatPill(label: String, amount: Double, fg: Color, bg: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(12.dp))
+                .background(bg)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = CurrencyFormatter.formatCompact(amount),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = fg
+            )
+        }
+        Spacer(Modifier.height(4.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = CurrencyFormatter.formatCompact(amount),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = color
-        )
     }
 }
+
+// ─── Insights card ────────────────────────────────────────────────────────────
 
 @Composable
 private fun InsightsCard(insights: List<String>) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.5f)
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(bottom = 10.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Lightbulb,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.tertiary,
-                    modifier = Modifier.size(20.dp)
+                    tint = Amber600,
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "Insights",
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
-                    color = MaterialTheme.colorScheme.onTertiaryContainer
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
             insights.forEach { insight ->
+                val (icon, color) = when {
+                    insight.startsWith("Warning") || insight.startsWith("▼") ->
+                        Icons.Default.Warning to Red600
+                    insight.startsWith("Great") || insight.startsWith("▲") ->
+                        Icons.Default.CheckCircle to Green600
+                    else -> Icons.Default.Info to Blue600
+                }
                 Row(
                     modifier = Modifier.padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.Top
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = "•",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        modifier = Modifier.padding(end = 8.dp)
-                    )
+                    Icon(icon, null, tint = color, modifier = Modifier.size(14.dp).padding(top = 2.dp))
                     Text(
                         text = insight,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
     }
 }
+
+// ─── Recent transactions card ─────────────────────────────────────────────────
 
 @Composable
 private fun RecentTransactionsCard(
@@ -707,49 +852,51 @@ private fun RecentTransactionsCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
     ) {
-        Column(
-            modifier = Modifier.padding(20.dp)
-        ) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Icon(
                         imageVector = Icons.Default.SwapHoriz,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(20.dp)
+                        tint = Blue600,
+                        modifier = Modifier.size(18.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Recent Transactions",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
+                        text = "Recent transactions",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
-                TextButton(onClick = onSeeAll) {
-                    Text("See All")
+                TextButton(
+                    onClick = onSeeAll,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "See all",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = Blue600
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            transactions.take(5).forEachIndexed { index, transaction ->
-                TransactionItemRow(
-                    transaction = transaction,
-                    onClick = { onTransactionClick(transaction) }
-                )
+            transactions.take(5).forEachIndexed { index, tx ->
+                TransactionRow(tx = tx, onClick = { onTransactionClick(tx) })
                 if (index < minOf(transactions.size - 1, 4)) {
-                    Divider(
-                        modifier = Modifier.padding(vertical = 8.dp),
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 6.dp),
+                        thickness = 0.5.dp,
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
                 }
@@ -759,60 +906,60 @@ private fun RecentTransactionsCard(
 }
 
 @Composable
-private fun TransactionItemRow(
-    transaction: TransactionItem,
-    onClick: () -> Unit
-) {
-    val isIncome = transaction.type == "INCOME"
+private fun TransactionRow(tx: TransactionItem, onClick: () -> Unit) {
+    val isIncome = tx.type == "INCOME"
+    val iconBg   = if (isIncome) Green50 else Red50
+    val iconFg   = if (isIncome) Green600 else Red600
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(vertical = 2.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(44.dp)
+                .size(38.dp)
                 .clip(CircleShape)
-                .background(
-                    if (isIncome) IncomeGreen.copy(alpha = 0.15f)
-                    else ExpenseRed.copy(alpha = 0.15f)
-                ),
+                .background(iconBg),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = if (isIncome) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                 contentDescription = null,
-                tint = if (isIncome) IncomeGreen else ExpenseRed,
-                modifier = Modifier.size(22.dp)
+                tint = iconFg,
+                modifier = Modifier.size(18.dp)
             )
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = transaction.title,
+                text = tx.title,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Medium
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = "${transaction.category} • ${DateUtils.formatShortDate(transaction.date)}",
-                style = MaterialTheme.typography.bodySmall,
+                text = "${tx.category} · ${DateUtils.formatShortDate(tx.date)}",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
 
         Text(
-            text = "${if (isIncome) "+" else "-"}${CurrencyFormatter.format(transaction.amount)}",
-            style = MaterialTheme.typography.titleSmall,
+            text = "${if (isIncome) "+" else "-"}${CurrencyFormatter.format(tx.amount)}",
+            style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.SemiBold,
-            color = if (isIncome) IncomeGreen else ExpenseRed
+            color = iconFg
         )
     }
 }
+
+// ─── Animated FAB menu ────────────────────────────────────────────────────────
 
 @Composable
 private fun AnimatedFabMenu(
@@ -822,7 +969,7 @@ private fun AnimatedFabMenu(
     onFabClick: () -> Unit,
     onAddIncome: () -> Unit,
     onAddExpense: () -> Unit,
-    onAddGoal: () -> Unit
+    onAddAccount: () -> Unit
 ) {
     Column(
         horizontalAlignment = Alignment.End,
@@ -835,48 +982,25 @@ private fun AnimatedFabMenu(
         ) {
             Column(
                 horizontalAlignment = Alignment.End,
-                modifier = Modifier.padding(bottom = 12.dp)
+                modifier = Modifier.padding(bottom = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Add Goal
-                FabMenuItem(
-                    text = "Add Goal",
-                    icon = Icons.Outlined.Savings,
-                    color = SavingsBlue,
-                    onClick = onAddGoal
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Add Expense
-                FabMenuItem(
-                    text = "Add Expense",
-                    icon = Icons.Default.TrendingDown,
-                    color = ExpenseRed,
-                    onClick = onAddExpense
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Add Income
-                FabMenuItem(
-                    text = "Add Income",
-                    icon = Icons.Default.TrendingUp,
-                    color = IncomeGreen,
-                    onClick = onAddIncome
-                )
+                FabMenuItem("Add account", Icons.Default.AccountBalanceWallet, Blue600, onAddAccount)
+                FabMenuItem("Add expense", Icons.Default.TrendingDown, Red600, onAddExpense)
+                FabMenuItem("Add income", Icons.Default.TrendingUp, Green600, onAddIncome)
             }
         }
 
         FloatingActionButton(
             onClick = onFabClick,
-            containerColor = MaterialTheme.colorScheme.primary,
-            elevation = FloatingActionButtonDefaults.elevation(
-                defaultElevation = 6.dp,
-                pressedElevation = 12.dp
-            ),
-            shape = RoundedCornerShape(16.dp)
+            containerColor = Blue600,
+            shape = RoundedCornerShape(16.dp),
+            elevation = FloatingActionButtonDefaults.elevation(6.dp, 12.dp)
         ) {
             Icon(
-                if (expanded) Icons.Default.Close else Icons.Default.Add,
-                contentDescription = "Add",
+                imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
+                contentDescription = if (expanded) "Close" else "Add",
+                tint = Color.White,
                 modifier = Modifier.rotate(fabRotation)
             )
         }
@@ -884,40 +1008,30 @@ private fun AnimatedFabMenu(
 }
 
 @Composable
-private fun FabMenuItem(
-    text: String,
-    icon: ImageVector,
-    color: Color,
-    onClick: () -> Unit
-) {
+private fun FabMenuItem(label: String, icon: ImageVector, color: Color, onClick: () -> Unit) {
     Row(
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surface,
             shape = RoundedCornerShape(8.dp),
-            shadowElevation = 4.dp,
-            modifier = Modifier.padding(end = 8.dp)
+            shadowElevation = 4.dp
         ) {
             Text(
-                text = text,
+                text = label,
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
-
-        FloatingActionButton(
+        SmallFloatingActionButton(
             onClick = onClick,
             containerColor = color,
-            modifier = Modifier.size(40.dp),
-            shape = RoundedCornerShape(12.dp)
+            shape = RoundedCornerShape(12.dp),
+            modifier = Modifier.size(40.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = text,
-                tint = Color.White,
-                modifier = Modifier.size(20.dp)
-            )
+            Icon(icon, label, tint = Color.White, modifier = Modifier.size(18.dp))
         }
     }
 }

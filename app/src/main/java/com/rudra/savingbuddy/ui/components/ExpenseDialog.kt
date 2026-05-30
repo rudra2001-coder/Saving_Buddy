@@ -17,7 +17,7 @@ import com.rudra.savingbuddy.domain.model.ExpenseCategory
 fun ExpenseDialog(
     expense: Expense? = null,
     onDismiss: () -> Unit,
-    onSave: (Double, ExpenseCategory, Long, String?) -> Unit
+    onSave: (Double, ExpenseCategory, Long, String?, Long?) -> Unit
 ) {
     var amount by remember { mutableStateOf(expense?.amount?.toString() ?: "") }
     var selectedCategory by remember { mutableStateOf(expense?.category ?: ExpenseCategory.OTHERS) }
@@ -91,7 +91,8 @@ fun ExpenseDialog(
                             amountValue,
                             selectedCategory,
                             expense?.date ?: System.currentTimeMillis(),
-                            notes.ifBlank { null }
+                            notes.ifBlank { null },
+                            expense?.accountId
                         )
                     }
                 }
@@ -111,7 +112,7 @@ fun ExpenseDialog(
 @Composable
 fun QuickAddExpenseDialog(
     onDismiss: () -> Unit,
-    onSave: (Double, ExpenseCategory) -> Unit
+    onSave: (Double, ExpenseCategory, Long, String?, Long?) -> Unit
 ) {
     var amount by remember { mutableStateOf("") }
     var selectedCategory by remember { mutableStateOf(ExpenseCategory.OTHERS) }
@@ -170,7 +171,7 @@ fun QuickAddExpenseDialog(
                 onClick = {
                     val amountValue = amount.toDoubleOrNull() ?: 0.0
                     if (amountValue > 0) {
-                        onSave(amountValue, selectedCategory)
+                        onSave(amountValue, selectedCategory, System.currentTimeMillis(), null, null)
                     }
                 }
             ) {

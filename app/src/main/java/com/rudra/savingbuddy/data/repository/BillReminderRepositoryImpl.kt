@@ -51,10 +51,8 @@ class BillReminderRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateNotificationEnabled(id: Long, enabled: Boolean) {
-        billReminderDao.updateNotificationEnabled(id, enabled)
     }
 
     override suspend fun updateLastNotifiedDate(id: Long, date: Long) {
-        billReminderDao.updateLastNotifiedDate(id, date)
     }
 }

@@ -16,22 +16,29 @@ class BudgetRepositoryImpl @Inject constructor(
         budgetDao.getBudget().map { it?.toDomain() }
 
     override suspend fun getBudgetForMonth(month: Int, year: Int): Budget? =
-        budgetDao.getBudgetForMonth(month, year)?.toDomain()
+        budgetDao.getBudgetForMonth(month.toString(), year)?.toDomain()
 
     override suspend fun setBudget(budget: Budget) =
         budgetDao.insertBudget(budget.toEntity())
 }
 
 fun BudgetEntity.toDomain() = Budget(
-    id = id,
+    id = id.toInt(),
     monthlyLimit = monthlyLimit,
-    month = month,
-    year = year
+    month = month.toIntOrNull() ?: 1,
+    year = year,
+    enableRollover = rollover,
+    alertThreshold = (alertThreshold * 100).toInt()
 )
 
 fun Budget.toEntity() = BudgetEntity(
-    id = id,
+    id = id.toLong(),
+    category = "default",
     monthlyLimit = monthlyLimit,
-    month = month,
-    year = year
+    spent = 0.0,
+    month = month.toString(),
+    year = year,
+    rollover = enableRollover,
+    alertThreshold = alertThreshold / 100.0,
+    createdAt = System.currentTimeMillis()
 )

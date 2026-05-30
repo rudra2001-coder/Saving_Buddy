@@ -47,7 +47,6 @@ android {
 }
 
 dependencies {
-    // Core Android
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel)
@@ -60,53 +59,24 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons)
 
-    // Room Database
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
+    implementation(libs.mlkit.text.recognition)
     ksp(libs.room.compiler)
 
-    // Hilt DI
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.work)
     ksp(libs.work.compiler)
 
-    // Navigation
     implementation(libs.navigation.compose)
-
-    // Background Work
     implementation(libs.work.runtime)
-
-    // Image Loading
-    implementation(libs.coil.compose)
-
-    // Biometric
     implementation(libs.biometric)
-
-    // Splash Screen
-    implementation(libs.splashscreen)
-
-    // Paging
-    implementation(libs.paging.runtime)
-    implementation(libs.paging.compose)
-
-    // Coroutines
+    implementation(libs.documentfile)
     implementation(libs.kotlinx.coroutines)
     implementation(libs.kotlinx.coroutines.android)
-
-    // DateTime
-    implementation(libs.kotlinx.datetime)
-
-    // Lottie Animations
-    implementation(libs.lottie)
-
-    // Accompanist
-    implementation(libs.accompanist.permissions)
-    implementation(libs.accompanist.systemuicontroller)
-
-    // DataStore
-    implementation(libs.datastore)
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

@@ -1,13 +1,19 @@
 package com.rudra.savingbuddy.di
 
 import android.content.Context
+import android.content.SharedPreferences
 import androidx.room.Room
 import com.rudra.savingbuddy.data.local.SavingBuddyDatabase
+import com.rudra.savingbuddy.data.local.dao.AccountBalanceHistoryDao
+import com.rudra.savingbuddy.data.local.dao.AccountDao
 import com.rudra.savingbuddy.data.local.dao.BudgetDao
 import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
 import com.rudra.savingbuddy.data.local.dao.IncomeDao
+import com.rudra.savingbuddy.data.local.dao.InvestmentDao
+import com.rudra.savingbuddy.data.local.dao.SubscriptionDao
+import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.UserSettingsDao
 import dagger.Module
 import dagger.Provides
@@ -26,8 +32,11 @@ object DatabaseModule {
         return Room.databaseBuilder(
             context,
             SavingBuddyDatabase::class.java,
-            "saving_buddy_database"
-        ).build()
+            SavingBuddyDatabase.DATABASE_NAME
+        )
+            .addMigrations(*SavingBuddyDatabase.getMigrations())
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides
@@ -47,4 +56,25 @@ object DatabaseModule {
 
     @Provides
     fun provideBillReminderDao(database: SavingBuddyDatabase): BillReminderDao = database.billReminderDao()
+
+    @Provides
+    fun provideSubscriptionDao(database: SavingBuddyDatabase): SubscriptionDao = database.subscriptionDao()
+
+    @Provides
+    fun provideAccountDao(database: SavingBuddyDatabase): AccountDao = database.accountDao()
+
+    @Provides
+    fun provideTransferDao(database: SavingBuddyDatabase): TransferDao = database.transferDao()
+
+    @Provides
+    fun provideAccountBalanceHistoryDao(database: SavingBuddyDatabase): AccountBalanceHistoryDao = database.accountBalanceHistoryDao()
+
+    @Provides
+    fun provideInvestmentDao(database: SavingBuddyDatabase): InvestmentDao = database.investmentDao()
+
+    @Provides
+    @Singleton
+    fun provideSharedPreferences(@ApplicationContext context: Context): SharedPreferences {
+        return context.getSharedPreferences("dashboard_prefs", Context.MODE_PRIVATE)
+    }
 }

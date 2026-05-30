@@ -1,6 +1,7 @@
 package com.rudra.savingbuddy.ui.screens.bills
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -26,8 +27,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.BillCycle
 import com.rudra.savingbuddy.domain.model.BillNotificationSettings
-import com.rudra.savingbuddy.ui.theme.ExpenseRed
-import com.rudra.savingbuddy.ui.theme.IncomeGreen
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import java.util.Calendar
 
@@ -60,9 +60,12 @@ fun BillRemindersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { 
-                    Text("Bill Reminders", fontWeight = FontWeight.Bold) 
-                },
+            title = { 
+                Column {
+                    Text("Bill Reminders", fontWeight = FontWeight.Bold)
+                    Text("Never miss a payment", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -107,12 +110,15 @@ fun BillRemindersScreen(
                 }
 
                 item {
-                    Text(
-                        "Upcoming Bills",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(vertical = 8.dp)
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Schedule, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Upcoming Bills",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
 
                 items(uiState.bills) { bill ->
@@ -220,6 +226,8 @@ fun BillsSummaryCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
@@ -343,6 +351,8 @@ fun BillCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         onClick = onEdit
     ) {
@@ -410,7 +420,7 @@ fun BillCard(
                     val daysColor = when {
                         daysUntil < 0 -> ExpenseRed
                         daysUntil == 0 -> ExpenseRed
-                        daysUntil <= 3 -> Color(0xFFFF9800)
+                        daysUntil <= 3 -> WarningOrange
                         else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
                     

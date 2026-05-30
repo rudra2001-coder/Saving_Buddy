@@ -13,7 +13,7 @@ interface ExpenseRepository {
     fun getTotalExpensesByDateRange(startDate: Long, endDate: Long): Flow<Double?>
     suspend fun getExpenseById(id: Long): Expense?
     fun getExpensesByCategoryGrouped(startDate: Long, endDate: Long): Flow<List<CategoryTotal>>
-    suspend fun insertExpense(expense: Expense): Long
+    suspend fun insertExpense(expense: Expense, deductFromAccount: Boolean = true): Long
     suspend fun updateExpense(expense: Expense)
     suspend fun deleteExpense(id: Long)
 }

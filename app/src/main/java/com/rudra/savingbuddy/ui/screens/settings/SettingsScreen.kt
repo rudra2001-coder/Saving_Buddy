@@ -1,20 +1,56 @@
 package com.rudra.savingbuddy.ui.screens.settings
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
+
+data class SettingsSection(
+    val title: String,
+    val icon: ImageVector,
+    val items: List<SettingsItem>
+)
+
+data class SettingsItem(
+    val title: String,
+    val subtitle: String? = null,
+    val icon: ImageVector,
+    val iconColor: Color = Color(0xFF6200EE),
+    val action: SettingsAction = SettingsAction.None,
+    val trailing: @Composable (() -> Unit)? = null
+)
+
+enum class SettingsAction {
+    None, Navigation, Toggle, Dialog
+}
+
+val currencies = listOf("BDT", "USD", "EUR", "GBP", "INR", "PKR")
+val weekDays = listOf("Saturday", "Sunday", "Monday")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,246 +59,341 @@ fun SettingsScreen(
     navController: NavController? = null
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    var expandedSection by remember { mutableStateOf<String?>(null) }
+    var expandedSection by remember { mutableStateOf("Appearance") }
+    var showBudgetDialog by remember { mutableStateOf(false) }
+    var showCurrencyDialog by remember { mutableStateOf(false) }
+    var showStartOfWeekDialog by remember { mutableStateOf(false) }
+    var showExportDialog by remember { mutableStateOf(false) }
+    var showThemeDialog by remember { mutableStateOf(false) }
+    var showStartHourPicker by remember { mutableStateOf(false) }
+    var showEndHourPicker by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        item {
-            Text(
-                text = "Settings",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
+    val settingsSections = listOf(
+        SettingsSection("Appearance", Icons.Outlined.Palette, listOf(
+            SettingsItem("Theme", if (uiState.amoledMode) "AMOLED Dark" else if (uiState.darkMode) "Dark" else "Light", Icons.Outlined.DarkMode, Color(0xFF7C4DFF), SettingsAction.Dialog),
+            SettingsItem("AMOLED Mode", "Pure black background", Icons.Outlined.Brightness3, Color(0xFF1A1A2E), SettingsAction.Toggle, { Switch(checked = uiState.amoledMode, onCheckedChange = { viewModel.setAmoledMode(it) }) }),
+            SettingsItem("Dark Mode Schedule", if (uiState.darkModeScheduled) "On" else "Off", Icons.Outlined.Schedule, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.darkModeScheduled, onCheckedChange = { viewModel.setDarkModeScheduled(it) }) }),
+            SettingsItem("Schedule Start", "${uiState.darkModeStartHour}:00", Icons.Outlined.NightsStay, Color(0xFF455A64), if (uiState.darkModeScheduled) SettingsAction.Dialog else SettingsAction.None),
+            SettingsItem("Schedule End", "${uiState.darkModeEndHour}:00", Icons.Outlined.WbSunny, Color(0xFFFF9800), if (uiState.darkModeScheduled) SettingsAction.Dialog else SettingsAction.None),
+            SettingsItem("Currency", "${uiState.currency} (৳)", Icons.Outlined.AttachMoney, Color(0xFF4CAF50), SettingsAction.Dialog),
+            SettingsItem("Start of Week", uiState.startOfWeek, Icons.Outlined.CalendarViewWeek, Color(0xFFFF9800), SettingsAction.Dialog)
+        )),
+        SettingsSection("Budget & Goals", Icons.Outlined.AccountBalance, listOf(
+            SettingsItem("Monthly Budget", "৳${CurrencyFormatter.formatBDT(uiState.budget?.monthlyLimit ?: 0.0)}", Icons.Outlined.Wallet, Color(0xFF4CAF50), SettingsAction.Dialog),
+            SettingsItem("Budget Alerts", "Alert at 80%", Icons.Outlined.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.budgetAlertEnabled, onCheckedChange = { viewModel.setBudgetAlert(it) }) }),
+            SettingsItem("Goal Reminders", "Weekly progress", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.goalReminderEnabled, onCheckedChange = { viewModel.setGoalReminder(it) }) })
+        )),
+        SettingsSection("Accounts", Icons.Outlined.AccountBalanceWallet, listOf(
+            SettingsItem("Default Account", "All Accounts", Icons.Outlined.AccountBalanceWallet, Color(0xFF2196F3), SettingsAction.Navigation),
+            SettingsItem("Account Categories", "Wallet, Bank, MFS", Icons.Outlined.Category, Color(0xFF2196F3), SettingsAction.Navigation),
+            SettingsItem("Daily Transfer Limits", "Configure limits", Icons.Outlined.Timer, Color(0xFFFF9800), SettingsAction.Navigation)
+        )),
+        SettingsSection("Notifications", Icons.Outlined.Notifications, listOf(
+            SettingsItem("Push Notifications", "Receive alerts", Icons.Outlined.Notifications, Color(0xFFF44336), SettingsAction.Toggle, { Switch(checked = uiState.pushNotificationEnabled, onCheckedChange = { viewModel.setPushNotification(it) }) }),
+            SettingsItem("Bill Reminders", "3 days before", Icons.Outlined.Receipt, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.billReminderEnabled, onCheckedChange = { viewModel.setBillReminder(it) }) }),
+            SettingsItem("Weekly Summary", "Every Monday", Icons.Outlined.Summarize, Color(0xFF2196F3), SettingsAction.Toggle, { Switch(checked = uiState.weeklySummaryEnabled, onCheckedChange = { viewModel.setWeeklySummary(it) }) }),
+            SettingsItem("Goal Progress", "On completion", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.goalProgressEnabled, onCheckedChange = { viewModel.setGoalProgress(it) }) })
+        )),
+        SettingsSection("Data & Privacy", Icons.Outlined.Security, listOf(
+            SettingsItem("Export Data", "CSV, PDF, JSON", Icons.Outlined.FileDownload, Color(0xFF607D8B), SettingsAction.Dialog),
+            SettingsItem("Backup", "Local storage", Icons.Outlined.Backup, Color(0xFF607D8B), SettingsAction.Navigation),
+            SettingsItem("Privacy Mode", "Hide amounts", Icons.Outlined.VisibilityOff, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.privacyModeEnabled, onCheckedChange = { viewModel.setPrivacyMode(it) }) }),
+            SettingsItem("Biometric Lock", "Fingerprint unlock", Icons.Outlined.Fingerprint, Color(0xFF424242), SettingsAction.Toggle, { Switch(checked = uiState.biometricLockEnabled, onCheckedChange = { viewModel.setBiometricLock(it) }) })
+        )),
+        SettingsSection("Language", Icons.Default.Language, listOf(
+            SettingsItem("App Language", uiState.language, Icons.Default.Language, Color(0xFF607D8B), SettingsAction.Navigation)
+        )),
+        SettingsSection("Smart Features", Icons.Default.AutoAwesome, listOf(
+            SettingsItem("Investment Tracking", "Track stocks & funds", Icons.Default.TrendingUp, Color(0xFF4CAF50), SettingsAction.Toggle, { Switch(checked = uiState.investmentTracking, onCheckedChange = { viewModel.setInvestmentTracking(it) }) }),
+            SettingsItem("Auto-Categorize", "Smart category detection", Icons.Default.AutoAwesome, Color(0xFF7C4DFF), SettingsAction.Toggle, { Switch(checked = uiState.autoCategorizeEnabled, onCheckedChange = { viewModel.setAutoCategorize(it) }) }),
+            SettingsItem("Smart Notifications", "AI-powered alerts", Icons.Default.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.smartNotificationsEnabled, onCheckedChange = { viewModel.setSmartNotifications(it) }) })
+        )),
+        SettingsSection("About & Support", Icons.Outlined.Info, listOf(
+            SettingsItem("App Version", "1.0.0 (Build 1)", Icons.Outlined.Info, Color(0xFF607D8B), SettingsAction.None),
+            SettingsItem("Privacy Policy", "", Icons.Outlined.Policy, Color(0xFF607D8B), SettingsAction.Navigation),
+            SettingsItem("Terms of Service", "", Icons.Outlined.Description, Color(0xFF607D8B), SettingsAction.Navigation),
+            SettingsItem("Rate App", "", Icons.Outlined.Star, Color(0xFFFFC107), SettingsAction.Navigation),
+            SettingsItem("Share App", "", Icons.Outlined.Share, Color(0xFF4CAF50), SettingsAction.Navigation),
+            SettingsItem("Contact Support", "", Icons.Outlined.Support, Color(0xFF2196F3), SettingsAction.Navigation)
+        ))
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Settings", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleLarge) },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
             )
         }
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            item { Spacer(modifier = Modifier.height(8.dp)) }
 
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Appearance",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.DarkMode,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Text("Dark Mode")
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
+                    Box(modifier = Modifier.fillMaxWidth().background(Brush.linearGradient(colors = listOf(MaterialTheme.colorScheme.primary, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f), MaterialTheme.colorScheme.tertiary.copy(alpha = 0.8f)))).padding(24.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            QuickStatItem(icon = Icons.Default.AccountBalanceWallet, value = "${uiState.accountCount}", label = "Accounts", color = Color.White)
+                            QuickStatItem(icon = Icons.Default.Flag, value = "${uiState.goalCount}", label = "Goals", color = Color.White)
+                            QuickStatItem(icon = Icons.Default.Receipt, value = "${uiState.billCount}", label = "Bills", color = Color.White)
                         }
-                        Switch(
-                            checked = uiState.darkMode,
-                            onCheckedChange = { viewModel.setDarkMode(it) }
-                        )
                     }
                 }
             }
-        }
 
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Budget",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    if (uiState.budget != null) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Monthly Budget",
-                                    style = MaterialTheme.typography.bodyMedium
-                                )
-                                Text(
-                                    text = CurrencyFormatter.format(uiState.budget!!.monthlyLimit),
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    } else {
-                        Text(
-                            text = "No budget set",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { viewModel.showBudgetDialog() },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.AttachMoney, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(if (uiState.budget != null) "Update Budget" else "Set Budget")
+            item {
+                Row(modifier = Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    settingsSections.forEach { section ->
+                        FilterChip(selected = expandedSection == section.title, onClick = { expandedSection = section.title }, label = { Text(section.title) }, leadingIcon = { Icon(section.icon, null, modifier = Modifier.size(16.dp)) })
                     }
                 }
             }
-        }
 
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "Notifications",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Notifications,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Daily Reminder")
-                                Text(
-                                    text = "Remind to log expenses",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                        Switch(
-                            checked = uiState.dailyReminderEnabled,
-                            onCheckedChange = { viewModel.setDailyReminder(it) }
-                        )
+            items(settingsSections.filter { it.title == expandedSection }) { section ->
+                SettingsSectionCard(title = section.title, icon = section.icon, items = section.items, isExpanded = true, onToggle = {},                     onItemClick = { item -> 
+                    when (item.title) {
+                        "Monthly Budget" -> showBudgetDialog = true
+                        "Currency" -> showCurrencyDialog = true
+                        "Export Data" -> showExportDialog = true
+                        "Theme" -> showThemeDialog = true
+                        "Start of Week" -> showStartOfWeekDialog = true
+                        "Schedule Start" -> showStartHourPicker = true
+                        "Schedule End" -> showEndHourPicker = true
+                        "Backup" -> navController?.navigate("backup")
+                        "Rate App" -> viewModel.rateApp()
+                        "Share App" -> viewModel.shareApp()
+                        "Contact Support" -> viewModel.contactSupport()
+                        "Privacy Policy" -> navController?.navigate("privacy_policy")
+                        "Terms of Service" -> navController?.navigate("terms_of_service")
+                        "App Language" -> navController?.navigate("language_settings")
+                        "Investment Tracking" -> navController?.navigate("investment_tracker")
                     }
-                    
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                    
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.Notifications,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(12.dp))
-                            Column {
-                                Text("Bill Reminders")
-                                Text(
-                                    text = "Get notified about due bills",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
+                })
+            }
+
+            item {
+                Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
+                    Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Outlined.Savings, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Saving Buddy", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                        Text("Your Personal Finance Tracker", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AssistChip(onClick = { navController?.navigate("privacy_policy") }, label = { Text("Privacy") }, leadingIcon = { Icon(Icons.Outlined.Security, null, modifier = Modifier.size(16.dp)) })
+                            AssistChip(onClick = { navController?.navigate("terms_of_service") }, label = { Text("Terms") }, leadingIcon = { Icon(Icons.Outlined.Description, null, modifier = Modifier.size(16.dp)) })
                         }
-                        Switch(
-                            checked = uiState.billReminderEnabled,
-                            onCheckedChange = { viewModel.setBillReminder(it) }
-                        )
                     }
                 }
             }
-        }
 
-        item {
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(
-                        text = "About",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "Saving Buddy v1.0",
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Text(
-                        text = "Your personal finance tracker",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Button(
-                        onClick = { navController?.navigate("features") },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.Apps, contentDescription = null)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("View All Features")
-                    }
-                }
-            }
+            item { Spacer(modifier = Modifier.height(24.dp)) }
         }
     }
 
-    if (uiState.showBudgetDialog) {
-        BudgetDialog(
-            currentBudget = uiState.budget?.monthlyLimit,
-            onDismiss = { viewModel.hideBudgetDialog() },
-            onSave = { viewModel.setBudget(it) }
+    if (showBudgetDialog) {
+        BudgetDialog(currentBudget = uiState.budget?.monthlyLimit, onDismiss = { showBudgetDialog = false }, onSave = { viewModel.setBudget(it); showBudgetDialog = false })
+    }
+
+    if (showCurrencyDialog) {
+        SelectionDialog(title = "Select Currency", options = currencies, selectedOption = uiState.currency, onDismiss = { showCurrencyDialog = false }, onSelect = { viewModel.setCurrency(it); showCurrencyDialog = false })
+    }
+
+    if (showStartOfWeekDialog) {
+        SelectionDialog(title = "Start of Week", options = weekDays, selectedOption = uiState.startOfWeek, onDismiss = { showStartOfWeekDialog = false }, onSelect = { viewModel.setStartOfWeek(it); showStartOfWeekDialog = false })
+    }
+
+    if (showThemeDialog) {
+        AlertDialog(
+            onDismissRequest = { showThemeDialog = false },
+            title = { Text("Theme Settings", fontWeight = FontWeight.Bold) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Dark Mode", fontWeight = FontWeight.Medium)
+                            Text("Use dark color scheme", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.darkMode, onCheckedChange = { viewModel.setDarkMode(it) })
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("AMOLED Mode", fontWeight = FontWeight.Medium)
+                            Text("Pure black backgrounds", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.amoledMode, onCheckedChange = { viewModel.setAmoledMode(it) })
+                    }
+                    HorizontalDivider()
+                    Text("Schedule", fontWeight = FontWeight.Bold)
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text("Scheduled Dark Mode", fontWeight = FontWeight.Medium)
+                            Text("Auto-switch based on time", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+                        }
+                        Switch(checked = uiState.darkModeScheduled, onCheckedChange = { viewModel.setDarkModeScheduled(it) })
+                    }
+                    if (uiState.darkModeScheduled) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("Start Time", fontWeight = FontWeight.Medium)
+                            TextButton(onClick = { showStartHourPicker = true; showThemeDialog = false }) {
+                                Text("${uiState.darkModeStartHour}:00")
+                            }
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("End Time", fontWeight = FontWeight.Medium)
+                            TextButton(onClick = { showEndHourPicker = true; showThemeDialog = false }) {
+                                Text("${uiState.darkModeEndHour}:00")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showThemeDialog = false }) { Text("Done") } }
+        )
+    }
+
+    if (showStartHourPicker) {
+        HourPickerDialog(
+            title = "Dark Mode Start",
+            currentHour = uiState.darkModeStartHour,
+            onDismiss = { showStartHourPicker = false },
+            onSelect = { viewModel.setDarkModeStartHour(it); showStartHourPicker = false }
+        )
+    }
+
+    if (showEndHourPicker) {
+        HourPickerDialog(
+            title = "Dark Mode End",
+            currentHour = uiState.darkModeEndHour,
+            onDismiss = { showEndHourPicker = false },
+            onSelect = { viewModel.setDarkModeEndHour(it); showEndHourPicker = false }
         )
     }
 }
 
 @Composable
-private fun BudgetDialog(
-    currentBudget: Double?,
+private fun HourPickerDialog(
+    title: String,
+    currentHour: Int,
     onDismiss: () -> Unit,
-    onSave: (Double) -> Unit
+    onSelect: (Int) -> Unit
 ) {
-    var amount by remember { mutableStateOf(currentBudget?.toString() ?: "") }
-
+    val hours = (0..23).map { String.format("%02d:00", it) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Set Monthly Budget") },
+        title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
-            OutlinedTextField(
-                value = amount,
-                onValueChange = { amount = it },
-                label = { Text("Budget Amount") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth()
-            )
-        },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    amount.toDoubleOrNull()?.let { onSave(it) }
+            LazyColumn {
+                items(hours) { hourStr ->
+                    val hour = hourStr.substringBefore(":").toInt()
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onSelect(hour) }
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(hourStr, style = MaterialTheme.typography.bodyLarge)
+                        if (hour == currentHour) {
+                            Icon(Icons.Default.Check, "Selected", tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
                 }
-            ) {
-                Text("Save")
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+}
+
+@Composable
+private fun QuickStatItem(icon: ImageVector, value: String, label: String, color: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, contentDescription = null, tint = color.copy(alpha = 0.9f), modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = color)
+        Text(label, style = MaterialTheme.typography.labelSmall, color = color.copy(alpha = 0.8f))
+    }
+}
+
+@Composable
+private fun SettingsSectionCard(title: String, icon: ImageVector, items: List<SettingsItem>, isExpanded: Boolean, onToggle: () -> Unit, onItemClick: (SettingsItem) -> Unit) {
+    Card(modifier = Modifier.fillMaxWidth().animateContentSize(), shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth().clickable { onToggle() }.padding(20.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(44.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)), contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(22.dp))
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                }
+            }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            items.forEach { item ->
+                SettingsItemRow(item = item, onClick = { onItemClick(item) })
             }
         }
-    )
+    }
+}
+
+@Composable
+private fun SettingsItemRow(item: SettingsItem, onClick: () -> Unit) {
+    Row(modifier = Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 20.dp, vertical = 14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+            Box(modifier = Modifier.size(40.dp).clip(CircleShape).background(item.iconColor.copy(alpha = 0.12f)), contentAlignment = Alignment.Center) {
+                Icon(item.icon, contentDescription = null, tint = item.iconColor, modifier = Modifier.size(20.dp))
+            }
+            Spacer(modifier = Modifier.width(12.dp))
+            Column {
+                Text(item.title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                item.subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            }
+        }
+        item.trailing?.invoke() ?: run {
+            if (item.action == SettingsAction.Navigation || item.action == SettingsAction.Dialog) {
+                Icon(Icons.Outlined.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun BudgetDialog(currentBudget: Double?, onDismiss: () -> Unit, onSave: (Double) -> Unit) {
+    var amount by remember { mutableStateOf(currentBudget?.toString() ?: "") }
+
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Monthly Budget", fontWeight = FontWeight.Bold) }, text = {
+        Column {
+            Text("Set your monthly spending limit", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(value = amount, onValueChange = { amount = it }, label = { Text("Budget Amount") }, leadingIcon = { Text("৳", style = MaterialTheme.typography.titleMedium) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), singleLine = true)
+        }
+    }, confirmButton = { Button(onClick = { amount.toDoubleOrNull()?.let { onSave(it) } }, shape = RoundedCornerShape(12.dp)) { Text("Save") } }, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
+}
+
+@Composable
+private fun SelectionDialog(title: String, options: List<String>, selectedOption: String, onDismiss: () -> Unit, onSelect: (String) -> Unit) {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text(title, fontWeight = FontWeight.Bold) }, text = {
+        Column {
+            options.forEach { option ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelect(option) }
+                        .padding(vertical = 12.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(option, style = MaterialTheme.typography.bodyLarge)
+                    if (option == selectedOption) {
+                        Icon(Icons.Default.Check, contentDescription = "Selected", tint = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+        }
+    }, confirmButton = {}, dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } })
 }

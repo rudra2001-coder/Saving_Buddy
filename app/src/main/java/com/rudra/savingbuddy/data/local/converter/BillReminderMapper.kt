@@ -14,10 +14,13 @@ object BillReminderMapper {
             billingCycle = bill.billingCycle.name,
             category = bill.category,
             isActive = bill.isActive,
-            notifyDaysBefore = bill.notifyDaysBefore.joinToString(","),
-            isNotificationEnabled = bill.isNotificationEnabled,
+            isPaid = false,
+            lastPaidDate = null,
+            nextDueDate = bill.createdAt + (30L * 24 * 60 * 60 * 1000),
+            accountId = null,
+            autoPay = false,
+            remindDaysBefore = bill.notifyDaysBefore.firstOrNull() ?: 3,
             notes = bill.notes,
-            lastNotifiedDate = bill.lastNotifiedDate,
             createdAt = bill.createdAt
         )
     }
@@ -28,13 +31,13 @@ object BillReminderMapper {
             name = entity.name,
             amount = entity.amount,
             billingDay = entity.billingDay,
-            billingCycle = BillCycle.valueOf(entity.billingCycle),
+            billingCycle = try { BillCycle.valueOf(entity.billingCycle) } catch (e: Exception) { BillCycle.MONTHLY },
             category = entity.category,
             isActive = entity.isActive,
-            notifyDaysBefore = entity.notifyDaysBefore.split(",").mapNotNull { it.toIntOrNull() },
-            isNotificationEnabled = entity.isNotificationEnabled,
+            notifyDaysBefore = listOf(entity.remindDaysBefore),
+            isNotificationEnabled = true,
             notes = entity.notes,
-            lastNotifiedDate = entity.lastNotifiedDate,
+            lastNotifiedDate = null,
             createdAt = entity.createdAt
         )
     }
