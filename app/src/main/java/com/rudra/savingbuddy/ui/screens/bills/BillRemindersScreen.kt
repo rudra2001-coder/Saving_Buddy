@@ -72,6 +72,9 @@ fun BillRemindersScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { navController.navigate("calendar") }) {
+                        Icon(Icons.Default.CalendarMonth, contentDescription = "View in Calendar", tint = IncomeGreen)
+                    }
                     IconButton(onClick = { viewModel.showSettingsDialog() }) {
                         Icon(Icons.Default.Settings, contentDescription = "Notification Settings")
                     }

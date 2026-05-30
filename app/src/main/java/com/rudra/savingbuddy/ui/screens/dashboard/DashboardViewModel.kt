@@ -14,6 +14,7 @@ import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.domain.repository.FusionRepository
 import com.rudra.savingbuddy.domain.repository.GoalRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
+import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import com.rudra.savingbuddy.util.DateUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -37,6 +38,7 @@ data class DashboardUiState(
     val activeGoal: Goal? = null,
     val upcomingBills: List<BillReminder> = emptyList(),
     val monthlyTrend: List<Double> = emptyList(),
+    val netWorthTrend: List<Pair<Long, Double>> = emptyList(),
     val mainBalance: Double = 0.0,
     val netWorth: Double = 0.0,
     val totalAssets: Double = 0.0,
@@ -45,6 +47,10 @@ data class DashboardUiState(
     val selectedAccountName: String = "Wallet",
     val selectedAccountBalance: Double = 0.0,
     val availableAccounts: List<AccountSelection> = emptyList(),
+    val roundUpEnabled: Boolean = false,
+    val roundUpGoalName: String? = null,
+    val totalRoundUpSaved: Double = 0.0,
+    val roundUpGoalProgress: Float = 0f,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -76,6 +82,7 @@ class DashboardViewModel @Inject constructor(
     private val billReminderRepository: BillReminderRepository,
     private val fusionRepository: FusionRepository,
     private val accountRepository: AccountRepository,
+    private val settingsRepository: SettingsRepository,
     private val prefs: SharedPreferences
 ) : ViewModel() {
 
@@ -85,6 +92,7 @@ class DashboardViewModel @Inject constructor(
     init {
         loadDashboardData()
         loadAccounts()
+        loadRoundUpSettings()
     }
 
     // ── Accounts ──────────────────────────────────────────────────────────────
@@ -143,6 +151,30 @@ class DashboardViewModel @Inject constructor(
     fun clearAccountSelection() {
         prefs.edit().remove("dashboard_selected_account_id").apply()
         loadAccounts()
+    }
+
+    // ── Round-Up ──────────────────────────────────────────────────────────────
+
+    private fun loadRoundUpSettings() {
+        viewModelScope.launch {
+            combine(
+                settingsRepository.getSettings(),
+                goalRepository.getActiveGoals()
+            ) { settings, goals ->
+                val enabled = settings?.roundUpEnabled ?: false
+                val goalId = settings?.roundUpGoalId
+                val goal = if (goalId != null) goals.firstOrNull { it.id == goalId }
+                    else goals.firstOrNull { it.id == settings?.roundUpGoalId }
+                Triple(enabled, goal, settings?.totalRoundUpSaved ?: 0.0)
+            }.collect { (enabled, goal, totalSaved) ->
+                _uiState.update { it.copy(
+                    roundUpEnabled = enabled,
+                    roundUpGoalName = goal?.name,
+                    totalRoundUpSaved = totalSaved,
+                    roundUpGoalProgress = goal?.progress ?: 0f
+                )}
+            }
+        }
     }
 
     // ── Core data ─────────────────────────────────────────────────────────────
@@ -208,6 +240,7 @@ class DashboardViewModel @Inject constructor(
         loadRecentTransactions(startOfMonth, endOfMonth)
         loadGoalsAndBills()
         loadMonthlyTrend()
+        loadNetWorthTrend()
         loadAccountHealth()
     }
 
@@ -258,6 +291,19 @@ class DashboardViewModel @Inject constructor(
                 trend.add(inc - exp)
             }
             _uiState.update { it.copy(monthlyTrend = trend) }
+        }
+    }
+
+    // ── Net worth trend ───────────────────────────────────────────────────────
+
+    private fun loadNetWorthTrend() {
+        viewModelScope.launch {
+            val now = System.currentTimeMillis()
+            val endDate = DateUtils.getStartOfDay(now)
+            val startDate = endDate - 29 * 24 * 60 * 60 * 1000L
+            fusionRepository.getDailyNetWorthForPeriod(startDate, endDate).collect { trend ->
+                _uiState.update { it.copy(netWorthTrend = trend) }
+            }
         }
     }
 

@@ -20,5 +20,12 @@ data class UserSettings(
     val goalProgressEnabled: Boolean = false,
     val privacyModeEnabled: Boolean = false,
     val biometricLockEnabled: Boolean = false,
-    val defaultAccountId: Long? = null
+    val defaultAccountId: Long? = null,
+    val roundUpEnabled: Boolean = false,
+    val roundUpGoalId: Long? = null,
+    val roundUpMultiplier: Int = 1,
+    val roundUpType: String = "NEAREST_10",
+    val totalRoundUpSaved: Double = 0.0,
+    val lastRoundUpDate: Long = 0L,
+    val dailyRoundUpTotal: Double = 0.0
 )

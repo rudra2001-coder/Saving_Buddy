@@ -47,7 +47,14 @@ fun UserSettingsEntity.toDomainSettings(): UserSettings {
         goalProgressEnabled = map["goalProgress"]?.toBoolean() ?: false,
         privacyModeEnabled = map["privacyMode"]?.toBoolean() ?: false,
         biometricLockEnabled = map["biometricLock"]?.toBoolean() ?: false,
-        defaultAccountId = map["defaultAccountId"]?.toLongOrNull()
+        defaultAccountId = map["defaultAccountId"]?.toLongOrNull(),
+        roundUpEnabled = map["roundUpEnabled"]?.toBoolean() ?: false,
+        roundUpGoalId = map["roundUpGoalId"]?.toLongOrNull(),
+        roundUpMultiplier = map["roundUpMultiplier"]?.toIntOrNull() ?: 1,
+        roundUpType = map["roundUpType"] ?: "NEAREST_10",
+        totalRoundUpSaved = map["totalRoundUpSaved"]?.toDoubleOrNull() ?: 0.0,
+        lastRoundUpDate = map["lastRoundUpDate"]?.toLongOrNull() ?: 0L,
+        dailyRoundUpTotal = map["dailyRoundUpTotal"]?.toDoubleOrNull() ?: 0.0
     )
 }
 
@@ -70,7 +77,14 @@ fun UserSettings.toSettingsEntity(): UserSettingsEntity {
         "weeklySummary=$weeklySummaryEnabled",
         "goalProgress=$goalProgressEnabled",
         "privacyMode=$privacyModeEnabled",
-        "biometricLock=$biometricLockEnabled"
+        "biometricLock=$biometricLockEnabled",
+        "roundUpEnabled=$roundUpEnabled",
+        "roundUpGoalId=$roundUpGoalId",
+        "roundUpMultiplier=$roundUpMultiplier",
+        "roundUpType=$roundUpType",
+        "totalRoundUpSaved=$totalRoundUpSaved",
+        "lastRoundUpDate=$lastRoundUpDate",
+        "dailyRoundUpTotal=$dailyRoundUpTotal"
     ).joinToString(";")
     return UserSettingsEntity(
         key = "app_settings",

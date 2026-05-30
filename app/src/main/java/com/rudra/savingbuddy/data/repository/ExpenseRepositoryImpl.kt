@@ -35,6 +35,9 @@ class ExpenseRepositoryImpl @Inject constructor(
     override fun getTotalExpensesByDateRange(startDate: Long, endDate: Long): Flow<Double?> =
         expenseDao.getTotalExpensesByDateRange(startDate, endDate)
 
+    override suspend fun getExpensesInDateRange(startDate: Long, endDate: Long): List<Expense> =
+        expenseDao.getExpensesByDateRange(startDate, endDate).first().map { it.toDomain() }
+
     override suspend fun getExpenseById(id: Long): Expense? =
         expenseDao.getExpenseById(id)?.toDomain()
 

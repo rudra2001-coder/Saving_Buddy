@@ -174,6 +174,22 @@ fun DashboardScreen(
                         }
                     }
 
+                    // Net Worth Trend (30-day sparkline)
+                    item {
+                        NetWorthTrendCard(trendData = uiState.netWorthTrend)
+                    }
+
+                    // Round-Up Savings
+                    item {
+                        RoundUpCard(
+                            totalSaved = uiState.totalRoundUpSaved,
+                            goalName = uiState.roundUpGoalName,
+                            goalProgress = uiState.roundUpGoalProgress,
+                            isEnabled = uiState.roundUpEnabled,
+                            onClick = { navController?.navigate("settings") }
+                        )
+                    }
+
                     // Monthly summary
                     item { MonthlySummaryCard(state = uiState) }
 
@@ -212,7 +228,8 @@ fun DashboardScreen(
                         item {
                             UpcomingBillsCard(
                                 bills = uiState.upcomingBills,
-                                onBillClick = { navController?.navigate("bills") }
+                                onBillClick = { navController?.navigate("bills") },
+                                onViewCalendarClick = { navController?.navigate("calendar") }
                             )
                         }
                     }

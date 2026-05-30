@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.Goal
 import com.rudra.savingbuddy.domain.model.GoalCategory
 import com.rudra.savingbuddy.domain.repository.GoalRepository
+import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -16,12 +17,15 @@ data class GoalsUiState(
     val isLoading: Boolean = false,
     val showAddDialog: Boolean = false,
     val editingGoal: Goal? = null,
-    val selectedTab: Int = 0
+    val selectedTab: Int = 0,
+    val roundUpGoalId: Long? = null,
+    val totalRoundUpSaved: Double = 0.0
 )
 
 @HiltViewModel
 class GoalsViewModel @Inject constructor(
-    private val goalRepository: GoalRepository
+    private val goalRepository: GoalRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(GoalsUiState())
@@ -29,6 +33,18 @@ class GoalsViewModel @Inject constructor(
 
     init {
         loadGoals()
+        loadRoundUpSettings()
+    }
+
+    private fun loadRoundUpSettings() {
+        viewModelScope.launch {
+            settingsRepository.getSettings().collect { settings ->
+                _uiState.update { it.copy(
+                    roundUpGoalId = settings?.roundUpGoalId,
+                    totalRoundUpSaved = settings?.totalRoundUpSaved ?: 0.0
+                )}
+            }
+        }
     }
 
     private fun loadGoals() {

@@ -6,8 +6,10 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.Budget
+import com.rudra.savingbuddy.domain.model.Goal
 import com.rudra.savingbuddy.domain.model.UserSettings
 import com.rudra.savingbuddy.domain.repository.BudgetRepository
+import com.rudra.savingbuddy.domain.repository.GoalRepository
 import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
@@ -47,13 +49,20 @@ data class SettingsUiState(
     val investmentTracking: Boolean = false,
     val autoCategorizeEnabled: Boolean = true,
     val smartNotificationsEnabled: Boolean = true,
-    val receiptScannerEnabled: Boolean = true
+    val receiptScannerEnabled: Boolean = true,
+    val roundUpEnabled: Boolean = false,
+    val roundUpGoalId: Long? = null,
+    val roundUpMultiplier: Int = 1,
+    val roundUpType: String = "NEAREST_10",
+    val totalRoundUpSaved: Double = 0.0,
+    val activeGoals: List<Goal> = emptyList()
 )
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val budgetRepository: BudgetRepository,
+    private val goalRepository: GoalRepository,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
 
@@ -70,8 +79,9 @@ class SettingsViewModel @Inject constructor(
             
             combine(
                 settingsRepository.getSettings(),
-                budgetRepository.getBudget()
-            ) { settings, budget ->
+                budgetRepository.getBudget(),
+                goalRepository.getActiveGoals()
+            ) { settings, budget, goals ->
                 SettingsUiState(
                     darkMode = settings?.darkMode ?: false,
                     amoledMode = settings?.amoledMode ?: false,
@@ -91,6 +101,12 @@ class SettingsViewModel @Inject constructor(
                     goalProgressEnabled = settings?.goalProgressEnabled ?: false,
                     privacyModeEnabled = settings?.privacyModeEnabled ?: false,
                     biometricLockEnabled = settings?.biometricLockEnabled ?: false,
+                    roundUpEnabled = settings?.roundUpEnabled ?: false,
+                    roundUpGoalId = settings?.roundUpGoalId,
+                    roundUpMultiplier = settings?.roundUpMultiplier ?: 1,
+                    roundUpType = settings?.roundUpType ?: "NEAREST_10",
+                    totalRoundUpSaved = settings?.totalRoundUpSaved ?: 0.0,
+                    activeGoals = goals,
                     isLoading = false
                 )
             }.collect { state ->
@@ -117,7 +133,12 @@ class SettingsViewModel @Inject constructor(
         weeklySummaryEnabled = _uiState.value.weeklySummaryEnabled,
         goalProgressEnabled = _uiState.value.goalProgressEnabled,
         privacyModeEnabled = _uiState.value.privacyModeEnabled,
-        biometricLockEnabled = _uiState.value.biometricLockEnabled
+        biometricLockEnabled = _uiState.value.biometricLockEnabled,
+        roundUpEnabled = _uiState.value.roundUpEnabled,
+        roundUpGoalId = _uiState.value.roundUpGoalId,
+        roundUpMultiplier = _uiState.value.roundUpMultiplier,
+        roundUpType = _uiState.value.roundUpType,
+        totalRoundUpSaved = _uiState.value.totalRoundUpSaved
     )
 
     fun setInvestmentTracking(enabled: Boolean) {
@@ -257,6 +278,34 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.updateSettings(getCurrentUserSettings().copy(biometricLockEnabled = enabled))
             _uiState.update { it.copy(biometricLockEnabled = enabled) }
+        }
+    }
+
+    fun setRoundUpEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(roundUpEnabled = enabled))
+            _uiState.update { it.copy(roundUpEnabled = enabled) }
+        }
+    }
+
+    fun setRoundUpGoalId(goalId: Long?) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(roundUpGoalId = goalId))
+            _uiState.update { it.copy(roundUpGoalId = goalId) }
+        }
+    }
+
+    fun setRoundUpMultiplier(multiplier: Int) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(roundUpMultiplier = multiplier))
+            _uiState.update { it.copy(roundUpMultiplier = multiplier) }
+        }
+    }
+
+    fun setRoundUpType(type: String) {
+        viewModelScope.launch {
+            settingsRepository.updateSettings(getCurrentUserSettings().copy(roundUpType = type))
+            _uiState.update { it.copy(roundUpType = type) }
         }
     }
 

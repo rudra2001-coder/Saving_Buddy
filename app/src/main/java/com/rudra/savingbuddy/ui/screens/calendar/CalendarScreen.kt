@@ -24,8 +24,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Expense
 import com.rudra.savingbuddy.domain.model.Income
 import com.rudra.savingbuddy.ui.theme.*
@@ -44,6 +46,8 @@ fun CalendarScreen(
     val uiState by viewModel.uiState.collectAsState()
     var currentMonth by remember { mutableStateOf(YearMonth.now()) }
     var selectedDate by remember { mutableStateOf<LocalDate?>(null) }
+    var showBillSheet by remember { mutableStateOf(false) }
+    var selectedBillDate by remember { mutableStateOf<LocalDate?>(null) }
 
     LaunchedEffect(currentMonth) {
         viewModel.setMonth(currentMonth)
@@ -86,18 +90,32 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
+            // Upcoming Bills Card
+            if (uiState.showBills && uiState.upcomingBills.isNotEmpty()) {
+                UpcomingBillsCard(
+                    upcomingBills = uiState.upcomingBills,
+                    totalBillsDue = uiState.totalBillsDue,
+                    onViewAllBills = { navController?.navigate("bills") },
+                    viewModel = viewModel
+                )
+            }
+
             // Month Summary Card
             MonthlySummaryCard(
                 month = currentMonth,
                 income = uiState.monthlyIncome,
                 expense = uiState.monthlyExpense,
-                net = uiState.monthlyNet
+                net = uiState.monthlyNet,
+                billCount = if (uiState.showBills) uiState.billsByDate.values.flatten().size else 0,
+                totalBillsDue = if (uiState.showBills) uiState.totalBillsDue else 0.0
             )
 
             // Filter Chips
             FilterChipsRow(
                 selectedFilter = uiState.filterType,
-                onFilterSelected = { viewModel.setFilter(it) }
+                showBills = uiState.showBills,
+                onFilterSelected = { viewModel.setFilter(it) },
+                onToggleBills = { viewModel.toggleShowBills() }
             )
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -120,7 +138,14 @@ fun CalendarScreen(
                 daysInMonth = daysInMonth,
                 selectedDate = selectedDate,
                 viewModel = viewModel,
-                onDateSelected = { selectedDate = it }
+                onDateSelected = { date ->
+                    selectedDate = date
+                    val bills = viewModel.getBillsOnDate(date)
+                    if (bills.isNotEmpty()) {
+                        selectedBillDate = date
+                        showBillSheet = true
+                    }
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -131,6 +156,17 @@ fun CalendarScreen(
                 viewModel = viewModel
             )
         }
+
+        // Bill Bottom Sheet
+        if (showBillSheet && selectedBillDate != null) {
+            BillBottomSheet(
+                date = selectedBillDate!!,
+                bills = viewModel.getBillsOnDate(selectedBillDate!!),
+                viewModel = viewModel,
+                onDismiss = { showBillSheet = false },
+                onNavigateToBills = { navController?.navigate("bills") }
+            )
+        }
     }
 }
 
@@ -139,7 +175,9 @@ private fun MonthlySummaryCard(
     month: YearMonth,
     income: Double,
     expense: Double,
-    net: Double
+    net: Double,
+    billCount: Int = 0,
+    totalBillsDue: Double = 0.0
 ) {
     Card(
         modifier = Modifier
@@ -210,6 +248,20 @@ private fun MonthlySummaryCard(
                     )
                 }
             }
+
+            if (billCount > 0) {
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Icon(Icons.Default.Receipt, null, tint = WarningOrange, modifier = Modifier.size(16.dp))
+                    Text(
+                        text = "\uD83D\uDCB0 $billCount bills due this month totaling ${CurrencyFormatter.format(totalBillsDue)}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }
@@ -217,7 +269,9 @@ private fun MonthlySummaryCard(
 @Composable
 private fun FilterChipsRow(
     selectedFilter: FilterType,
-    onFilterSelected: (FilterType) -> Unit
+    showBills: Boolean,
+    onFilterSelected: (FilterType) -> Unit,
+    onToggleBills: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -245,6 +299,18 @@ private fun FilterChipsRow(
             onClick = { onFilterSelected(FilterType.EXPENSE) },
             label = { Text("Expense") },
             modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = showBills,
+            onClick = onToggleBills,
+            label = { Text(if (showBills) "Hide Bills" else "Show Bills") },
+            leadingIcon = {
+                Icon(
+                    if (showBills) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                    contentDescription = null,
+                    Modifier.size(16.dp)
+                )
+            }
         )
     }
 }
@@ -357,6 +423,7 @@ private fun CalendarDayCell(
     val hasTransactions = daySummary.transactionCount > 0
     val hasIncome = daySummary.hasIncome
     val hasExpense = daySummary.hasExpense
+    val hasBills = daySummary.billCount > 0
 
     val backgroundColor by animateColorAsState(
         targetValue = when {
@@ -399,35 +466,14 @@ private fun CalendarDayCell(
                     else -> MaterialTheme.colorScheme.onSurface
                 }
             )
-            
-            if (hasTransactions) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    if (hasIncome) {
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                    else IncomeGreen
-                                )
-                        )
-                    }
-                    if (hasExpense) {
-                        Box(
-                            modifier = Modifier
-                                .size(4.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    if (isSelected) MaterialTheme.colorScheme.onPrimary
-                                    else ExpenseRed
-                                )
-                        )
-                    }
-                }
-            }
+
+            BillCalendarDot(
+                hasIncome = hasIncome,
+                hasExpense = hasExpense,
+                hasBills = hasBills,
+                billCount = daySummary.billCount,
+                isSelected = isSelected
+            )
         }
     }
 }
@@ -654,4 +700,327 @@ private fun TransactionItem(
             )
         }
     }
+}
+
+@Composable
+private fun BillCalendarDot(
+    hasIncome: Boolean,
+    hasExpense: Boolean,
+    hasBills: Boolean,
+    billCount: Int,
+    isSelected: Boolean
+) {
+    val dotColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
+    if (hasBills) {
+        if (hasIncome || hasExpense) {
+            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                if (hasIncome) {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else IncomeGreen)
+                    )
+                }
+                if (hasExpense) {
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else ExpenseRed)
+                    )
+                }
+                if (billCount <= 3) {
+                    repeat(billCount) {
+                        Box(
+                            modifier = Modifier
+                                .size(4.dp)
+                                .clip(CircleShape)
+                                .background(WarningOrange)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(WarningOrange.copy(alpha = 0.8f))
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "$billCount",
+                            style = MaterialTheme.typography.labelSmall,
+                            fontSize = 8.sp,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(WarningOrange.copy(alpha = 0.8f))
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "$billCount",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontSize = 8.sp,
+                    color = Color.White
+                )
+            }
+        }
+    } else if (hasIncome || hasExpense) {
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (hasIncome) {
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else IncomeGreen)
+                )
+            }
+            if (hasExpense) {
+                Box(
+                    modifier = Modifier
+                        .size(4.dp)
+                        .clip(CircleShape)
+                        .background(if (isSelected) MaterialTheme.colorScheme.onPrimary else ExpenseRed)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun UpcomingBillsCard(
+    upcomingBills: List<BillWithDate>,
+    totalBillsDue: Double,
+    onViewAllBills: () -> Unit,
+    viewModel: CalendarViewModel
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Brush.verticalGradient(listOf(WarningOrange.copy(alpha = 0.06f), Color.Transparent)))
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Receipt, null, tint = WarningOrange, modifier = Modifier.size(20.dp))
+                    Text("Upcoming Bills", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                }
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = WarningOrange.copy(alpha = 0.1f)
+                ) {
+                    Text(
+                        text = CurrencyFormatter.format(totalBillsDue),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = WarningOrange
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            upcomingBills.forEachIndexed { index, billWithDate ->
+                if (index > 0) {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                BillUpcomingItem(
+                    bill = billWithDate.bill,
+                    dueDate = billWithDate.dueDate,
+                    viewModel = viewModel
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            TextButton(
+                onClick = onViewAllBills,
+                modifier = Modifier.align(Alignment.End)
+            ) {
+                Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("View All Bills")
+            }
+        }
+    }
+}
+
+@Composable
+private fun BillUpcomingItem(
+    bill: BillReminder,
+    dueDate: Long,
+    viewModel: CalendarViewModel
+) {
+    val now = System.currentTimeMillis()
+    val daysUntil = ((dueDate - now) / 86400000L).toInt()
+    val status = viewModel.getBillStatus(bill, dueDate)
+
+    val pillColor = when {
+        daysUntil < 0 -> ExpenseRed
+        daysUntil <= 3 -> ExpenseRed.copy(alpha = 0.7f)
+        daysUntil <= 7 -> WarningOrange
+        else -> PrimaryGreen
+    }
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        Text(text = "\uD83D\uDCC5", fontSize = 20.sp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(bill.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+            Text(DateUtils.formatDate(dueDate), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Text(
+            text = CurrencyFormatter.format(bill.amount),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = pillColor.copy(alpha = 0.15f)
+        ) {
+            Text(
+                text = when {
+                    daysUntil < 0 -> "${-daysUntil}d overdue"
+                    daysUntil == 0 -> "Due today"
+                    else -> "${daysUntil}d left"
+                },
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Medium,
+                color = pillColor
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BillBottomSheet(
+    date: LocalDate,
+    bills: List<BillReminder>,
+    viewModel: CalendarViewModel,
+    onDismiss: () -> Unit,
+    onNavigateToBills: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
+        title = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text("Bills Due", fontWeight = FontWeight.Bold)
+                    Text(
+                        DateUtils.formatDate(date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        },
+        text = {
+            val dateMillis = date.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                bills.forEach { bill ->
+                    val status = viewModel.getBillStatus(bill, dateMillis)
+                    val statusText = when (status) {
+                        BillStatus.OVERDUE -> "Overdue"
+                        BillStatus.DUE_TODAY -> "Due Today"
+                        BillStatus.UPCOMING -> "Upcoming"
+                    }
+                    val statusColor = when (status) {
+                        BillStatus.OVERDUE -> ExpenseRed
+                        BillStatus.DUE_TODAY -> WarningOrange
+                        BillStatus.UPCOMING -> PrimaryGreen
+                    }
+
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                        )
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Text(text = "\uD83D\uDCC5", fontSize = 24.sp)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(bill.name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
+                                Text(
+                                    "${bill.category} - ${bill.billingCycle.displayName}",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(
+                                    CurrencyFormatter.format(bill.amount),
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = statusColor.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = statusText,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Medium,
+                                        color = statusColor
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onNavigateToBills) {
+                Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Manage Bills")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }

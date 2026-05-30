@@ -161,7 +161,8 @@ fun GoalsScreen(
                     onEdit = { viewModel.showEditDialog(goal) },
                     onDelete = { showDeleteDialog = goal },
                     onContribute = { showContributionDialog = goal },
-                    onMarkComplete = { viewModel.markComplete(goal.id) }
+                    onMarkComplete = { viewModel.markComplete(goal.id) },
+                    isRoundUpLinked = uiState.roundUpGoalId == goal.id
                 )
             }
 
@@ -236,7 +237,8 @@ fun GoalCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onContribute: () -> Unit,
-    onMarkComplete: () -> Unit
+    onMarkComplete: () -> Unit,
+    isRoundUpLinked: Boolean = false
 ) {
     var expanded by remember { mutableStateOf(false) }
     val animatedProgress by animateFloatAsState(
@@ -298,6 +300,23 @@ fun GoalCard(
                 ) {
                     Text("${goal.daysRemaining}d left", modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, color = categoryColor)
+                }
+                if (isRoundUpLinked) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = PrimaryGreen.copy(alpha = 0.15f)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(Icons.Default.Savings, null, modifier = Modifier.size(12.dp), tint = PrimaryGreen)
+                            Text("Round-Up", style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Medium, color = PrimaryGreen)
+                        }
+                    }
                 }
             }
 

@@ -1,5 +1,6 @@
 package com.rudra.savingbuddy.data.repository
 
+import com.rudra.savingbuddy.data.local.dao.AccountBalanceHistoryDao
 import com.rudra.savingbuddy.data.local.dao.AccountDao
 import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.GoalDao
@@ -23,7 +24,8 @@ class FusionRepositoryImpl @Inject constructor(
     private val incomeDao: IncomeDao,
     private val expenseDao: ExpenseDao,
     private val transferDao: TransferDao,
-    private val goalDao: GoalDao
+    private val goalDao: GoalDao,
+    private val accountBalanceHistoryDao: AccountBalanceHistoryDao
 ) : FusionRepository {
 
     override fun getUnifiedTransactions(limit: Int): Flow<List<UnifiedTransaction>> {
@@ -151,6 +153,35 @@ class FusionRepositoryImpl @Inject constructor(
                 assetsByType = assetsByType,
                 liabilitiesByType = liabilitiesByType
             )
+        }
+    }
+
+    override fun getDailyNetWorthForPeriod(startDate: Long, endDate: Long): Flow<List<Pair<Long, Double>>> {
+        return combine(
+            accountDao.getAllAccounts(),
+            accountBalanceHistoryDao.getAllBalanceHistory()
+        ) { accounts, allHistory ->
+            val historyByAccount = allHistory.groupBy { it.accountId }
+            val cal = Calendar.getInstance()
+            val days = mutableListOf<Pair<Long, Double>>()
+            var currentDate = startDate
+            while (currentDate <= endDate) {
+                cal.timeInMillis = currentDate
+                cal.set(Calendar.HOUR_OF_DAY, 0)
+                cal.set(Calendar.MINUTE, 0)
+                cal.set(Calendar.SECOND, 0)
+                cal.set(Calendar.MILLISECOND, 0)
+                val dayStart = cal.timeInMillis
+                var total = 0.0
+                for (account in accounts) {
+                    val history = historyByAccount[account.id]
+                    val entry = history?.filter { it.date <= dayStart }?.maxByOrNull { it.date }
+                    total += entry?.balance ?: account.balance
+                }
+                days.add(Pair(dayStart, total))
+                currentDate += 24 * 60 * 60 * 1000L
+            }
+            days
         }
     }
 

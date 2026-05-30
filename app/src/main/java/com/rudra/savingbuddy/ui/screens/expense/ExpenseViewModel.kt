@@ -11,7 +11,9 @@ import com.rudra.savingbuddy.domain.model.RecurringStatus
 import com.rudra.savingbuddy.domain.model.EndCondition
 import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
+import com.rudra.savingbuddy.domain.repository.SettingsRepository
 import com.rudra.savingbuddy.util.DateUtils
+import com.rudra.savingbuddy.util.RoundUpManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -32,7 +34,9 @@ data class ExpenseUiState(
 @HiltViewModel
 class ExpenseViewModel @Inject constructor(
     private val expenseRepository: ExpenseRepository,
-    private val accountRepository: AccountRepository
+    private val accountRepository: AccountRepository,
+    private val roundUpManager: RoundUpManager,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ExpenseUiState())
@@ -150,10 +154,16 @@ class ExpenseViewModel @Inject constructor(
                     recurringInterval = if (isRecurring) recurringInterval else null
                 )
                 
-                if (_uiState.value.editingExpense != null) {
+                val isEditing = _uiState.value.editingExpense != null
+                if (isEditing) {
                     expenseRepository.updateExpense(expense)
                 } else {
                     expenseRepository.insertExpense(expense, deductFromAccount = accountId != null)
+                    settingsRepository.getSettings().first()?.let { settings ->
+                        if (settings.roundUpEnabled) {
+                            roundUpManager.processRoundUp(amount, settings)
+                        }
+                    }
                 }
                 hideDialog()
             } catch (e: Exception) {

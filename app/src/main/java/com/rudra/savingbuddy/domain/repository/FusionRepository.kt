@@ -12,6 +12,8 @@ interface FusionRepository {
     
     fun getNetWorthSummary(): Flow<NetWorthSummary>
     
+    fun getDailyNetWorthForPeriod(startDate: Long, endDate: Long): Flow<List<Pair<Long, Double>>>
+    
     fun getAccountHealthList(): Flow<List<AccountHealth>>
     
     fun getTransferPatterns(): Flow<List<TransferPattern>>

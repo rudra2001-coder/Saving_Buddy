@@ -36,6 +36,9 @@ class IncomeRepositoryImpl @Inject constructor(
     override fun getTotalIncomeByDateRange(startDate: Long, endDate: Long): Flow<Double?> =
         incomeDao.getTotalIncomeByDateRange(startDate, endDate)
 
+    override suspend fun getIncomesInDateRange(startDate: Long, endDate: Long): List<Income> =
+        incomeDao.getIncomeByDateRange(startDate, endDate).first().map { it.toDomain() }
+
     override suspend fun getIncomeById(id: Long): Income? =
         incomeDao.getIncomeById(id)?.toDomain()
 

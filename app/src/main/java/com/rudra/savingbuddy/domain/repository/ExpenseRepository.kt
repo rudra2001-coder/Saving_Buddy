@@ -11,6 +11,7 @@ interface ExpenseRepository {
     fun getExpensesByDateRange(startDate: Long, endDate: Long): Flow<List<Expense>>
     fun getTodayExpenses(startOfDay: Long, endOfDay: Long): Flow<List<Expense>>
     fun getTotalExpensesByDateRange(startDate: Long, endDate: Long): Flow<Double?>
+    suspend fun getExpensesInDateRange(startDate: Long, endDate: Long): List<Expense>
     suspend fun getExpenseById(id: Long): Expense?
     fun getExpensesByCategoryGrouped(startDate: Long, endDate: Long): Flow<List<CategoryTotal>>
     suspend fun insertExpense(expense: Expense, deductFromAccount: Boolean = true): Long

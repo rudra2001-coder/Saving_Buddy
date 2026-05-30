@@ -10,6 +10,7 @@ interface IncomeRepository {
     fun getIncomeByDateRange(startDate: Long, endDate: Long): Flow<List<Income>>
     fun getTodayIncome(startOfDay: Long, endOfDay: Long): Flow<List<Income>>
     fun getTotalIncomeByDateRange(startDate: Long, endDate: Long): Flow<Double?>
+    suspend fun getIncomesInDateRange(startDate: Long, endDate: Long): List<Income>
     suspend fun getIncomeById(id: Long): Income?
     suspend fun insertIncome(income: Income, addToWallet: Boolean = true): Long
     suspend fun updateIncome(income: Income)

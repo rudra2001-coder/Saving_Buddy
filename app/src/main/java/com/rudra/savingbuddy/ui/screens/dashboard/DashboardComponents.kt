@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.ShowChart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -24,6 +25,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.rudra.savingbuddy.data.local.dao.CategoryTotal
 import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.model.Goal
@@ -160,7 +162,8 @@ private fun GoalStatColumn(label: String, value: String, valueColor: Color) {
 fun UpcomingBillsCard(
     bills: List<BillReminder>,
     onBillClick: (BillReminder) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onViewCalendarClick: (() -> Unit)? = null
 ) {
     if (bills.isEmpty()) return
 
@@ -169,6 +172,7 @@ fun UpcomingBillsCard(
         val days = it.billingDay - today
         if (days < 0) days + 30 else days
     } ?: 0
+    val totalDue = bills.sumOf { it.amount }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -246,6 +250,30 @@ fun UpcomingBillsCard(
                         modifier = Modifier.padding(vertical = 12.dp),
                         color = MaterialTheme.colorScheme.outlineVariant
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "${CurrencyFormatter.format(totalDue)} due in ${bills.size} bill${if (bills.size > 1) "s" else ""}",
+                    style = MaterialTheme.typography.bodySmall,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onErrorContainer
+                )
+                if (onViewCalendarClick != null) {
+                    TextButton(onClick = onViewCalendarClick) {
+                        Icon(Icons.Default.CalendarMonth, null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("View on Calendar", style = MaterialTheme.typography.labelSmall)
+                    }
                 }
             }
         }
@@ -575,16 +603,168 @@ private fun CategoryItem(
     }
 }
 
-private fun getCategoryColor(category: String): Color {
-    return when (category) {
-        "FOOD" -> Color(0xFFFF7043)
-        "TRANSPORT" -> Color(0xFF42A5F5)
-        "BILLS" -> Color(0xFFFFCA28)
-        "SHOPPING" -> Color(0xFFAB47BC)
-        "ENTERTAINMENT" -> Color(0xFFE91E63)
-        "HEALTH" -> Color(0xFF26A69A)
-        "EDUCATION" -> Color(0xFF5C6BC0)
-        else -> Color(0xFF78909C)
+    private fun getCategoryColor(category: String): Color {
+        return when (category) {
+            "FOOD" -> Color(0xFFFF7043)
+            "TRANSPORT" -> Color(0xFF42A5F5)
+            "BILLS" -> Color(0xFFFFCA28)
+            "SHOPPING" -> Color(0xFFAB47BC)
+            "ENTERTAINMENT" -> Color(0xFFE91E63)
+            "HEALTH" -> Color(0xFF26A69A)
+            "EDUCATION" -> Color(0xFF5C6BC0)
+            else -> Color(0xFF78909C)
+        }
+    }
+
+    @Composable
+    fun NetWorthTrendCard(
+    trendData: List<Pair<Long, Double>>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = BackgroundCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            PrimaryGreen.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        ) {
+            if (trendData.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ShowChart,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(48.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Net Worth Trend",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "Not enough data",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(text = "\uD83D\uDCB0", fontSize = 16.sp)
+                        Text(
+                            text = "Net Worth Trend",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    val lastValue = trendData.lastOrNull()?.second ?: 0.0
+                    val firstValue = trendData.firstOrNull()?.second ?: 0.0
+                    val changePercent = if (firstValue != 0.0) ((lastValue - firstValue) / firstValue) * 100 else 0.0
+                    val isUp = changePercent >= 0
+                    val trendColor = if (isUp) PrimaryGreen else ExpenseRed
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            text = CurrencyFormatter.format(lastValue),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Surface(
+                            color = if (isUp) PrimaryGreen.copy(alpha = 0.15f) else ExpenseRed.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(99.dp)
+                        ) {
+                            Text(
+                                text = "${if (isUp) "+" else ""}${"%.1f".format(changePercent)}%",
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = trendColor,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Text(
+                        text = "Last 30 days",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    val values = trendData.map { it.second }
+                    if (values.isNotEmpty()) {
+                        val maxVal = values.maxOrNull() ?: 1.0
+                        val minVal = values.minOrNull() ?: 0.0
+                        val rangeVal = (maxVal - minVal).coerceAtLeast(1.0)
+
+                        Canvas(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(60.dp)
+                        ) {
+                            val stepX = size.width / (values.size - 1).coerceAtLeast(1)
+                            val points = values.mapIndexed { index, value ->
+                                val x = index * stepX
+                                val y = size.height - ((value - minVal) / rangeVal * size.height).toFloat()
+                                Offset(x, y)
+                            }
+
+                            val linePath = Path().apply {
+                                if (points.isNotEmpty()) {
+                                    moveTo(points.first().x, points.first().y)
+                                    points.drop(1).forEach { lineTo(it.x, it.y) }
+                                }
+                            }
+                            drawPath(
+                                path = linePath,
+                                color = trendColor,
+                                style = Stroke(width = 2.5f)
+                            )
+
+                            if (points.isNotEmpty()) {
+                                val first = points.first()
+                                val last = points.last()
+                                drawCircle(color = trendColor, radius = 3f, center = first)
+                                drawCircle(color = trendColor, radius = 4f, center = last)
+                                drawCircle(color = Color.White, radius = 2f, center = last)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -785,6 +965,145 @@ fun NetWorthCard(
                 contentDescription = "View Details",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+        }
+    }
+}
+
+@Composable
+fun RoundUpCard(
+    totalSaved: Double,
+    goalName: String?,
+    goalProgress: Float,
+    isEnabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = BackgroundCard),
+        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() }
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            PrimaryGreen.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(PrimaryGreen.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Savings,
+                            contentDescription = null,
+                            tint = PrimaryGreen,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Text(
+                        text = "Round-Up Savings",
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                }
+
+                Spacer(Modifier.height(12.dp))
+
+                if (isEnabled && goalName != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Total Saved",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = CurrencyFormatter.formatBDT(totalSaved),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryGreen
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = goalName,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = "${(goalProgress * 100).toInt()}%",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = PrimaryGreen
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    LinearProgressIndicator(
+                        progress = { goalProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = PrimaryGreen,
+                        trackColor = PrimaryGreen.copy(alpha = 0.15f)
+                    )
+                } else if (isEnabled) {
+                    Text(
+                        text = "Link a savings goal in Settings to start rounding up",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = TextSecondary
+                    )
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "Round-Up Savings",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = CurrencyFormatter.formatBDT(totalSaved),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
+                        Text(
+                            text = "Tap to enable",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = PrimaryGreen,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
         }
     }
 }

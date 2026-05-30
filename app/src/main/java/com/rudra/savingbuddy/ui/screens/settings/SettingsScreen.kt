@@ -67,6 +67,9 @@ fun SettingsScreen(
     var showThemeDialog by remember { mutableStateOf(false) }
     var showStartHourPicker by remember { mutableStateOf(false) }
     var showEndHourPicker by remember { mutableStateOf(false) }
+    var showRoundUpGoalDialog by remember { mutableStateOf(false) }
+    var showRoundUpTypeDialog by remember { mutableStateOf(false) }
+    var showRoundUpMultiplierDialog by remember { mutableStateOf(false) }
 
     val settingsSections = listOf(
         SettingsSection("Appearance", Icons.Outlined.Palette, listOf(
@@ -82,6 +85,13 @@ fun SettingsScreen(
             SettingsItem("Monthly Budget", "৳${CurrencyFormatter.formatBDT(uiState.budget?.monthlyLimit ?: 0.0)}", Icons.Outlined.Wallet, Color(0xFF4CAF50), SettingsAction.Dialog),
             SettingsItem("Budget Alerts", "Alert at 80%", Icons.Outlined.NotificationsActive, Color(0xFFFF9800), SettingsAction.Toggle, { Switch(checked = uiState.budgetAlertEnabled, onCheckedChange = { viewModel.setBudgetAlert(it) }) }),
             SettingsItem("Goal Reminders", "Weekly progress", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Toggle, { Switch(checked = uiState.goalReminderEnabled, onCheckedChange = { viewModel.setGoalReminder(it) }) })
+        )),
+        SettingsSection("Round-Ups", Icons.Outlined.Savings, listOf(
+            SettingsItem("Enable Round-Ups", if (uiState.roundUpEnabled) "On" else "Off", Icons.Outlined.Savings, Color(0xFF4CAF50), SettingsAction.Toggle, { Switch(checked = uiState.roundUpEnabled, onCheckedChange = { viewModel.setRoundUpEnabled(it) }) }),
+            SettingsItem("Linked Goal", uiState.activeGoals.firstOrNull { it.id == uiState.roundUpGoalId }?.name ?: "None", Icons.Outlined.Flag, Color(0xFFE91E63), SettingsAction.Dialog),
+            SettingsItem("Round-Up Type", when (uiState.roundUpType) { "NEAREST_50" -> "Nearest \$50"; "NEAREST_100" -> "Nearest \$100"; else -> "Nearest \$10" }, Icons.Outlined.TrendingUp, Color(0xFFFF9800), SettingsAction.Dialog),
+            SettingsItem("Multiplier", "${uiState.roundUpMultiplier}x", Icons.Outlined.Repeat, Color(0xFF2196F3), SettingsAction.Dialog),
+            SettingsItem("Total Saved", CurrencyFormatter.formatBDT(uiState.totalRoundUpSaved), Icons.Outlined.AccountBalance, Color(0xFF4CAF50), SettingsAction.None)
         )),
         SettingsSection("Accounts", Icons.Outlined.AccountBalanceWallet, listOf(
             SettingsItem("Default Account", "All Accounts", Icons.Outlined.AccountBalanceWallet, Color(0xFF2196F3), SettingsAction.Navigation),
@@ -170,6 +180,9 @@ fun SettingsScreen(
                         "Terms of Service" -> navController?.navigate("terms_of_service")
                         "App Language" -> navController?.navigate("language_settings")
                         "Investment Tracking" -> navController?.navigate("investment_tracker")
+                        "Linked Goal" -> showRoundUpGoalDialog = true
+                        "Round-Up Type" -> showRoundUpTypeDialog = true
+                        "Multiplier" -> showRoundUpMultiplierDialog = true
                     }
                 })
             }
@@ -270,6 +283,41 @@ fun SettingsScreen(
             currentHour = uiState.darkModeEndHour,
             onDismiss = { showEndHourPicker = false },
             onSelect = { viewModel.setDarkModeEndHour(it); showEndHourPicker = false }
+        )
+    }
+
+    if (showRoundUpGoalDialog) {
+        SelectionDialog(
+            title = "Select Goal",
+            options = listOf("None") + uiState.activeGoals.map { it.name },
+            selectedOption = uiState.activeGoals.firstOrNull { it.id == uiState.roundUpGoalId }?.name ?: "None",
+            onDismiss = { showRoundUpGoalDialog = false },
+            onSelect = { selected ->
+                val goalId = if (selected == "None") null
+                    else uiState.activeGoals.firstOrNull { it.name == selected }?.id
+                viewModel.setRoundUpGoalId(goalId)
+                showRoundUpGoalDialog = false
+            }
+        )
+    }
+
+    if (showRoundUpTypeDialog) {
+        SelectionDialog(
+            title = "Round-Up Type",
+            options = listOf("NEAREST_10", "NEAREST_50", "NEAREST_100"),
+            selectedOption = uiState.roundUpType,
+            onDismiss = { showRoundUpTypeDialog = false },
+            onSelect = { viewModel.setRoundUpType(it); showRoundUpTypeDialog = false }
+        )
+    }
+
+    if (showRoundUpMultiplierDialog) {
+        SelectionDialog(
+            title = "Multiplier",
+            options = listOf("1", "2", "3"),
+            selectedOption = uiState.roundUpMultiplier.toString(),
+            onDismiss = { showRoundUpMultiplierDialog = false },
+            onSelect = { viewModel.setRoundUpMultiplier(it.toIntOrNull() ?: 1); showRoundUpMultiplierDialog = false }
         )
     }
 }

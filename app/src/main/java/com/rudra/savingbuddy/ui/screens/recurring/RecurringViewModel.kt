@@ -1,15 +1,20 @@
 package com.rudra.savingbuddy.ui.screens.recurring
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.*
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
+import com.rudra.savingbuddy.util.RecurringDetector
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import javax.inject.Inject
+import org.json.JSONArray
+import org.json.JSONObject
 
 data class RecurringItem(
     val id: Long,
@@ -53,7 +58,10 @@ data class RecurringUiState(
     val totalMonthlyIncome: Double = 0.0,
     val totalMonthlyExpense: Double = 0.0,
     val commitmentsTotal: Double = 0.0,
-    val warnings: List<String> = emptyList()
+    val warnings: List<String> = emptyList(),
+    val detectedPatterns: List<DetectedTransaction> = emptyList(),
+    val isDetecting: Boolean = false,
+    val hasNewPatterns: Boolean = false
 )
 
 data class UpcomingTransaction(
@@ -64,7 +72,9 @@ data class UpcomingTransaction(
 @HiltViewModel
 class RecurringViewModel @Inject constructor(
     private val incomeRepository: IncomeRepository,
-    private val expenseRepository: ExpenseRepository
+    private val expenseRepository: ExpenseRepository,
+    private val recurringDetector: RecurringDetector,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(RecurringUiState())
@@ -436,4 +446,139 @@ class RecurringViewModel @Inject constructor(
     fun refresh() {
         loadRecurringItems()
     }
+
+    fun detectRecurringPatterns() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isDetecting = true) }
+
+            val endDate = System.currentTimeMillis()
+            val startDate = endDate - 180L * 24 * 60 * 60 * 1000
+
+            val incomes = incomeRepository.getIncomesInDateRange(startDate, endDate)
+            val expenses = expenseRepository.getExpensesInDateRange(startDate, endDate)
+
+            val patterns = recurringDetector.detectPatterns(incomes, expenses)
+            val dismissedKeys = loadDismissedPatternKeys()
+
+            val newPatterns = patterns.filter { pattern ->
+                val key = "${pattern.description}_${pattern.amount}_${pattern.category}"
+                key !in dismissedKeys
+            }
+
+            _uiState.update { it.copy(
+                detectedPatterns = newPatterns,
+                isDetecting = false,
+                hasNewPatterns = newPatterns.isNotEmpty()
+            )}
+        }
+    }
+
+    fun dismissPattern(pattern: DetectedTransaction) {
+        viewModelScope.launch {
+            val dismissed = loadDismissedPatterns().toMutableList()
+            dismissed.add(DismissedPattern(
+                description = pattern.description,
+                amount = pattern.amount,
+                category = pattern.category,
+                dismissedAt = System.currentTimeMillis()
+            ))
+            saveDismissedPatterns(dismissed)
+
+            _uiState.update { state ->
+                state.copy(
+                    detectedPatterns = state.detectedPatterns.filter {
+                        !(it.description == pattern.description &&
+                          it.amount == pattern.amount &&
+                          it.category == pattern.category)
+                    }
+                )
+            }
+        }
+    }
+
+    fun applyPattern(pattern: DetectedTransaction) {
+        viewModelScope.launch {
+            if (pattern.type == TransactionType.INCOME) {
+                val category = try {
+                    IncomeCategory.valueOf(pattern.category)
+                } catch (e: Exception) {
+                    IncomeCategory.OTHERS
+                }
+                incomeRepository.insertIncome(
+                    Income(
+                        source = pattern.description,
+                        amount = pattern.amount,
+                        category = category,
+                        date = System.currentTimeMillis(),
+                        isRecurring = true,
+                        recurringInterval = pattern.suggestedInterval
+                    )
+                )
+            } else {
+                val category = try {
+                    ExpenseCategory.valueOf(pattern.category)
+                } catch (e: Exception) {
+                    ExpenseCategory.OTHERS
+                }
+                expenseRepository.insertExpense(
+                    Expense(
+                        amount = pattern.amount,
+                        category = category,
+                        date = System.currentTimeMillis(),
+                        notes = pattern.description,
+                        isRecurring = true,
+                        recurringInterval = pattern.suggestedInterval
+                    )
+                )
+            }
+            dismissPattern(pattern)
+            loadRecurringItems()
+        }
+    }
+
+    private fun loadDismissedPatternKeys(): Set<String> {
+        val json = prefs().getString("dismissed_patterns", "[]") ?: "[]"
+        val arr = try { JSONArray(json) } catch (e: Exception) { JSONArray() }
+        val keys = mutableSetOf<String>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.optJSONObject(i)
+            if (obj != null) {
+                keys.add("${obj.optString("description")}_${obj.optDouble("amount")}_${obj.optString("category")}")
+            }
+        }
+        return keys
+    }
+
+    private fun loadDismissedPatterns(): List<DismissedPattern> {
+        val json = prefs().getString("dismissed_patterns", "[]") ?: "[]"
+        val arr = try { JSONArray(json) } catch (e: Exception) { JSONArray() }
+        val list = mutableListOf<DismissedPattern>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.optJSONObject(i)
+            if (obj != null) {
+                list.add(DismissedPattern(
+                    description = obj.optString("description"),
+                    amount = obj.optDouble("amount"),
+                    category = obj.optString("category"),
+                    dismissedAt = obj.optLong("dismissedAt")
+                ))
+            }
+        }
+        return list
+    }
+
+    private fun saveDismissedPatterns(patterns: List<DismissedPattern>) {
+        val arr = JSONArray()
+        patterns.forEach { p ->
+            arr.put(JSONObject().apply {
+                put("description", p.description)
+                put("amount", p.amount)
+                put("category", p.category)
+                put("dismissedAt", p.dismissedAt)
+            })
+        }
+        prefs().edit().putString("dismissed_patterns", arr.toString()).apply()
+    }
+
+    private fun prefs() = context.getSharedPreferences("recurring_detection", Context.MODE_PRIVATE)
 }

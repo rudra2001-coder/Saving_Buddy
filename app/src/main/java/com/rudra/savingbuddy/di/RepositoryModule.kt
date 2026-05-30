@@ -97,7 +97,8 @@ object RepositoryModule {
         incomeDao: IncomeDao,
         expenseDao: ExpenseDao,
         transferDao: TransferDao,
-        goalDao: GoalDao
-    ): FusionRepository = FusionRepositoryImpl(accountDao, incomeDao, expenseDao, transferDao, goalDao)
+        goalDao: GoalDao,
+        accountBalanceHistoryDao: AccountBalanceHistoryDao
+    ): FusionRepository = FusionRepositoryImpl(accountDao, incomeDao, expenseDao, transferDao, goalDao, accountBalanceHistoryDao)
 
     }
