@@ -18,6 +18,15 @@ interface BillReminderDao {
     @Query("SELECT * FROM bill_reminders WHERE isActive = 1")
     suspend fun getBillsForNotification(): List<BillReminderEntity>
 
+    @Query("UPDATE bill_reminders SET paidMonths = :paidMonths WHERE id = :id")
+    suspend fun updatePaidMonths(id: Long, paidMonths: String?)
+
+    @Query("UPDATE bill_reminders SET lastProcessedMonth = :month WHERE id = :id")
+    suspend fun updateLastProcessedMonth(id: Long, month: String?)
+
+    @Query("UPDATE bill_reminders SET payFromAccountId = :accountId WHERE id = :id")
+    suspend fun updatePayFromAccount(id: Long, accountId: Long?)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertBillReminder(bill: BillReminderEntity): Long
 

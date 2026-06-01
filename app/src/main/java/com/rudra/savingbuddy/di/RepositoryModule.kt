@@ -68,7 +68,7 @@ object RepositoryModule {
 
     @Provides
     @Singleton
-    fun provideBillReminderRepository(billReminderDao: BillReminderDao): BillReminderRepository = BillReminderRepositoryImpl(billReminderDao)
+    fun provideBillReminderRepository(billReminderDao: BillReminderDao, accountDao: AccountDao): BillReminderRepository = BillReminderRepositoryImpl(billReminderDao, accountDao)
 
     @Provides
     @Singleton

@@ -14,4 +14,8 @@ interface BillReminderRepository {
     suspend fun updateBillActiveStatus(id: Long, isActive: Boolean)
     suspend fun updateNotificationEnabled(id: Long, enabled: Boolean)
     suspend fun updateLastNotifiedDate(id: Long, date: Long)
+    suspend fun payBill(billId: Long, fromAccountId: Long, months: List<String>): Boolean
+    suspend fun updatePaidMonths(billId: Long, months: List<String>)
+    suspend fun updatePayFromAccount(billId: Long, accountId: Long?)
+    suspend fun getCurrentMonthKey(): String
 }

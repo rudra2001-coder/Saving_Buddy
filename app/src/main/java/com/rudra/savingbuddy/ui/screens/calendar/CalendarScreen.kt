@@ -85,76 +85,107 @@ fun CalendarScreen(
             )
         }
     ) { padding ->
-        Column(
+        val transactions = selectedDate?.let { viewModel.getTransactionsForDate(it) } ?: emptyList()
+
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
+            contentPadding = PaddingValues(bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // Upcoming Bills Card
             if (uiState.showBills && uiState.upcomingBills.isNotEmpty()) {
-                UpcomingBillsCard(
-                    upcomingBills = uiState.upcomingBills,
-                    totalBillsDue = uiState.totalBillsDue,
-                    onViewAllBills = { navController?.navigate("bills") },
-                    viewModel = viewModel
-                )
+                item {
+                    UpcomingBillsCard(
+                        upcomingBills = uiState.upcomingBills,
+                        totalBillsDue = uiState.totalBillsDue,
+                        onViewAllBills = { navController?.navigate("bills") },
+                        viewModel = viewModel
+                    )
+                }
             }
 
             // Month Summary Card
-            MonthlySummaryCard(
-                month = currentMonth,
-                income = uiState.monthlyIncome,
-                expense = uiState.monthlyExpense,
-                net = uiState.monthlyNet,
-                billCount = if (uiState.showBills) uiState.billsByDate.values.flatten().size else 0,
-                totalBillsDue = if (uiState.showBills) uiState.totalBillsDue else 0.0
-            )
+            item {
+                MonthlySummaryCard(
+                    month = currentMonth,
+                    income = uiState.monthlyIncome,
+                    expense = uiState.monthlyExpense,
+                    net = uiState.monthlyNet,
+                    billCount = if (uiState.showBills) uiState.billsByDate.values.flatten().size else 0,
+                    totalBillsDue = if (uiState.showBills) uiState.totalBillsDue else 0.0
+                )
+            }
 
             // Filter Chips
-            FilterChipsRow(
-                selectedFilter = uiState.filterType,
-                showBills = uiState.showBills,
-                onFilterSelected = { viewModel.setFilter(it) },
-                onToggleBills = { viewModel.toggleShowBills() }
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
+            item {
+                FilterChipsRow(
+                    selectedFilter = uiState.filterType,
+                    showBills = uiState.showBills,
+                    onFilterSelected = { viewModel.setFilter(it) },
+                    onToggleBills = { viewModel.toggleShowBills() }
+                )
+            }
 
             // Month Navigation
-            MonthNavigator(
-                currentMonth = currentMonth,
-                onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
-                onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
-            )
+            item {
+                MonthNavigator(
+                    currentMonth = currentMonth,
+                    onPreviousMonth = { currentMonth = currentMonth.minusMonths(1) },
+                    onNextMonth = { currentMonth = currentMonth.plusMonths(1) }
+                )
+            }
 
             // Day of Week Headers
-            DayOfWeekHeader()
-
-            Spacer(modifier = Modifier.height(8.dp))
+            item {
+                DayOfWeekHeader()
+            }
 
             // Calendar Grid
-            CalendarGrid(
-                currentMonth = currentMonth,
-                daysInMonth = daysInMonth,
-                selectedDate = selectedDate,
-                viewModel = viewModel,
-                onDateSelected = { date ->
-                    selectedDate = date
-                    val bills = viewModel.getBillsOnDate(date)
-                    if (bills.isNotEmpty()) {
-                        selectedBillDate = date
-                        showBillSheet = true
+            item {
+                CalendarGrid(
+                    currentMonth = currentMonth,
+                    daysInMonth = daysInMonth,
+                    selectedDate = selectedDate,
+                    viewModel = viewModel,
+                    onDateSelected = { date ->
+                        selectedDate = date
+                        val bills = viewModel.getBillsOnDate(date)
+                        if (bills.isNotEmpty()) {
+                            selectedBillDate = date
+                            showBillSheet = true
+                        }
+                    }
+                )
+            }
+
+            // Selected Date Header
+            item {
+                SelectedDateHeader(
+                    selectedDate = selectedDate,
+                    transactionCount = transactions.size
+                )
+            }
+
+            if (selectedDate != null) {
+                if (transactions.isEmpty()) {
+                    item {
+                        EmptyDateState()
+                    }
+                } else {
+                    items(transactions) { transaction ->
+                        TransactionItem(
+                            transaction = transaction,
+                            onClick = {}
+                        )
                     }
                 }
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Selected Date Transactions
-            SelectedDateTransactions(
-                selectedDate = selectedDate,
-                viewModel = viewModel
-            )
+            } else {
+                item {
+                    SelectDatePrompt()
+                }
+            }
         }
 
         // Bill Bottom Sheet
@@ -479,114 +510,95 @@ private fun CalendarDayCell(
 }
 
 @Composable
-private fun SelectedDateTransactions(
+private fun SelectedDateHeader(
     selectedDate: LocalDate?,
-    viewModel: CalendarViewModel
+    transactionCount: Int
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-    ) {
-        if (selectedDate != null) {
-            val transactions = viewModel.getTransactionsForDate(selectedDate)
-            val daySummary = viewModel.getDaySummary(selectedDate)
-
-            Card(
+    if (selectedDate != null) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            )
+        ) {
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    .padding(12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = DateUtils.formatDate(
+                        selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    ),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
                 )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                if (transactionCount > 0) {
                     Text(
-                        text = DateUtils.formatDate(
-                            selectedDate.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-                        ),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    if (transactions.isNotEmpty()) {
-                        Text(
-                            text = "${transactions.size} txns",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            if (transactions.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(
-                            Icons.Default.EventBusy,
-                            contentDescription = null,
-                            modifier = Modifier.size(48.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "No transactions on this date",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    items(transactions) { transaction ->
-                        TransactionItem(
-                            transaction = transaction,
-                            onClick = {}
-                        )
-                    }
-                }
-            }
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        Icons.Default.TouchApp,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                    )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Select a date to view transactions",
-                        style = MaterialTheme.typography.bodyMedium,
+                        text = "$transactionCount txns",
+                        style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun EmptyDateState() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.EventBusy,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "No transactions on this date",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun SelectDatePrompt() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                Icons.Default.TouchApp,
+                contentDescription = null,
+                modifier = Modifier.size(48.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Select a date to view transactions",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }

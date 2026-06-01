@@ -14,14 +14,17 @@ object BillReminderMapper {
             billingCycle = bill.billingCycle.name,
             category = bill.category,
             isActive = bill.isActive,
-            isPaid = false,
+            isPaid = bill.paidMonths.isNotEmpty(),
             lastPaidDate = null,
-            nextDueDate = bill.createdAt + (30L * 24 * 60 * 60 * 1000),
-            accountId = null,
+            nextDueDate = calculateNextDueDate(bill.billingDay, bill.billingCycle, bill.createdAt),
+            accountId = bill.payFromAccountId,
             autoPay = false,
             remindDaysBefore = bill.notifyDaysBefore.firstOrNull() ?: 3,
             notes = bill.notes,
-            createdAt = bill.createdAt
+            createdAt = bill.createdAt,
+            payFromAccountId = bill.payFromAccountId,
+            paidMonths = if (bill.paidMonths.isEmpty()) null else bill.paidMonths.joinToString(","),
+            lastProcessedMonth = bill.lastProcessedMonth
         )
     }
 
@@ -38,7 +41,18 @@ object BillReminderMapper {
             isNotificationEnabled = true,
             notes = entity.notes,
             lastNotifiedDate = null,
-            createdAt = entity.createdAt
+            createdAt = entity.createdAt,
+            payFromAccountId = entity.payFromAccountId ?: entity.accountId,
+            paidMonths = entity.paidMonths?.split(",")?.filter { it.isNotBlank() } ?: emptyList(),
+            lastProcessedMonth = entity.lastProcessedMonth
         )
+    }
+
+    private fun calculateNextDueDate(billingDay: Int, billingCycle: BillCycle, createdAt: Long): Long {
+        val cal = java.util.Calendar.getInstance().apply {
+            timeInMillis = createdAt
+            set(java.util.Calendar.DAY_OF_MONTH, billingDay.coerceAtMost(28))
+        }
+        return cal.timeInMillis
     }
 }

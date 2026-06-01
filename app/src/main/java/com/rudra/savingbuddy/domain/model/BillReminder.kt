@@ -12,7 +12,10 @@ data class BillReminder(
     val isNotificationEnabled: Boolean = true,
     val notes: String? = null,
     val lastNotifiedDate: Long? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val payFromAccountId: Long? = null,
+    val paidMonths: List<String> = emptyList(),
+    val lastProcessedMonth: String? = null
 )
 
 enum class BillCycle(val displayName: String, val daysInCycle: Int) {

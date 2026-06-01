@@ -22,7 +22,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.rudra.savingbuddy.domain.model.BillCycle
@@ -60,7 +59,7 @@ fun BillRemindersScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-            title = { 
+            title = {
                 Column {
                     Text("Bill Reminders", fontWeight = FontWeight.Bold)
                     Text("Never miss a payment", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -108,7 +107,8 @@ fun BillRemindersScreen(
                         monthlyTotal = uiState.totalMonthlyAmount,
                         weeklyTotal = uiState.totalWeeklyAmount,
                         upcomingCount = uiState.upcomingBillsCount,
-                        activeCount = uiState.bills.count { it.isActive }
+                        activeCount = uiState.bills.count { it.isActive },
+                        paidCount = uiState.bills.count { it.isPaidForCurrentMonth() }
                     )
                 }
 
@@ -130,7 +130,8 @@ fun BillRemindersScreen(
                         onEdit = { editingBill = bill },
                         onDelete = { billToDelete = bill },
                         onToggleActive = { viewModel.toggleBillActive(bill.id, !bill.isActive) },
-                        onToggleNotification = { viewModel.toggleBillNotification(bill.id, !bill.isNotificationEnabled) }
+                        onToggleNotification = { viewModel.toggleBillNotification(bill.id, !bill.isNotificationEnabled) },
+                        onPay = { viewModel.showPayDialog(bill) }
                     )
                 }
 
@@ -192,6 +193,20 @@ fun BillRemindersScreen(
             onSave = { viewModel.updateNotificationSettings(it) }
         )
     }
+
+    if (uiState.showPayDialog && uiState.payingBill != null) {
+        PayBillDialog(
+            bill = uiState.payingBill!!,
+            accounts = uiState.accounts,
+            selectedAccountId = uiState.selectedAccountId,
+            monthsCount = uiState.payMonthsCount,
+            paySuccess = uiState.paySuccess,
+            onSelectAccount = { viewModel.selectPayAccount(it) },
+            onMonthsCountChange = { viewModel.setPayMonthsCount(it) },
+            onConfirm = { viewModel.confirmPayBill() },
+            onDismiss = { viewModel.hidePayDialog() }
+        )
+    }
 }
 
 @Composable
@@ -225,7 +240,8 @@ fun BillsSummaryCard(
     monthlyTotal: Double,
     weeklyTotal: Double,
     upcomingCount: Int,
-    activeCount: Int
+    activeCount: Int,
+    paidCount: Int
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -272,11 +288,11 @@ fun BillsSummaryCard(
                     )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(16.dp))
             HorizontalDivider(color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f))
             Spacer(modifier = Modifier.height(16.dp))
-            
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly
@@ -292,6 +308,12 @@ fun BillsSummaryCard(
                     label = "Active",
                     value = "$activeCount",
                     color = IncomeGreen
+                )
+                SummaryChip(
+                    icon = Icons.Default.Paid,
+                    label = "Paid",
+                    value = "$paidCount",
+                    color = SavingsBlue
                 )
             }
         }
@@ -335,14 +357,17 @@ fun BillCard(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
     onToggleActive: () -> Unit,
-    onToggleNotification: () -> Unit
+    onToggleNotification: () -> Unit,
+    onPay: () -> Unit
 ) {
     val daysUntil = bill.getDaysUntilDue()
     val isUrgent = bill.isUrgent() && bill.isActive
+    val isPaidForMonth = bill.isPaidForCurrentMonth()
 
     val backgroundColor by animateColorAsState(
         targetValue = when {
             !bill.isActive -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+            isPaidForMonth -> IncomeGreen.copy(alpha = 0.08f)
             isUrgent && bill.isDueToday() -> ExpenseRed.copy(alpha = 0.15f)
             isUrgent -> ExpenseRed.copy(alpha = 0.1f)
             else -> MaterialTheme.colorScheme.surface
@@ -359,139 +384,379 @@ fun BillCard(
         colors = CardDefaults.cardColors(containerColor = backgroundColor),
         onClick = onEdit
     ) {
-        Row(
+        Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(16.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(48.dp)
-                    .clip(CircleShape)
-                    .background(
-                        if (bill.isActive) ExpenseRed.copy(alpha = 0.15f)
-                        else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
-                    ),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    categoryIcon,
-                    contentDescription = null,
-                    tint = if (bill.isActive) ExpenseRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
-                    modifier = Modifier.size(24.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        bill.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Medium,
-                        color = if (bill.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                    )
-                    if (!bill.isActive) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            "Paused",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
-                
-                Text(
-                    "${bill.billingCycle.displayName} • ${bill.category}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(
+                            when {
+                                !bill.isActive -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                isPaidForMonth -> IncomeGreen.copy(alpha = 0.15f)
+                                else -> ExpenseRed.copy(alpha = 0.15f)
+                            }
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    val daysText = when {
-                        daysUntil < 0 -> "Overdue"
-                        daysUntil == 0 -> "Due Today"
-                        daysUntil == 1 -> "Due Tomorrow"
-                        else -> "Due in $daysUntil days"
-                    }
-                    
-                    val daysColor = when {
-                        daysUntil < 0 -> ExpenseRed
-                        daysUntil == 0 -> ExpenseRed
-                        daysUntil <= 3 -> WarningOrange
-                        else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                    
                     Icon(
-                        when {
-                            daysUntil < 0 -> Icons.Default.Warning
-                            daysUntil == 0 -> Icons.Default.Today
-                            else -> Icons.Default.Schedule
-                        },
+                        if (isPaidForMonth && bill.isActive) Icons.Default.CheckCircle else categoryIcon,
                         contentDescription = null,
-                        modifier = Modifier.size(14.dp),
-                        tint = daysColor
+                        tint = when {
+                            !bill.isActive -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                            isPaidForMonth -> IncomeGreen
+                            else -> ExpenseRed
+                        },
+                        modifier = Modifier.size(24.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            bill.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Medium,
+                            color = if (bill.isActive) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                        if (!bill.isActive) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Paused",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else if (isPaidForMonth) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                "Paid",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = IncomeGreen,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
                     Text(
-                        daysText,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = daysColor,
-                        fontWeight = if (daysUntil <= 3) FontWeight.Bold else FontWeight.Normal
+                        "${bill.billingCycle.displayName} \u2022 ${bill.category}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    
-                    if (bill.isNotificationEnabled && bill.isActive) {
-                        Spacer(modifier = Modifier.width(12.dp))
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(top = 4.dp)
+                    ) {
+                        val daysText = when {
+                            !bill.isActive -> "Paused"
+                            isPaidForMonth -> "Paid for this month"
+                            daysUntil < 0 -> "Overdue"
+                            daysUntil == 0 -> "Due Today"
+                            daysUntil == 1 -> "Due Tomorrow"
+                            else -> "Due in $daysUntil days"
+                        }
+
+                        val daysColor = when {
+                            isPaidForMonth -> IncomeGreen
+                            daysUntil < 0 -> ExpenseRed
+                            daysUntil == 0 -> ExpenseRed
+                            daysUntil <= 3 -> WarningOrange
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+
                         Icon(
-                            Icons.Default.Notifications,
-                            contentDescription = "Notifications on",
+                            when {
+                                isPaidForMonth -> Icons.Default.CheckCircle
+                                daysUntil < 0 -> Icons.Default.Warning
+                                daysUntil == 0 -> Icons.Default.Today
+                                else -> Icons.Default.Schedule
+                            },
+                            contentDescription = null,
                             modifier = Modifier.size(14.dp),
-                            tint = IncomeGreen
+                            tint = daysColor
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            daysText,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = daysColor,
+                            fontWeight = if (daysUntil <= 3 && !isPaidForMonth) FontWeight.Bold else FontWeight.Normal
+                        )
+
+                        if (bill.isNotificationEnabled && bill.isActive && !isPaidForMonth) {
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Icon(
+                                Icons.Default.Notifications,
+                                contentDescription = "Notifications on",
+                                modifier = Modifier.size(14.dp),
+                                tint = IncomeGreen
+                            )
+                        }
+                    }
+
+                    if (bill.paidMonths.isNotEmpty() && bill.isActive) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "Paid: ${bill.paidMonths.takeLast(3).joinToString(", ")}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = IncomeGreen.copy(alpha = 0.7f)
                         )
                     }
                 }
-            }
 
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    CurrencyFormatter.format(bill.amount),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = if (bill.isActive) ExpenseRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                )
-                
-                Row {
-                    IconButton(
-                        onClick = onToggleNotification,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            if (bill.isNotificationEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
-                            contentDescription = "Toggle notification",
-                            modifier = Modifier.size(18.dp),
-                            tint = if (bill.isNotificationEnabled) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(
-                        onClick = onDelete,
-                        modifier = Modifier.size(32.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Delete",
-                            modifier = Modifier.size(18.dp),
-                            tint = ExpenseRed.copy(alpha = 0.7f)
-                        )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        CurrencyFormatter.format(bill.amount),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = if (bill.isActive) ExpenseRed else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
+
+                    Row {
+                        if (bill.isActive && !isPaidForMonth) {
+                            IconButton(
+                                onClick = onPay,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Payments,
+                                    contentDescription = "Pay bill",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = IncomeGreen
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = onToggleNotification,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                if (bill.isNotificationEnabled) Icons.Default.NotificationsActive else Icons.Default.NotificationsOff,
+                                contentDescription = "Toggle notification",
+                                modifier = Modifier.size(18.dp),
+                                tint = if (bill.isNotificationEnabled) IncomeGreen else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        IconButton(
+                            onClick = onDelete,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                modifier = Modifier.size(18.dp),
+                                tint = ExpenseRed.copy(alpha = 0.7f)
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PayBillDialog(
+    bill: BillItem,
+    accounts: List<com.rudra.savingbuddy.domain.model.Account>,
+    selectedAccountId: Long?,
+    monthsCount: Int,
+    paySuccess: Boolean?,
+    onSelectAccount: (Long) -> Unit,
+    onMonthsCountChange: (Int) -> Unit,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val totalAmount = bill.amount * monthsCount
+    var accountExpanded by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                if (paySuccess == true) "Payment Successful" else "Pay ${bill.name}"
+            )
+        },
+        text = {
+            if (paySuccess == true) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = IncomeGreen
+                    )
+                    Text(
+                        "${CurrencyFormatter.format(totalAmount)} paid successfully",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = IncomeGreen
+                    )
+                    Text(
+                        "for ${monthsCount} month${if (monthsCount > 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (paySuccess == false) {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Error,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = ExpenseRed
+                    )
+                    Text(
+                        "Insufficient balance or payment failed",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = ExpenseRed
+                    )
+                }
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Amount per month", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            CurrencyFormatter.format(bill.amount),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Pay for months", style = MaterialTheme.typography.bodyMedium)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(
+                                onClick = { onMonthsCountChange(monthsCount - 1) },
+                                enabled = monthsCount > 1,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Remove, contentDescription = "Decrease", modifier = Modifier.size(18.dp))
+                            }
+                            Text(
+                                "$monthsCount",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            IconButton(
+                                onClick = { onMonthsCountChange(monthsCount + 1) },
+                                enabled = monthsCount < 12,
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Increase", modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(
+                            CurrencyFormatter.format(totalAmount),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = ExpenseRed
+                        )
+                    }
+
+                    ExposedDropdownMenuBox(
+                        expanded = accountExpanded,
+                        onExpandedChange = { accountExpanded = it }
+                    ) {
+                        val selectedAccount = accounts.find { it.id == selectedAccountId }
+                        OutlinedTextField(
+                            value = selectedAccount?.let { "${it.name} (${CurrencyFormatter.format(it.balance)})" } ?: "Select account",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Pay from account") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor()
+                        )
+                        ExposedDropdownMenu(
+                            expanded = accountExpanded,
+                            onDismissRequest = { accountExpanded = false }
+                        ) {
+                            accounts.forEach { account ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(account.name)
+                                            Text(
+                                                CurrencyFormatter.format(account.balance),
+                                                color = if (account.balance >= totalAmount) IncomeGreen else ExpenseRed,
+                                                style = MaterialTheme.typography.bodySmall
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onSelectAccount(account.id)
+                                        accountExpanded = false
+                                    },
+                                    enabled = account.balance >= totalAmount
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (paySuccess == null) {
+                TextButton(
+                    onClick = onConfirm,
+                    enabled = selectedAccountId != null && totalAmount > 0
+                ) {
+                    Text("Pay ${CurrencyFormatter.format(totalAmount)}")
+                }
+            } else {
+                TextButton(onClick = onDismiss) {
+                    Text("Done")
+                }
+            }
+        },
+        dismissButton = {
+            if (paySuccess == null) {
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+            }
+        }
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -510,7 +775,7 @@ fun AddBillDialog(
     var notify1Day by remember { mutableStateOf(true) }
     var isNotificationEnabled by remember { mutableStateOf(true) }
     var notes by remember { mutableStateOf("") }
-    
+
     var categoryExpanded by remember { mutableStateOf(false) }
     var cycleExpanded by remember { mutableStateOf(false) }
     var dayExpanded by remember { mutableStateOf(false) }
@@ -633,7 +898,7 @@ fun AddBillDialog(
                     style = MaterialTheme.typography.labelMedium,
                     modifier = Modifier.padding(top = 8.dp)
                 )
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -717,7 +982,7 @@ fun EditBillDialog(
     var isActive by remember { mutableStateOf(bill.isActive) }
     var isNotificationEnabled by remember { mutableStateOf(bill.isNotificationEnabled) }
     var notes by remember { mutableStateOf(bill.notes ?: "") }
-    
+
     var categoryExpanded by remember { mutableStateOf(false) }
     var cycleExpanded by remember { mutableStateOf(false) }
     var dayExpanded by remember { mutableStateOf(false) }
@@ -741,7 +1006,7 @@ fun EditBillDialog(
                         onCheckedChange = { isActive = it }
                     )
                 }
-                
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -878,7 +1143,10 @@ fun EditBillDialog(
                         notifyDaysBefore = bill.notifyDaysBefore,
                         isNotificationEnabled = isNotificationEnabled,
                         notes = notes.ifBlank { null },
-                        createdAt = System.currentTimeMillis()
+                        createdAt = System.currentTimeMillis(),
+                        payFromAccountId = bill.payFromAccountId,
+                        paidMonths = bill.paidMonths,
+                        lastProcessedMonth = bill.lastProcessedMonth
                     )
                     onSave(updatedBill)
                 }

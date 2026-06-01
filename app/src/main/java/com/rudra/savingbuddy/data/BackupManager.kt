@@ -430,7 +430,10 @@ class BackupManager @Inject constructor(
         lastPaidDate = lastPaidDate, nextDueDate = nextDueDate,
         accountId = accountId, autoPay = autoPay,
         remindDaysBefore = remindDaysBefore, notes = notes,
-        createdAt = createdAt
+        createdAt = createdAt,
+        payFromAccountId = payFromAccountId,
+        paidMonths = paidMonths,
+        lastProcessedMonth = lastProcessedMonth
     )
 
     private fun BillReminderBackup.toBillReminderEntity() = BillReminderEntity(
@@ -440,7 +443,10 @@ class BackupManager @Inject constructor(
         isPaid = isPaid, lastPaidDate = lastPaidDate,
         nextDueDate = nextDueDate, accountId = accountId,
         autoPay = autoPay, remindDaysBefore = remindDaysBefore,
-        notes = notes, createdAt = createdAt
+        notes = notes, createdAt = createdAt,
+        payFromAccountId = payFromAccountId,
+        paidMonths = paidMonths,
+        lastProcessedMonth = lastProcessedMonth
     )
 
     private fun TransferEntity.toTransactionBackup() = TransactionBackup(

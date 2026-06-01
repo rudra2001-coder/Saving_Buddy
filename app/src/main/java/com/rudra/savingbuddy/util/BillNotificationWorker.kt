@@ -37,8 +37,13 @@ class BillNotificationWorker @AssistedInject constructor(
         val currentDay = today.get(Calendar.DAY_OF_MONTH)
         val currentMonth = today.get(Calendar.MONTH)
         val currentYear = today.get(Calendar.YEAR)
-        
+        val currentMonthKey = "%04d-%02d".format(currentYear, currentMonth + 1)
+
         bills.forEach { bill ->
+            if (bill.paidMonths.contains(currentMonthKey)) {
+                return@forEach
+            }
+
             val daysUntilDue = calculateDaysUntilDue(
                 bill.billingDay,
                 bill.billingCycle,
@@ -46,7 +51,7 @@ class BillNotificationWorker @AssistedInject constructor(
                 currentMonth,
                 currentYear
             )
-            
+
             val shouldNotify = when (daysUntilDue) {
                 3 -> bill.notifyDaysBefore.contains(3)
                 2 -> bill.notifyDaysBefore.contains(2)
@@ -54,11 +59,11 @@ class BillNotificationWorker @AssistedInject constructor(
                 0 -> true
                 else -> false
             }
-            
+
             if (shouldNotify) {
                 val lastNotified = bill.lastNotifiedDate ?: 0L
                 val todayStart = getTodayStartMillis()
-                
+
                 if (lastNotified < todayStart) {
                     sendBillNotification(
                         billId = bill.id,
@@ -81,7 +86,7 @@ class BillNotificationWorker @AssistedInject constructor(
         currentYear: Int
     ): Int {
         val today = Calendar.getInstance()
-        
+
         if (billingDay < currentDay) {
             when (billingCycle) {
                 BillCycle.WEEKLY -> {
@@ -115,11 +120,11 @@ class BillNotificationWorker @AssistedInject constructor(
         } else if (billingDay == currentDay) {
             return 0
         }
-        
+
         val dueDate = Calendar.getInstance().apply {
             set(Calendar.DAY_OF_MONTH, billingDay)
         }
-        
+
         return ((dueDate.timeInMillis - today.timeInMillis) / (24 * 60 * 60 * 1000)).toInt()
     }
 
@@ -190,7 +195,7 @@ class BillNotificationWorker @AssistedInject constructor(
 
         fun scheduleBillReminderCheck(context: Context) {
             val workManager = WorkManager.getInstance(context)
-            
+
             val workRequest = androidx.work.PeriodicWorkRequestBuilder<BillNotificationWorker>(
                 1, java.util.concurrent.TimeUnit.DAYS
             )

@@ -1,17 +1,20 @@
 package com.rudra.savingbuddy.data.repository
 
 import com.rudra.savingbuddy.data.local.converter.BillReminderMapper
+import com.rudra.savingbuddy.data.local.dao.AccountDao
 import com.rudra.savingbuddy.data.local.dao.BillReminderDao
 import com.rudra.savingbuddy.domain.model.BillReminder
 import com.rudra.savingbuddy.domain.repository.BillReminderRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.util.Calendar
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BillReminderRepositoryImpl @Inject constructor(
-    private val billReminderDao: BillReminderDao
+    private val billReminderDao: BillReminderDao,
+    private val accountDao: AccountDao
 ) : BillReminderRepository {
 
     override fun getAllBillReminders(): Flow<List<BillReminder>> {
@@ -54,5 +57,42 @@ class BillReminderRepositoryImpl @Inject constructor(
     }
 
     override suspend fun updateLastNotifiedDate(id: Long, date: Long) {
+    }
+
+    override suspend fun payBill(billId: Long, fromAccountId: Long, months: List<String>): Boolean {
+        val bill = billReminderDao.getBillReminderById(billId) ?: return false
+        val account = accountDao.getAccountById(fromAccountId) ?: return false
+        val totalAmount = bill.amount * months.size
+
+        if (account.balance < totalAmount) return false
+
+        val newBalance = account.balance - totalAmount
+        accountDao.updateBalance(fromAccountId, newBalance)
+
+        val existingPaid = bill.paidMonths?.split(",")?.filter { it.isNotBlank() } ?: emptyList()
+        val allPaid = (existingPaid + months).distinct().sorted()
+        val paidStr = if (allPaid.isEmpty()) null else allPaid.joinToString(",")
+        billReminderDao.updatePaidMonths(billId, paidStr)
+
+        val currentMonth = getCurrentMonthKey()
+        billReminderDao.updateLastProcessedMonth(billId, currentMonth)
+
+        return true
+    }
+
+    override suspend fun updatePaidMonths(billId: Long, months: List<String>) {
+        val paidStr = if (months.isEmpty()) null else months.joinToString(",")
+        billReminderDao.updatePaidMonths(billId, paidStr)
+    }
+
+    override suspend fun updatePayFromAccount(billId: Long, accountId: Long?) {
+        billReminderDao.updatePayFromAccount(billId, accountId)
+    }
+
+    override suspend fun getCurrentMonthKey(): String {
+        val cal = Calendar.getInstance()
+        val year = cal.get(Calendar.YEAR)
+        val month = cal.get(Calendar.MONTH) + 1
+        return "%04d-%02d".format(year, month)
     }
 }

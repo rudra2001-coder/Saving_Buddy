@@ -106,7 +106,10 @@ data class BillReminderBackup(
     val autoPay: Boolean,
     val remindDaysBefore: Int,
     val notes: String?,
-    val createdAt: Long
+    val createdAt: Long,
+    val payFromAccountId: Long? = null,
+    val paidMonths: String? = null,
+    val lastProcessedMonth: String? = null
 )
 
 @Serializable

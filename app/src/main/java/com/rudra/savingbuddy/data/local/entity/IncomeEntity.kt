@@ -124,5 +124,8 @@ data class BillReminderEntity(
     val autoPay: Boolean = false,
     val remindDaysBefore: Int = 3,
     val notes: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val payFromAccountId: Long? = null,
+    val paidMonths: String? = null,
+    val lastProcessedMonth: String? = null
 )

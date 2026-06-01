@@ -43,7 +43,7 @@ import com.rudra.savingbuddy.data.local.entity.UserSettingsEntity
         AccountBalanceHistoryEntity::class,
         InvestmentEntity::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = true
 )
 abstract class SavingBuddyDatabase : RoomDatabase() {
@@ -159,13 +159,22 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE bill_reminders ADD COLUMN payFromAccountId INTEGER")
+                db.execSQL("ALTER TABLE bill_reminders ADD COLUMN paidMonths TEXT")
+                db.execSQL("ALTER TABLE bill_reminders ADD COLUMN lastProcessedMonth TEXT")
+            }
+        }
+
         fun getMigrations(): Array<Migration> = arrayOf(
             MIGRATION_1_2,
             MIGRATION_2_3,
             MIGRATION_3_4,
             MIGRATION_4_5,
             MIGRATION_5_6,
-            MIGRATION_6_7
+            MIGRATION_6_7,
+            MIGRATION_7_8
         )
     }
 }
