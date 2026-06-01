@@ -1,6 +1,6 @@
 # Saving Buddy — Full Project Understanding
 
-> **Last Updated:** 2026-05-20
+> **Last Updated:** 2026-06-02
 > **Package:** `com.rudra.savingbuddy`
 > **Min SDK:** 28 | **Target SDK:** 36 | **Kotlin:** 2.3.20
 
@@ -258,7 +258,7 @@ com.rudra.savingbuddy/
 
 ## 5. Database (Room)
 
-### Database: `saving_buddy_database` (version 7)
+### Database: `saving_buddy_database` (version 8)
 
 ### Entities (11 tables)
 
@@ -268,7 +268,7 @@ com.rudra.savingbuddy/
 | **expense** | id, amount, category, date, isRecurring, recurringInterval, accountId, paymentMethod, receiptImagePath, isApproved | All expense records |
 | **budgets** | id, category, monthlyLimit, spent, month, year, rollover, alertThreshold | Budget limits per category |
 | **goals** | id, name, targetAmount, currentAmount, category, deadline, isCompleted, autoAllocate, notes, iconEmoji, colorHex | Savings goals |
-| **bill_reminders** | id, name, amount, billingDay, billingCycle, isActive, isPaid, accountId, autoPay, remindDaysBefore | Recurring bill reminders |
+| **bill_reminders** | id, name, amount, billingDay, billingCycle, isActive, isPaid, accountId, autoPay, remindDaysBefore, payFromAccountId, paidMonths, lastProcessedMonth | Recurring bill reminders with pay-from-account and multi-month paid tracking |
 | **accounts** | id, name, type, provider, accountNumber, balance, dailyLimit, linkedGoalId, isArchived, displayOrder, metadata | Financial accounts (Wallet, Bank, bKash etc.) |
 | **transfers** | id, fromAccountId, toAccountId, amount, fee, status, reference, category | Money transfers between accounts |
 | **account_balance_history** | id, accountId, date, balance, changeAmount, changeType | Daily balance snapshots |
@@ -276,7 +276,7 @@ com.rudra.savingbuddy/
 | **investments** | id, name, type, amount, currentValue, purchaseDate, notes | Investment portfolio |
 | **user_settings** | key (PK), value, updatedAt | Key-value settings store |
 
-### Migration History (1→7)
+### Migration History (1→8)
 
 | Migration | Changes |
 |---|---|
@@ -286,13 +286,14 @@ com.rudra.savingbuddy/
 | **4→5** | Added `accountId`, `autoPay`, `remindDaysBefore` to bill_reminders; `rollover`, `alertThreshold` to budgets |
 | **5→6** | Created `subscriptions` table |
 | **6→7** | Created `investments` table |
+| **7→8** | Added `payFromAccountId`, `paidMonths`, `lastProcessedMonth` to bill_reminders for payment tracking |
 
 ### Key DAO Features
 - **IncomeDao/ExpenseDao**: Date range queries, category grouping, totals, recurring item queries
 - **AccountDao**: Balance updates, balance history recording, active/archived filtering
 - **TransferDao**: Sent/received totals, daily limits, pattern detection
 - **GoalDao**: Active goal queries, amount updates, allocation source
-- **BillReminderDao**: Notification queries, last notified date updates
+- **BillReminderDao**: Notification queries, paid month tracking (`updatePaidMonths`, `updatePayFromAccount`), last notified date updates
 - **SubscriptionDao**: Upcoming billing queries, notification filtering
 
 ---
@@ -310,6 +311,7 @@ com.rudra.savingbuddy/
 - `ExpenseRepositoryImpl(expenseDao, accountDao)`
 - `FusionRepositoryImpl(accountDao, incomeDao, expenseDao, transferDao, goalDao)`
 - `AccountRepositoryImpl(accountDao, transferDao, balanceHistoryDao)`
+- `BillReminderRepositoryImpl(billReminderDao, accountDao)` — now takes `AccountDao` for bill payment deduction
 - And others...
 
 ### Injection Points
@@ -386,7 +388,7 @@ Full Material 3 typography scale from `displayLarge` to `labelSmall` with premiu
 | **Transfer** | id, fromAccountId, toAccountId, amount, fee, note, status, reference |
 | **Goal** | id, name, targetAmount, currentAmount, category, deadline, progress, daysRemaining |
 | **Budget** | id, monthlyLimit, month, year, categoryLimits, enableRollover, alertThreshold |
-| **BillReminder** | id, name, amount, billingDay, billingCycle, isActive, notifyDaysBefore |
+| **BillReminder** | id, name, amount, billingDay, billingCycle, isActive, notifyDaysBefore, payFromAccountId, paidMonths, lastProcessedMonth |
 | **Subscription** | id, name, amount, billingCycle, nextBillingDate, category, isActive |
 | **Investment** | id, name, type, amount, currentValue, purchaseDate |
 
@@ -468,7 +470,7 @@ Each entity has a corresponding mapper in `data/local/converter/`:
 | **ExpenseRepositoryImpl** | ExpenseDao, AccountDao | CRUD, date range totals, category aggregation |
 | **BudgetRepositoryImpl** | BudgetDao | Get/set budget, category limits |
 | **GoalRepositoryImpl** | GoalDao | CRUD, active goals, amount updates |
-| **BillReminderRepositoryImpl** | BillReminderDao | CRUD, notification queries |
+| **BillReminderRepositoryImpl** | BillReminderDao, AccountDao | CRUD, notification queries, **payBill** (deducts from account and marks months paid) |
 | **AccountRepositoryImpl** | AccountDao, TransferDao, BalanceHistoryDao | CRUD, balance updates, history |
 | **TransferRepositoryImpl** | TransferDao | CRUD, sent/received totals |
 | **SubscriptionRepositoryImpl** | SubscriptionDao | CRUD, upcoming billing |
@@ -552,7 +554,7 @@ The main screen — most complex UI in the app:
 | **AddAccountScreen** | Create new account (Wallet/Bank/Mobile Banking etc.) |
 | **TransferScreen** | Transfer money between accounts |
 | **BudgetScreen** | Budget management with category limits |
-| **BillRemindersScreen** | Manage recurring bills |
+| **BillRemindersScreen** | Manage recurring bills with Pay dialog, account picker, multi-month payment, paid/unpaid tracking |
 | **GoalsScreen** | Savings goals management |
 | **ReportsScreen** | Financial reports |
 | **AnalyticsScreen** | Advanced analytics/charts |
@@ -560,7 +562,7 @@ The main screen — most complex UI in the app:
 | **ExpenseScreen/IncomeScreen** | History lists with filters |
 | **BackupScreen** | Backup/restore management |
 | **CalculatorScreen** | Built-in calculator |
-| **CalendarScreen** | Calendar view of transactions |
+| **CalendarScreen** | Calendar view of transactions (fully scrollable with single LazyColumn) |
 | **CurrencyConverterScreen** | Live forex conversion |
 | **ReceiptScannerScreen** | ML Kit receipt OCR |
 | **InvestmentScreen** | Portfolio tracking |
@@ -642,7 +644,7 @@ The main screen — most complex UI in the app:
 
 | Worker | Schedule | Purpose |
 |---|---|---|
-| **BillNotificationWorker** | Daily periodic | Checks bill due dates, sends notifications at 3/2/1/0 days before due |
+| **BillNotificationWorker** | Daily periodic | Checks bill due dates, skips if already paid for current month, sends notifications at 3/2/1/0 days before due |
 | **SubscriptionNotificationWorker** | Daily periodic | Checks subscription renewal dates, sends reminders |
 | **NotificationWorker** | Daily at configurable time | Daily expense logging reminder |
 | **WeeklyDigestWorker** | Weekly | Weekly recurring transaction summary |
@@ -771,7 +773,7 @@ Grade:
 | Expense Tracking | ✅ Complete | `ExpenseEntity`, `ExpenseScreen`, `AddExpenseScreen` |
 | Budget Management | ✅ Complete | `BudgetEntity`, `BudgetScreen`, `SettingsScreen` |
 | Savings Goals | ✅ Complete | `GoalEntity`, `GoalsScreen` |
-| Bill Reminders | ✅ Complete | `BillReminderEntity`, `BillRemindersScreen` |
+| Bill Reminders | ✅ Complete | `BillReminderEntity`, `BillRemindersScreen` — upgraded with Pay from account, multi-month payment, paid/unpaid month tracking, auto-silence after payment |
 | Multi-Account | ✅ Complete | `AccountEntity`, `AccountsScreen` |
 | Account Transfers | ✅ Complete | `TransferEntity`, `TransferScreen` |
 | Subscriptions | ✅ Complete | `SubscriptionEntity`, `SubscriptionManagerScreen` |

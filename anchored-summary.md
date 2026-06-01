@@ -26,7 +26,7 @@
 - **RecurringScreen.kt**: Insight cards, net monthly card, smart suggestions, premium item cards with bulk mode, details bottom sheet
 - **ReportsScreen.kt**: Top bar with subtitle, premium pill-style tab row (Overview/Logs)
 - **AnalyticsScreen.kt**: Top bar with subtitle, premium period selector, card borders/icons on all 7 card composables
-- **CalendarScreen.kt**: Top bar with subtitle, premium MonthlySummaryCard with gradient accent + border + icon header
+- **CalendarScreen.kt**: Top bar with subtitle, premium MonthlySummaryCard with gradient accent + border + icon header; made fully scrollable via single LazyColumn (nested scroll fixed)
 - **TransactionHistoryScreen.kt**: Subtle borders on TransactionCard, refined header
 - **SettingsScreen.kt**: Borders added to SettingsSectionCard, stats card, and footer card
 - **FusionScreen.kt**: Top bar subtitle, pill-style tab row replacing TabRow, borders on SimpleAssetItem/SimpleEmptyCard/SimpleEmptyInsights
@@ -34,6 +34,19 @@
 - **BillRemindersScreen.kt, CalculatorScreen.kt, CurrencyConverterScreen.kt, GamificationScreen.kt**: Top bar subtitles, premium card styling, section header icons, theme color replacements
 - **InvestmentScreen.kt, LanguageScreen.kt, MusicScreen.kt, NotificationsScreen.kt, ReceiptScannerScreen.kt, SubscriptionManagerScreen.kt**: Top bar subtitles, premium card borders/shapes, theme color replacements
 - **AccountDetailScreen.kt, ExpenseDetailScreen.kt, ChangelogScreen.kt, AdvancedFeaturesScreen.kt**: Top bar subtitles, border/shape/icon upgrades, theme color replacements
+
+### Bill Reminder Payment System Upgrade
+- **Pay from Account**: Each bill card has a payments button; user selects an account and amount is deducted from that account's balance
+- **Multi-Month Payment**: User can choose 1-12 months to pay at once via +/- controls in the Pay dialog
+- **Paid/Unpaid Month Tracking**: Bills track paid months (yyyy-MM) in `paidMonths` column; UI shows "Paid" badge and paid month history
+- **Auto-Silence**: Paid bills skip notifications for that month; unpaid bills keep notifying every cycle
+- **Account Deduction**: `BillReminderRepositoryImpl.payBill()` validates balance and calls `AccountDao.updateBalance()`
+- **Database**: New `MIGRATION_7_8` adds `payFromAccountId`, `paidMonths`, `lastProcessedMonth` to `bill_reminders`
+- **Migration**: Room database updated from v7 → v8
+
+### Calendar Screen Fix
+- **Before**: Root `Column` was non-scrollable with nested `LazyColumn` for transactions (would throw)
+- **After**: Single `LazyColumn` wrapping all sections; transactions rendered via inline `items()` instead of nested lazy list
 
 ### Blocked
 - Gradle build cannot be verified due to Java 25 ↔ Maven Central TLS handshake error (`Tag mismatch` on `symbol-processing-aa-embeddable-2.3.6.jar`)
@@ -44,6 +57,8 @@
 - Category chips use emoji + displayName with selected state (colored background at 0.15f alpha, border 1.5dp colored)
 - Quick amount chips used in both AddExpense (preset amounts) and Transfer (100/500/1000/5000)
 - Subscription/Recurring items use accent color based on status (Gray=paused, ExpenseRed=overdue, WarningOrange=near due, IncomeGreen/ExpenseRed=type)
+- Paid months stored as comma-separated yyyy-MM strings in SQLite for simple querying
+- Pay dialog uses inline +/- month count selector instead of date picker for simplicity
 
 ## Relevant Files
 - `app/src/main/java/com/rudra/savingbuddy/ui/theme/Color.kt` — all theme colors
@@ -51,3 +66,18 @@
 - `app/src/main/java/com/rudra/savingbuddy/util/CurrencyFormatter.kt` — formatBDT, formatCompact, format
 - `app/src/main/java/com/rudra/savingbuddy/ui/navigation/MainNavigation.kt` — routes cleaned up
 - All 35+ screen files under `ui/screens/` — upgraded
+- **New/Modified (Bill Payment Upgrade):**
+  - `domain/model/BillReminder.kt` — added `payFromAccountId`, `paidMonths`, `lastProcessedMonth`
+  - `data/local/entity/IncomeEntity.kt` — `BillReminderEntity` 3 new columns
+  - `data/local/converter/BillReminderMapper.kt` — maps new fields
+  - `data/local/dao/BillReminderDao.kt` — `updatePaidMonths`, `updatePayFromAccount` queries
+  - `domain/repository/BillReminderRepository.kt` — `payBill()`, `updatePaidMonths()` methods
+  - `data/repository/BillReminderRepositoryImpl.kt` — `payBill()` deducts from account via `AccountDao`
+  - `di/RepositoryModule.kt` — injects `AccountDao` into `BillReminderRepositoryImpl`
+  - `ui/screens/bills/BillRemindersViewModel.kt` — pay dialog state, `confirmPayBill()`, account loading
+  - `ui/screens/bills/BillRemindersScreen.kt` — `PayBillDialog`, paid badges, month count selector
+  - `util/BillNotificationWorker.kt` — skips paid months
+  - `data/local/SavingBuddyDatabase.kt` — `MIGRATION_7_8`
+  - `data/models/BackupModels.kt` + `BackupManager.kt` — new fields in backup/restore
+- **Modified (Calendar Fix):**
+  - `ui/screens/calendar/CalendarScreen.kt` — replaced fixed Column + nested LazyColumn with single scrollable LazyColumn
