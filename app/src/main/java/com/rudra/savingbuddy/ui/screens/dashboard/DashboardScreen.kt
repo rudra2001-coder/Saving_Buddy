@@ -10,6 +10,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -148,7 +149,9 @@ fun DashboardScreen(
                             monthlyExpenses      = uiState.monthlyExpenses,
                             selectedAccountName  = uiState.selectedAccountName,
                             availableAccounts    = uiState.availableAccounts,
-                            onAccountSelect      = { viewModel.selectAccount(it) }
+                            heroCardColor        = uiState.heroCardColor,
+                            onAccountSelect      = { viewModel.selectAccount(it) },
+                            onColorSelect        = { viewModel.updateHeroColor(it) }
                         )
                     }
 
@@ -352,13 +355,32 @@ private fun NetBalanceCard(
     monthlyExpenses: Double,
     selectedAccountName: String,
     availableAccounts: List<AccountSelection>,
-    onAccountSelect: (Long) -> Unit
+    heroCardColor: Long?,
+    onAccountSelect: (Long) -> Unit,
+    onColorSelect: (Long) -> Unit
 ) {
     val isPositive   = netBalance >= 0
     var showPicker   by remember { mutableStateOf(false) }
+    var showColorPicker by remember { mutableStateOf(false) }
 
-    val gradientStart = if (isPositive) Color(0xFF185FA5) else Color(0xFFA32D2D)
-    val gradientEnd   = if (isPositive) Color(0xFF0C447C) else Color(0xFF791F1F)
+    val defaultStart = if (isPositive) Color(0xFF185FA5) else Color(0xFFA32D2D)
+    val defaultEnd   = if (isPositive) Color(0xFF0C447C) else Color(0xFF791F1F)
+
+    val gradientStart = heroCardColor?.let { Color(it) } ?: defaultStart
+    val gradientEnd   = heroCardColor?.let {
+        // Derive a slightly darker color for the gradient end
+        Color(it).copy(alpha = 0.85f) // Simple way to create a gradient feel
+    } ?: defaultEnd
+
+    val heroColors = listOf(
+        0xFF185FA5, // Blue
+        0xFF3B6D11, // Green
+        0xFFA32D2D, // Red
+        0xFF854F0B, // Amber
+        0xFF6A1B9A, // Purple
+        0xFF00695C, // Teal
+        0xFF283593, // Indigo
+    )
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -383,13 +405,16 @@ private fun NetBalanceCard(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable { if (availableAccounts.isNotEmpty()) showPicker = true }
                             .padding(vertical = 2.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment     = Alignment.CenterVertically
                     ) {
                         Row(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { if (availableAccounts.isNotEmpty()) showPicker = true }
+                                .padding(vertical = 4.dp),
                             verticalAlignment    = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
@@ -402,15 +427,29 @@ private fun NetBalanceCard(
                             Text(
                                 text  = selectedAccountName,
                                 style = MaterialTheme.typography.labelLarge,
-                                color = Color.White.copy(alpha = 0.85f)
+                                color = Color.White.copy(alpha = 0.85f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            if (availableAccounts.isNotEmpty()) {
+                                Icon(
+                                    imageVector  = Icons.Default.KeyboardArrowDown,
+                                    contentDescription = "Change account",
+                                    tint         = Color.White.copy(alpha = 0.6f),
+                                    modifier     = Modifier.size(17.dp)
+                                )
+                            }
                         }
-                        if (availableAccounts.isNotEmpty()) {
+
+                        IconButton(
+                            onClick = { showColorPicker = true },
+                            modifier = Modifier.size(24.dp)
+                        ) {
                             Icon(
-                                imageVector  = Icons.Default.KeyboardArrowDown,
-                                contentDescription = "Change account",
-                                tint         = Color.White.copy(alpha = 0.6f),
-                                modifier     = Modifier.size(17.dp)
+                                imageVector = Icons.Default.Palette,
+                                contentDescription = "Customize Color",
+                                tint = Color.White.copy(alpha = 0.7f),
+                                modifier = Modifier.size(18.dp)
                             )
                         }
                     }
@@ -457,6 +496,88 @@ private fun NetBalanceCard(
                 }
             }
         }
+    }
+
+    // Color picker dialog
+    if (showColorPicker) {
+        AlertDialog(
+            onDismissRequest = { showColorPicker = false },
+            title = { Text("Customize Hero Color", fontWeight = FontWeight.SemiBold) },
+            text = {
+                Column {
+                    Text("Select a color:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(12.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        contentPadding = PaddingValues(vertical = 4.dp)
+                    ) {
+                        items(heroColors) { colorLong ->
+                            val color = Color(colorLong)
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                                    .clickable {
+                                        onColorSelect(colorLong)
+                                        showColorPicker = false
+                                    }
+                                    .then(
+                                        if (heroCardColor == colorLong) {
+                                            Modifier.border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                        } else Modifier
+                                    )
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(16.dp))
+                    Text("Or mix your own:", style = MaterialTheme.typography.bodyMedium)
+                    Spacer(Modifier.height(8.dp))
+
+                    var red by remember { mutableStateOf(((heroCardColor ?: 0xFF185FA5) shr 16 and 0xFF).toFloat()) }
+                    var green by remember { mutableStateOf(((heroCardColor ?: 0xFF185FA5) shr 8 and 0xFF).toFloat()) }
+                    var blue by remember { mutableStateOf(((heroCardColor ?: 0xFF185FA5) and 0xFF).toFloat()) }
+
+                    Column {
+                        Slider(value = red, onValueChange = { red = it }, valueRange = 0f..255f, colors = SliderDefaults.colors(thumbColor = Color.Red))
+                        Slider(value = green, onValueChange = { green = it }, valueRange = 0f..255f, colors = SliderDefaults.colors(thumbColor = Color.Green))
+                        Slider(value = blue, onValueChange = { blue = it }, valueRange = 0f..255f, colors = SliderDefaults.colors(thumbColor = Color.Blue))
+
+                        val mixedColor = (0xFFL shl 24) or (red.toLong() shl 16) or (green.toLong() shl 8) or blue.toLong()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(mixedColor))
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            TextButton(onClick = {
+                                onColorSelect(-1L)
+                                showColorPicker = false
+                            }) {
+                                Text("Reset to Default")
+                            }
+                            Button(
+                                onClick = {
+                                    onColorSelect(mixedColor)
+                                    showColorPicker = false
+                                }
+                            ) {
+                                Text("Apply")
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showColorPicker = false }) { Text("Close") }
+            }
+        )
     }
 
     // Account picker dialog

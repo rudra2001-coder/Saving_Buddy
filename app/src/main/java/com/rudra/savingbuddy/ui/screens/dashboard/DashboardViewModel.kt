@@ -53,6 +53,7 @@ data class DashboardUiState(
     val roundUpGoalName: String? = null,
     val totalRoundUpSaved: Double = 0.0,
     val roundUpGoalProgress: Float = 0f,
+    val heroCardColor: Long? = null,
     val isLoading: Boolean = true,
     val error: String? = null
 )
@@ -97,6 +98,24 @@ class DashboardViewModel @Inject constructor(
         loadDashboardData()
         loadAccounts()
         loadRoundUpSettings()
+        loadHeroColor()
+    }
+
+    private fun loadHeroColor() {
+        val color = prefs.getLong("hero_card_color", -1L)
+        if (color != -1L) {
+            _uiState.update { it.copy(heroCardColor = color) }
+        }
+    }
+
+    fun updateHeroColor(color: Long) {
+        if (color == -1L) {
+            prefs.edit().remove("hero_card_color").apply()
+            _uiState.update { it.copy(heroCardColor = null) }
+        } else {
+            prefs.edit().putLong("hero_card_color", color).apply()
+            _uiState.update { it.copy(heroCardColor = color) }
+        }
     }
 
     // ── Accounts ──────────────────────────────────────────────────────────────
