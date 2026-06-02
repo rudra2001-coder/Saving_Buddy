@@ -4,32 +4,45 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:background="@android:color/white">
+    android:padding="12dp"
+    android:background="@drawable/widget_card_bg">
 
-    <TextView
-        android:id="@+id/widget_title"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Quick Expense"
-        android:textSize="16sp"
-        android:textStyle="bold"
-        android:textColor="#333333" />
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="center">
 
-    <TextView
-        android:id="@+id/widget_subtitle"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="Tap to add expense"
-        android:textSize="12sp"
-        android:textColor="#666666" />
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/expense_widget_title"
+            android:textSize="11sp"
+            android:textColor="@color/widget_text_secondary" />
+
+        <TextView
+            android:id="@+id/widget_today_total"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="--"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:textColor="@color/widget_expense_red"
+            android:layout_marginTop="2dp" />
+
+    </LinearLayout>
 
     <Button
         android:id="@+id/widget_button"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:text="+ Add"
-        android:backgroundTint="#4CAF50" />
+        android:layout_height="40dp"
+        android:text="@string/expense_widget_add"
+        android:textSize="12sp"
+        android:textAllCaps="false"
+        android:textStyle="bold"
+        android:backgroundTint="@color/widget_expense_red"
+        android:radius="12dp" />
 
 </LinearLayout>

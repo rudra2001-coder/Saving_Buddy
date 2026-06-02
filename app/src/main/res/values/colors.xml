@@ -7,4 +7,15 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Widget Theme Colors -->
+    <color name="widget_income_green">#FF4CAF50</color>
+    <color name="widget_expense_red">#FFF44336</color>
+    <color name="widget_savings_blue">#FF2196F3</color>
+    <color name="widget_warning_orange">#FFFF9800</color>
+    <color name="widget_card_bg">#FFF5F5F5</color>
+    <color name="widget_dark_bg">#FF1A1A2E</color>
+    <color name="widget_text_primary">#FF212121</color>
+    <color name="widget_text_secondary">#FF757575</color>
+    <color name="widget_divider">#1E000000</color>
 </resources>

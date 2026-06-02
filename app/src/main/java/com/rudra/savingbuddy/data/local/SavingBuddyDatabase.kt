@@ -176,5 +176,22 @@ abstract class SavingBuddyDatabase : RoomDatabase() {
             MIGRATION_6_7,
             MIGRATION_7_8
         )
+
+        @Volatile
+        private var instance: SavingBuddyDatabase? = null
+
+        fun getInstance(context: Context): SavingBuddyDatabase {
+            return instance ?: synchronized(this) {
+                instance ?: Room.databaseBuilder(
+                    context.applicationContext,
+                    SavingBuddyDatabase::class.java,
+                    DATABASE_NAME
+                )
+                    .addMigrations(*getMigrations())
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { instance = it }
+            }
+        }
     }
 }

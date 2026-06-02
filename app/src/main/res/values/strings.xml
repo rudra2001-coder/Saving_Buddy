@@ -1,4 +1,14 @@
 <resources>
     <string name="app_name">Saving Buddy</string>
     <string name="widget_description">Quick add expenses from your home screen</string>
+    <string name="balance_widget_description">View your total balance at a glance</string>
+    <string name="expense_widget_title">Today\'s Expenses</string>
+    <string name="expense_widget_add">Add Expense</string>
+    <string name="income_widget_add">Add Income</string>
+    <string name="quick_action_widget_description">Quick actions for Saving Buddy</string>
+    <string name="widget_total_balance">Total Balance</string>
+    <string name="widget_today_income">Today\'s Income</string>
+    <string name="widget_today_expense">Today\'s Expense</string>
+    <string name="widget_net_worth">Net Worth</string>
+    <string name="widget_no_data">No data yet</string>
 </resources>

@@ -3,7 +3,6 @@ package com.rudra.savingbuddy.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.widget.RemoteViews
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
-class ExpenseWidget : AppWidgetProvider() {
+class BalanceWidgetProvider : AppWidgetProvider() {
 
     override fun onUpdate(
         context: Context,
@@ -32,23 +31,14 @@ class ExpenseWidget : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetId: Int
         ) {
-            val openIntent = Intent(context, MainActivity::class.java)
-            val openPendingIntent = PendingIntent.getActivity(
-                context, 0, openIntent,
+            val intent = Intent(context, MainActivity::class.java)
+            val pendingIntent = PendingIntent.getActivity(
+                context, 0, intent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            val addExpenseIntent = Intent(context, MainActivity::class.java).apply {
-                putExtra("navigate_to", "add_expense")
-            }
-            val addExpensePendingIntent = PendingIntent.getActivity(
-                context, 1, addExpenseIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-            )
-
-            val views = RemoteViews(context.packageName, R.layout.expense_widget)
-            views.setOnClickPendingIntent(R.id.widget_container, openPendingIntent)
-            views.setOnClickPendingIntent(R.id.widget_button, addExpensePendingIntent)
+            val views = RemoteViews(context.packageName, R.layout.balance_widget)
+            views.setOnClickPendingIntent(R.id.balance_widget_container, pendingIntent)
 
             runBlocking {
                 try {
@@ -62,29 +52,24 @@ class ExpenseWidget : AppWidgetProvider() {
                     val startOfDay = calendar.timeInMillis
                     val endOfDay = startOfDay + 86400000L
 
+                    val accounts = db.accountDao().getAllAccounts().first()
+                    val totalBalance = accounts.sumOf { it.balance }
+                    val todayIncome = db.incomeDao()
+                        .getTotalIncomeByDateRange(startOfDay, endOfDay).first() ?: 0.0
                     val todayExpense = db.expenseDao()
                         .getTotalExpensesByDateRange(startOfDay, endOfDay).first() ?: 0.0
 
-                    views.setTextViewText(R.id.widget_title, "Today's Expenses")
-                    views.setTextViewText(
-                        R.id.widget_today_total,
-                        formatAmount(todayExpense)
-                    )
+                    views.setTextViewText(R.id.widget_balance_amount, formatAmount(totalBalance))
+                    views.setTextViewText(R.id.widget_income_amount, formatAmount(todayIncome))
+                    views.setTextViewText(R.id.widget_expense_amount, formatAmount(todayExpense))
                 } catch (e: Exception) {
-                    views.setTextViewText(R.id.widget_today_total, "---")
+                    views.setTextViewText(R.id.widget_balance_amount, "---")
+                    views.setTextViewText(R.id.widget_income_amount, "---")
+                    views.setTextViewText(R.id.widget_expense_amount, "---")
                 }
             }
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
-        }
-
-        fun refreshAll(context: Context) {
-            val appWidgetManager = AppWidgetManager.getInstance(context)
-            val componentName = ComponentName(context, ExpenseWidget::class.java)
-            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
-            for (appWidgetId in appWidgetIds) {
-                updateAppWidget(context, appWidgetManager, appWidgetId)
-            }
         }
 
         private fun formatAmount(amount: Double): String {

@@ -3,8 +3,8 @@
     android:minWidth="180dp"
     android:minHeight="110dp"
     android:updatePeriodMillis="1800000"
-    android:initialLayout="@layout/expense_widget"
+    android:initialLayout="@layout/balance_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:description="@string/widget_description"
+    android:description="@string/balance_widget_description"
     android:previewImage="@mipmap/ic_launcher" />

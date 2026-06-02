@@ -45,7 +45,7 @@ import com.rudra.savingbuddy.ui.screens.gamification.GamificationScreen
 import com.rudra.savingbuddy.ui.screens.expense.ExpenseDetailScreen
 
 @Composable
-fun MainNavigation() {
+fun MainNavigation(navigateTo: String? = null) {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("onboarding", Context.MODE_PRIVATE) }
     val onboardingCompleted = remember { prefs.getBoolean("completed", false) }
@@ -54,6 +54,14 @@ fun MainNavigation() {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
+
+    LaunchedEffect(navigateTo) {
+        if (navigateTo != null && onboardingCompleted) {
+            navController.navigate(navigateTo) {
+                launchSingleTop = true
+            }
+        }
+    }
 
     Scaffold(
         bottomBar = {

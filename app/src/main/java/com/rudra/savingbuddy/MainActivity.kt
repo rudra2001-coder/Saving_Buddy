@@ -35,6 +35,8 @@ class MainActivity : ComponentActivity() {
 
         initCurrency()
 
+        val navigateTo = intent?.getStringExtra("navigate_to")
+
         setContent {
             val settings by settingsRepository.getSettings().collectAsState(initial = null)
 
@@ -63,7 +65,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainNavigation()
+                    MainNavigation(navigateTo = navigateTo)
                 }
             }
         }
