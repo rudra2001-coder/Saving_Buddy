@@ -47,6 +47,15 @@ interface ExpenseDao {
 
     @Query("DELETE FROM expense")
     suspend fun deleteAll()
+
+    @Query("SELECT * FROM expense WHERE isRecurring = 1")
+    suspend fun getRecurringExpenses(): List<ExpenseEntity>
+
+    @Query("SELECT MAX(date) FROM expense WHERE category = :category AND amount = :amount AND isRecurring = 0")
+    suspend fun getLatestOccurrenceDate(category: String, amount: Double): Long?
+
+    @Query("SELECT COUNT(*) FROM expense WHERE category = :category AND amount = :amount AND date >= :startOfDay AND date < :endOfDay")
+    suspend fun countOccurrencesOnDay(category: String, amount: Double, startOfDay: Long, endOfDay: Long): Int
 }
 
 data class CategoryTotal(

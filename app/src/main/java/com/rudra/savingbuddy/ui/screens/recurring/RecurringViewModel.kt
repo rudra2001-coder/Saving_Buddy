@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.rudra.savingbuddy.domain.model.*
+import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.ExpenseRepository
 import com.rudra.savingbuddy.domain.repository.IncomeRepository
 import com.rudra.savingbuddy.util.RecurringDetector
@@ -61,7 +62,8 @@ data class RecurringUiState(
     val warnings: List<String> = emptyList(),
     val detectedPatterns: List<DetectedTransaction> = emptyList(),
     val isDetecting: Boolean = false,
-    val hasNewPatterns: Boolean = false
+    val hasNewPatterns: Boolean = false,
+    val availableAccounts: List<Account> = emptyList()
 )
 
 data class UpcomingTransaction(
@@ -73,6 +75,7 @@ data class UpcomingTransaction(
 class RecurringViewModel @Inject constructor(
     private val incomeRepository: IncomeRepository,
     private val expenseRepository: ExpenseRepository,
+    private val accountRepository: AccountRepository,
     private val recurringDetector: RecurringDetector,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
@@ -90,14 +93,15 @@ class RecurringViewModel @Inject constructor(
     private fun loadRecurringItems() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
-            
+
             combine(
                 incomeRepository.getAllIncome(),
-                expenseRepository.getAllExpenses()
-            ) { incomeList, expenseList ->
+                expenseRepository.getAllExpenses(),
+                accountRepository.getAllAccounts()
+            ) { incomeList, expenseList, accounts ->
                 allIncomes = incomeList
                 allExpenses = expenseList
-                processRecurringData(incomeList, expenseList)
+                processRecurringData(incomeList, expenseList).copy(availableAccounts = accounts)
             }.collect { state ->
                 _uiState.value = state
             }
@@ -378,7 +382,7 @@ class RecurringViewModel @Inject constructor(
         }
     }
 
-    fun saveRecurringIncome(name: String, amount: Double, category: IncomeCategory, interval: RecurringInterval, notes: String?, endCondition: EndCondition = EndCondition.NEVER, endDate: Long? = null, occurrencesRemaining: Int? = null) {
+    fun saveRecurringIncome(name: String, amount: Double, category: IncomeCategory, interval: RecurringInterval, notes: String?, accountId: Long?, endCondition: EndCondition = EndCondition.NEVER, endDate: Long? = null, occurrencesRemaining: Int? = null) {
         viewModelScope.launch {
             val income = Income(
                 source = name,
@@ -387,7 +391,8 @@ class RecurringViewModel @Inject constructor(
                 date = System.currentTimeMillis(),
                 isRecurring = true,
                 recurringInterval = interval,
-                notes = notes
+                notes = notes,
+                accountId = accountId
             )
             incomeRepository.insertIncome(income)
             hideAddDialog()
@@ -395,7 +400,7 @@ class RecurringViewModel @Inject constructor(
         }
     }
 
-    fun saveRecurringExpense(name: String, amount: Double, category: ExpenseCategory, interval: RecurringInterval, notes: String?, endCondition: EndCondition = EndCondition.NEVER, endDate: Long? = null, occurrencesRemaining: Int? = null) {
+    fun saveRecurringExpense(name: String, amount: Double, category: ExpenseCategory, interval: RecurringInterval, notes: String?, accountId: Long?, endCondition: EndCondition = EndCondition.NEVER, endDate: Long? = null, occurrencesRemaining: Int? = null) {
         viewModelScope.launch {
             val expense = Expense(
                 amount = amount,
@@ -407,7 +412,8 @@ class RecurringViewModel @Inject constructor(
                 status = RecurringStatus.ACTIVE,
                 endCondition = endCondition,
                 endDate = endDate,
-                occurrencesRemaining = occurrencesRemaining
+                occurrencesRemaining = occurrencesRemaining,
+                accountId = accountId
             )
             expenseRepository.insertExpense(expense)
             hideAddDialog()

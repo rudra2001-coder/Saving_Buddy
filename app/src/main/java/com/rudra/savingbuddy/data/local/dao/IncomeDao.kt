@@ -47,4 +47,13 @@ interface IncomeDao {
 
     @Query("SELECT * FROM income ORDER BY date DESC")
     fun getAllIncomes(): Flow<List<IncomeEntity>>
+
+    @Query("SELECT * FROM income WHERE isRecurring = 1")
+    suspend fun getRecurringIncomes(): List<IncomeEntity>
+
+    @Query("SELECT MAX(date) FROM income WHERE source = :source AND category = :category AND amount = :amount AND isRecurring = 0")
+    suspend fun getLatestOccurrenceDate(source: String, category: String, amount: Double): Long?
+
+    @Query("SELECT COUNT(*) FROM income WHERE source = :source AND category = :category AND amount = :amount AND date >= :startOfDay AND date < :endOfDay")
+    suspend fun countOccurrencesOnDay(source: String, category: String, amount: Double, startOfDay: Long, endOfDay: Long): Int
 }

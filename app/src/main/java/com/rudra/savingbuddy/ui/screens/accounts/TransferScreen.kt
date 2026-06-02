@@ -230,6 +230,50 @@ fun TransferScreen(
                 }
             }
 
+            // Fee Input
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Icon(Icons.Default.Receipt, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                            Text("Transaction Fee (optional)", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.feeText,
+                            onValueChange = { newValue ->
+                                viewModel.updateFee(newValue)
+                            },
+                            label = { Text("Fee") },
+                            placeholder = { Text("0") },
+                            leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = ExpenseRed) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = ExpenseRed,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                cursorColor = ExpenseRed
+                            )
+                        )
+                        if (uiState.fee > 0) {
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text("Fee will be deducted from source account",
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            }
+
             // Fee Summary
             item {
                 Card(
@@ -255,11 +299,17 @@ fun TransferScreen(
                                 style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.onSurface)
                         }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Amount to receive", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(CurrencyFormatter.formatBDT(uiState.amount.toDoubleOrNull() ?: 0.0),
+                                style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium,
+                                color = IncomeGreen)
+                        }
                         HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp), color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("Total", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Total from source", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                             Text(CurrencyFormatter.formatBDT(uiState.totalAmount),
-                                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = IncomeGreen)
+                                style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = ExpenseRed)
                         }
                     }
                 }
@@ -399,8 +449,14 @@ fun TransferScreen(
                             }
                         }
                     }
-                    Text("Amount: ${CurrencyFormatter.formatBDT(uiState.totalAmount)}", fontWeight = FontWeight.Bold,
+                    Text("Amount to send: ${CurrencyFormatter.formatBDT(uiState.amount.toDoubleOrNull() ?: 0.0)}", fontWeight = FontWeight.Bold,
                         style = MaterialTheme.typography.titleMedium, color = IncomeGreen)
+                    if (uiState.fee > 0) {
+                        Text("Fee: ${CurrencyFormatter.formatBDT(uiState.fee)}", style = MaterialTheme.typography.bodyMedium,
+                            color = ExpenseRed)
+                        Text("Total from source: ${CurrencyFormatter.formatBDT(uiState.totalAmount)}", style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold, color = ExpenseRed)
+                    }
                     if (uiState.note.isNotBlank()) {
                         Text("Note: ${uiState.note}", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -435,8 +491,12 @@ fun TransferScreen(
             title = { Text("Transfer Successful!", fontWeight = FontWeight.Bold) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("${CurrencyFormatter.formatBDT(uiState.totalAmount)} moved successfully",
+                    Text("${CurrencyFormatter.formatBDT(uiState.amount.toDoubleOrNull() ?: 0.0)} transferred successfully",
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    if (uiState.fee > 0) {
+                        Text("Fee charged: ${CurrencyFormatter.formatBDT(uiState.fee)}",
+                            style = MaterialTheme.typography.bodySmall, color = ExpenseRed)
+                    }
                     Spacer(modifier = Modifier.height(8.dp))
                     Card(
                         shape = RoundedCornerShape(12.dp),

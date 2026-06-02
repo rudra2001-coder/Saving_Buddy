@@ -33,6 +33,7 @@ import com.rudra.savingbuddy.ui.theme.*
 import com.rudra.savingbuddy.util.CurrencyFormatter
 import com.rudra.savingbuddy.util.DateUtils
 import java.util.Calendar
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -273,12 +274,13 @@ fun RecurringScreen(
     // Add Dialog
     if (uiState.showAddDialog) {
         AddRecurringDialog(
+            accounts = uiState.availableAccounts,
             onDismiss = { viewModel.hideAddDialog() },
-            onSaveIncome = { name, amount, category, interval, notes, endCondition, endDate, occurrences ->
-                viewModel.saveRecurringIncome(name, amount, category, interval, notes, endCondition, endDate, occurrences)
+            onSaveIncome = { name, amount, category, interval, notes, accountId, endCondition, endDate, occurrences ->
+                viewModel.saveRecurringIncome(name, amount, category, interval, notes, accountId, endCondition, endDate, occurrences)
             },
-            onSaveExpense = { name, amount, category, interval, notes, endCondition, endDate, occurrences ->
-                viewModel.saveRecurringExpense(name, amount, category, interval, notes, endCondition, endDate, occurrences)
+            onSaveExpense = { name, amount, category, interval, notes, accountId, endCondition, endDate, occurrences ->
+                viewModel.saveRecurringExpense(name, amount, category, interval, notes, accountId, endCondition, endDate, occurrences)
             }
         )
     }
@@ -668,9 +670,10 @@ fun ItemDetailsSheet(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddRecurringDialog(
+    accounts: List<Account>,
     onDismiss: () -> Unit,
-    onSaveIncome: (String, Double, IncomeCategory, RecurringInterval, String?, EndCondition, Long?, Int?) -> Unit,
-    onSaveExpense: (String, Double, ExpenseCategory, RecurringInterval, String?, EndCondition, Long?, Int?) -> Unit
+    onSaveIncome: (String, Double, IncomeCategory, RecurringInterval, String?, Long?, EndCondition, Long?, Int?) -> Unit,
+    onSaveExpense: (String, Double, ExpenseCategory, RecurringInterval, String?, Long?, EndCondition, Long?, Int?) -> Unit
 ) {
     var isIncome by remember { mutableStateOf(true) }
     var name by remember { mutableStateOf("") }
@@ -680,6 +683,10 @@ fun AddRecurringDialog(
     var notes by remember { mutableStateOf("") }
     var categoryExpanded by remember { mutableStateOf(false) }
     var intervalExpanded by remember { mutableStateOf(false) }
+    var accountExpanded by remember { mutableStateOf(false) }
+    var selectedAccountId by remember { mutableStateOf<Long?>(null) }
+
+    val selectedAccount = accounts.find { it.id == selectedAccountId }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -736,6 +743,42 @@ fun AddRecurringDialog(
                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
                         unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
                 )
+
+                // Account Picker
+                if (accounts.isNotEmpty()) {
+                    ExposedDropdownMenuBox(expanded = accountExpanded, onExpandedChange = { accountExpanded = it }) {
+                        OutlinedTextField(
+                            value = selectedAccount?.let { "${it.name} (${CurrencyFormatter.formatBDT(it.balance)})" } ?: "Select account",
+                            onValueChange = {},
+                            readOnly = true,
+                            label = { Text("Account") },
+                            leadingIcon = { Icon(Icons.Default.AccountBalance, null, tint = if (isIncome) IncomeGreen else ExpenseRed) },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountExpanded) },
+                            modifier = Modifier.fillMaxWidth().menuAnchor(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = if (isIncome) IncomeGreen else ExpenseRed,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        )
+                        ExposedDropdownMenu(expanded = accountExpanded, onDismissRequest = { accountExpanded = false }) {
+                            accounts.forEach { account ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(account.name, fontWeight = FontWeight.Medium)
+                                            Text(CurrencyFormatter.formatBDT(account.balance),
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    },
+                                    onClick = {
+                                        selectedAccountId = account.id
+                                        accountExpanded = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
 
                 // Interval Picker
                 ExposedDropdownMenuBox(expanded = intervalExpanded, onExpandedChange = { intervalExpanded = it }) {
@@ -794,14 +837,14 @@ fun AddRecurringDialog(
                     if (name.isNotBlank() && amountVal > 0 && selectedCategory.isNotBlank()) {
                         if (isIncome) {
                             val category = IncomeCategory.entries.find { it.displayName == selectedCategory } ?: IncomeCategory.OTHERS
-                            onSaveIncome(name, amountVal, category, selectedInterval, notes.ifBlank { null }, EndCondition.NEVER, null, null)
+                            onSaveIncome(name, amountVal, category, selectedInterval, notes.ifBlank { null }, selectedAccountId, EndCondition.NEVER, null, null)
                         } else {
                             val category = ExpenseCategory.entries.find { it.displayName == selectedCategory } ?: ExpenseCategory.OTHERS
-                            onSaveExpense(name, amountVal, category, selectedInterval, notes.ifBlank { null }, EndCondition.NEVER, null, null)
+                            onSaveExpense(name, amountVal, category, selectedInterval, notes.ifBlank { null }, selectedAccountId, EndCondition.NEVER, null, null)
                         }
                     }
                 },
-                enabled = name.isNotBlank() && amount.toDoubleOrNull() != null && selectedCategory.isNotBlank(),
+                enabled = name.isNotBlank() && amount.toDoubleOrNull() != null && selectedCategory.isNotBlank() && selectedAccountId != null,
                 shape = RoundedCornerShape(14.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = if (isIncome) IncomeGreen else ExpenseRed)
             ) { Text("Add", fontWeight = FontWeight.SemiBold) }

@@ -176,24 +176,28 @@ class AccountRepositoryImpl @Inject constructor(
         return TransferResult(success = true, transactionId = "DEL${System.currentTimeMillis()}")
     }
 
-    override suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, note: String?): TransferResult {
+    override suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, fee: Double, note: String?): TransferResult {
         val fromAccount = accountDao.getAccountById(fromId)?.toDomain()
             ?: return TransferResult(success = false, errorMessage = "Source account not found")
-        
+
         val toAccount = accountDao.getAccountById(toId)?.toDomain()
             ?: return TransferResult(success = false, errorMessage = "Destination account not found")
 
-        // Check balance
-        if (fromAccount.balance < amount) {
-            return TransferResult(success = false, errorMessage = "Insufficient balance")
+        val totalDeduction = amount + fee
+
+        if (fromAccount.balance < totalDeduction) {
+            val shortfall = totalDeduction - fromAccount.balance
+            return TransferResult(
+                success = false,
+                errorMessage = "Insufficient balance. Need ${String.format("%.2f", totalDeduction)} BDT (amount ${String.format("%.2f", amount)} BDT + fee ${String.format("%.2f", fee)} BDT) but only ${String.format("%.2f", fromAccount.balance)} BDT available. Add ${String.format("%.2f", shortfall)} BDT more."
+            )
         }
 
-        // Check daily limit
         val provider = AccountProvider.entries.find { it.name == fromAccount.provider }
         if (provider != null && provider.dailyTransferLimit > 0) {
             val startOfDay = getStartOfDay()
             val todaySent = transferDao.getTotalSentToday(fromId, startOfDay) ?: 0.0
-            if (todaySent + amount > provider.dailyTransferLimit) {
+            if (todaySent + totalDeduction > provider.dailyTransferLimit) {
                 return TransferResult(
                     success = false,
                     errorMessage = "Daily limit exceeded (${provider.dailyTransferLimit} BDT)"
@@ -201,15 +205,12 @@ class AccountRepositoryImpl @Inject constructor(
             }
         }
 
-        // Process transfer
-        val newFromBalance = fromAccount.balance - amount
+        val newFromBalance = fromAccount.balance - totalDeduction
         val newToBalance = toAccount.balance + amount
-        val fee = calculateFee(fromAccount, toAccount)
 
         accountDao.updateBalance(fromId, newFromBalance)
         accountDao.updateBalance(toId, newToBalance)
 
-        // Log transfer
         val transfer = Transfer(
             fromAccountId = fromId,
             toAccountId = toId,
@@ -221,7 +222,6 @@ class AccountRepositoryImpl @Inject constructor(
         )
         transferDao.insertTransfer(transfer.toEntity())
 
-        // Save balance snapshot
         balanceHistoryDao.insertBalanceHistory(
             AccountBalanceHistoryEntity(
                 accountId = fromId,
@@ -275,11 +275,6 @@ class AccountRepositoryImpl @Inject constructor(
                 )
             )
         }
-    }
-
-    private fun calculateFee(from: Account, to: Account): Double {
-        // Free within app
-        return 0.0
     }
 
     private fun getStartOfDay(): Long {

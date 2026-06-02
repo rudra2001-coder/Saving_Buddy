@@ -19,7 +19,7 @@ interface AccountRepository {
     suspend fun deleteAccount(id: Long)
     suspend fun deleteAccountWithTransfer(accountId: Long, targetAccountId: Long): TransferResult
     
-    suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, note: String?): TransferResult
+    suspend fun transferMoney(fromId: Long, toId: Long, amount: Double, fee: Double = 0.0, note: String?): TransferResult
     suspend fun getTransfersForAccount(accountId: Long): List<Transfer>
     suspend fun getDailyTransferTotal(accountId: Long): Double
     suspend fun getTransfersInRange(accountId: Long, startDate: Long, endDate: Long): Double

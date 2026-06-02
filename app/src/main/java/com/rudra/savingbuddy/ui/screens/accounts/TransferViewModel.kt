@@ -18,7 +18,7 @@ data class TransferUiState(
     val toAccount: Account? = null,
     val amount: String = "",
     val note: String = "",
-    val fee: Double = 0.0,
+    val feeText: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,
     val transferResult: TransferResult? = null,
@@ -27,6 +27,8 @@ data class TransferUiState(
     val dailyLimitUsage: Double = 0.0,
     val dailyLimit: Double = 0.0
 ) {
+    val fee: Double get() = feeText.toDoubleOrNull() ?: 0.0
+
     val totalAmount: Double
         get() = (amount.toDoubleOrNull() ?: 0.0) + fee
 
@@ -35,6 +37,7 @@ data class TransferUiState(
                 toAccount != null && 
                 amount.isNotBlank() && 
                 (amount.toDoubleOrNull() ?: 0.0) > 0 &&
+                fee >= 0 &&
                 fromAccount?.id != toAccount?.id
 
     val dailyLimitPercent: Float
@@ -91,6 +94,12 @@ class TransferViewModel @Inject constructor(
         _uiState.update { it.copy(note = note) }
     }
 
+    fun updateFee(fee: String) {
+        if (fee.isEmpty() || fee.matches(Regex("^\\d*\\.?\\d*$"))) {
+            _uiState.update { it.copy(feeText = fee, error = null) }
+        }
+    }
+
     fun executeTransfer() {
         val state = _uiState.value
         
@@ -110,8 +119,14 @@ class TransferViewModel @Inject constructor(
             return
         }
 
-        if (state.fromAccount.balance < amount) {
-            _uiState.update { it.copy(error = "Insufficient balance") }
+        val fee = state.fee
+        val totalDeduction = amount + fee
+
+        if (state.fromAccount.balance < totalDeduction) {
+            val shortfall = totalDeduction - state.fromAccount.balance
+            _uiState.update {
+                it.copy(error = "Insufficient balance. Need ${String.format("%.2f", totalDeduction)} BDT (amount ${String.format("%.2f", amount)} BDT + fee ${String.format("%.2f", fee)} BDT) but only ${String.format("%.2f", state.fromAccount.balance)} BDT available. Add ${String.format("%.2f", shortfall)} BDT more.")
+            }
             return
         }
 
@@ -123,6 +138,7 @@ class TransferViewModel @Inject constructor(
                     fromId = state.fromAccount.id,
                     toId = state.toAccount.id,
                     amount = amount,
+                    fee = fee,
                     note = state.note.ifBlank { null }
                 )
 
