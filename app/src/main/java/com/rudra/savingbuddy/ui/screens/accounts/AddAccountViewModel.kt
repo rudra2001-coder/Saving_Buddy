@@ -19,6 +19,8 @@ data class AddAccountUiState(
     val accountNumber: String = "",
     val nickname: String = "",
     val initialBalance: String = "0",
+    val dailyLimit: String = "",
+    val limitEnabled: Boolean = false,
     val isLoading: Boolean = false,
     val isSaved: Boolean = false,
     val error: String? = null,
@@ -52,6 +54,7 @@ class AddAccountViewModel @Inject constructor(
             val account = accountRepository.getAccount(accountId)
             if (account != null) {
                 val provider = AccountProvider.entries.find { it.name == account.provider }
+                val hasLimit = account.dailyLimit != null && account.dailyLimit!! > 0
                 _uiState.update {
                     it.copy(
                         editingAccountId = accountId,
@@ -62,6 +65,8 @@ class AddAccountViewModel @Inject constructor(
                         nickname = account.name,
                         initialBalance = account.balance.toBigDecimal().stripTrailingZeros().toPlainString(),
                         existingBalance = account.balance,
+                        dailyLimit = if (hasLimit) account.dailyLimit.toString() else "",
+                        limitEnabled = hasLimit,
                         isLoading = false
                     )
                 }
@@ -103,6 +108,21 @@ class AddAccountViewModel @Inject constructor(
         _uiState.update { it.copy(customProviderName = name) }
     }
 
+    fun updateDailyLimit(limit: String) {
+        if (limit.isEmpty() || limit.matches(Regex("^\\d*\\.?\\d*$"))) {
+            _uiState.update { it.copy(dailyLimit = limit) }
+        }
+    }
+
+    fun toggleLimit(enabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                limitEnabled = enabled,
+                dailyLimit = if (!enabled) "" else it.dailyLimit
+            )
+        }
+    }
+
     fun saveAccount() {
         val state = _uiState.value
         
@@ -136,7 +156,7 @@ class AddAccountViewModel @Inject constructor(
                             provider = providerName,
                             accountNumber = state.accountNumber,
                             iconColor = generateIconColor(),
-                            dailyLimit = state.selectedProvider!!.dailyTransferLimit.takeIf { it > 0 },
+                            dailyLimit = if (state.limitEnabled) state.dailyLimit.toDoubleOrNull()?.takeIf { it > 0 } else null,
                             lastUpdated = System.currentTimeMillis()
                         )
                         accountRepository.updateAccount(updatedAccount)
@@ -151,7 +171,7 @@ class AddAccountViewModel @Inject constructor(
                         initialBalance = newBalance,
                         currency = "BDT",
                         iconColor = generateIconColor(),
-                        dailyLimit = state.selectedProvider!!.dailyTransferLimit.takeIf { it > 0 }
+                        dailyLimit = if (state.limitEnabled) state.dailyLimit.toDoubleOrNull()?.takeIf { it > 0 } else null
                     )
                     accountRepository.insertAccount(account)
                 }

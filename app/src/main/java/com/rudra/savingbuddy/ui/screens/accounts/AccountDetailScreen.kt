@@ -180,58 +180,99 @@ fun AccountDetailScreen(
                 }
             }
 
-            uiState.account?.dailyLimit?.let { limit ->
-                if (limit > 0) {
-                    item {
-                        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            Icons.Outlined.Speed,
-                                            contentDescription = null,
-                                            tint = WarningOrange,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text(
-                                            "Daily Transfer Limit",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                    }
-                                }
-                                Spacer(modifier = Modifier.height(12.dp))
-                                val progress = ((uiState.account?.usedToday ?: 0.0) / limit).toFloat().coerceIn(0f, 1f)
-                                val animatedProgress by animateFloatAsState(
-                                    targetValue = progress,
-                                    animationSpec = tween(500),
-                                    label = "limit_progress"
+            val hasLimit = uiState.account?.dailyLimit != null && uiState.account?.dailyLimit!! > 0
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth().clickable { viewModel.showLimitDialog() },
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                ) {
+                    Column(modifier = Modifier.padding(20.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Outlined.Speed,
+                                    contentDescription = null,
+                                    tint = if (hasLimit) WarningOrange else MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp)
                                 )
-                                LinearProgressIndicator(
-                                    progress = { animatedProgress },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(8.dp)
-                                        .clip(RoundedCornerShape(4.dp)),
-                                    color = when {
-                                        progress >= 0.9f -> ExpenseRed
-                                        progress >= 0.7f -> WarningOrange
-                                        else -> IncomeGreen
-                                    },
-                                    trackColor = MaterialTheme.colorScheme.surfaceVariant
-                                )
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
                                 Text(
-                                    "${CurrencyFormatter.formatBDT(limit - (uiState.account?.usedToday ?: 0.0))} remaining of ${CurrencyFormatter.formatBDT(limit)}",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    "Daily Limit",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
+                            IconButton(
+                                onClick = { viewModel.showLimitDialog() },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Edit,
+                                    contentDescription = "Edit limit",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+                        if (hasLimit) {
+                            val limit = uiState.account!!.dailyLimit!!
+                            Spacer(modifier = Modifier.height(12.dp))
+                            val used = uiState.account?.usedToday ?: 0.0
+                            val remaining = limit - used
+                            val progress = (used / limit).toFloat().coerceIn(0f, 1f)
+                            val animatedProgress by animateFloatAsState(
+                                targetValue = progress,
+                                animationSpec = tween(500),
+                                label = "limit_progress"
+                            )
+                            LinearProgressIndicator(
+                                progress = { animatedProgress },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(8.dp)
+                                    .clip(RoundedCornerShape(4.dp)),
+                                color = when {
+                                    progress >= 1f -> ExpenseRed
+                                    progress >= 0.9f -> WarningOrange
+                                    progress >= 0.7f -> WarningOrange
+                                    else -> IncomeGreen
+                                },
+                                trackColor = MaterialTheme.colorScheme.surfaceVariant
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "${CurrencyFormatter.formatBDT(remaining)} remaining of ${CurrencyFormatter.formatBDT(limit)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            if (progress >= 1f) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = ExpenseRed.copy(alpha = 0.12f)),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Icon(Icons.Default.Warning, null, tint = ExpenseRed, modifier = Modifier.size(18.dp))
+                                        Text("Limit reached", color = ExpenseRed, style = MaterialTheme.typography.bodySmall, fontWeight = FontWeight.SemiBold)
+                                    }
+                                }
+                            }
+                        } else {
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                "No limit set — tap to add one",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
@@ -447,6 +488,86 @@ fun AccountDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.hideCashOutDialog() }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
+
+    if (uiState.showLimitDialog) {
+        AlertDialog(
+            onDismissRequest = { viewModel.hideLimitDialog() },
+            icon = {
+                Icon(
+                    Icons.Outlined.Speed,
+                    contentDescription = null,
+                    tint = WarningOrange,
+                    modifier = Modifier.size(40.dp)
+                )
+            },
+            title = { Text("Daily Limit", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Set a daily spending limit for ${uiState.account?.name}",
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column {
+                            Text("Enable Limit", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                if (uiState.limitEditEnabled) "Limit will be enforced" else "No limit",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(
+                            checked = uiState.limitEditEnabled,
+                            onCheckedChange = { viewModel.toggleLimitEdit(it) },
+                            colors = SwitchDefaults.colors(checkedTrackColor = IncomeGreen, checkedThumbColor = Color.White)
+                        )
+                    }
+                    if (uiState.limitEditEnabled) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        OutlinedTextField(
+                            value = uiState.limitEditAmount,
+                            onValueChange = { viewModel.updateLimitEditAmount(it) },
+                            label = { Text("Limit Amount") },
+                            placeholder = { Text("e.g., 5000") },
+                            leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge) },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                    }
+                    uiState.error?.let { error ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { viewModel.saveLimit() },
+                    enabled = !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(containerColor = IncomeGreen),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    if (uiState.isLoading) {
+                        CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                    } else {
+                        Text("Save")
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.hideLimitDialog() }) {
                     Text("Cancel")
                 }
             }

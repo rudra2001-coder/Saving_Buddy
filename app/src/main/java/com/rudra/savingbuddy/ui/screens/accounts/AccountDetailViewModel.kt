@@ -22,7 +22,10 @@ data class AccountDetailUiState(
     val addMoneyAmount: String = "",
     val cashOutAmount: String = "",
     val operationResult: TransferResult? = null,
-    val error: String? = null
+    val error: String? = null,
+    val showLimitDialog: Boolean = false,
+    val limitEditAmount: String = "",
+    val limitEditEnabled: Boolean = false
 )
 
 @HiltViewModel
@@ -146,5 +149,65 @@ class AccountDetailViewModel @Inject constructor(
 
     fun clearResult() {
         _uiState.update { it.copy(operationResult = null) }
+    }
+
+    fun showLimitDialog() {
+        val account = _uiState.value.account
+        val hasLimit = account?.dailyLimit != null && account.dailyLimit!! > 0
+        _uiState.update {
+            it.copy(
+                showLimitDialog = true,
+                limitEditAmount = if (hasLimit) account.dailyLimit.toString() else "",
+                limitEditEnabled = hasLimit,
+                error = null
+            )
+        }
+    }
+
+    fun hideLimitDialog() {
+        _uiState.update { it.copy(showLimitDialog = false, limitEditAmount = "", error = null) }
+    }
+
+    fun updateLimitEditAmount(amount: String) {
+        if (amount.isEmpty() || amount.matches(Regex("^\\d*\\.?\\d*$"))) {
+            _uiState.update { it.copy(limitEditAmount = amount) }
+        }
+    }
+
+    fun toggleLimitEdit(enabled: Boolean) {
+        _uiState.update {
+            it.copy(
+                limitEditEnabled = enabled,
+                limitEditAmount = if (!enabled) "" else it.limitEditAmount
+            )
+        }
+    }
+
+    fun saveLimit() {
+        val state = _uiState.value
+        val account = state.account ?: return
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            try {
+                val newLimit = if (state.limitEditEnabled) state.limitEditAmount.toDoubleOrNull()?.takeIf { it > 0 } else null
+                val updatedAccount = account.copy(
+                    dailyLimit = newLimit,
+                    lastUpdated = System.currentTimeMillis()
+                )
+                accountRepository.updateAccount(updatedAccount)
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        showLimitDialog = false,
+                        limitEditAmount = ""
+                    )
+                }
+            } catch (e: Exception) {
+                _uiState.update {
+                    it.copy(isLoading = false, error = e.message ?: "Failed to save limit")
+                }
+            }
+        }
     }
 }

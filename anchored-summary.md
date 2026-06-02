@@ -35,6 +35,12 @@
 - **InvestmentScreen.kt, LanguageScreen.kt, MusicScreen.kt, NotificationsScreen.kt, ReceiptScannerScreen.kt, SubscriptionManagerScreen.kt**: Top bar subtitles, premium card borders/shapes, theme color replacements
 - **AccountDetailScreen.kt, ExpenseDetailScreen.kt, ChangelogScreen.kt, AdvancedFeaturesScreen.kt**: Top bar subtitles, border/shape/icon upgrades, theme color replacements
 
+### Account Daily Limit Upgrade
+- **EditAccountScreen**: Added inline toggle (Switch) to enable/disable daily limit + numeric text field for custom limit amount
+- **AccountDetailScreen**: Limit card now always visible (shows "No limit set — tap to add one" when disabled); added edit icon button inline; added limit edit dialog with toggle + amount + save; shows red "Limit reached" warning banner when usage hits 100%
+- **AddAccountViewModel**: Added `dailyLimit`, `limitEnabled` to UI state; `updateDailyLimit()`, `toggleLimit()` functions; save logic uses user-set limit or null
+- **AccountDetailViewModel**: Added `showLimitDialog`, `limitEditAmount`, `limitEditEnabled` state; `showLimitDialog()`, `toggleLimitEdit()`, `saveLimit()` functions
+
 ### Bill Reminder Payment System Upgrade
 - **Pay from Account**: Each bill card has a payments button; user selects an account and amount is deducted from that account's balance
 - **Multi-Month Payment**: User can choose 1-12 months to pay at once via +/- controls in the Pay dialog

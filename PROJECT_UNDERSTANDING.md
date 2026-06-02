@@ -405,6 +405,8 @@ AccountProvider (with daily limits):
   - CASH, PAYPAL, PAYONEER, STRIPE
 ```
 
+**Account dailyLimit**: Each account has a nullable `dailyLimit` (`Double?`) — users can set a custom limit or disable it entirely. Control is available both in the **Edit Account** screen (toggle + amount field) and inline in the **Account Detail** screen (dialog with toggle + amount). When `dailyLimit` is `null`, no limit is enforced. The Account Detail screen shows a progress bar with color-coded usage and a red "Limit reached" warning when the limit is hit.
+
 ### Expense Categories (15)
 ```
 FOOD, TRANSPORT, BILLS, SHOPPING, ENTERTAINMENT, HEALTH, EDUCATION,
@@ -549,9 +551,10 @@ The main screen — most complex UI in the app:
 ### Other Screens
 | Screen | Purpose |
 |---|---|
-| **AccountsScreen** | List all accounts with balances |
-| **AccountDetailScreen** | Single account view with transactions |
-| **AddAccountScreen** | Create new account (Wallet/Bank/Mobile Banking etc.) |
+| **AccountsScreen** | List all accounts with balances; shows remaining limit per account card |
+| **AccountDetailScreen** | Single account view with transactions; shows daily limit progress bar (color-coded green/orange/red), "Limit reached" warning, inline edit dialog with toggle + amount field |
+| **AddAccountScreen** | Create new account (Wallet/Bank/Mobile Banking etc.) — includes daily limit toggle + amount field |
+| **EditAccountScreen** | Edit existing account (reuses AddAccountViewModel) — includes daily limit toggle + amount field + provider limit info |
 | **TransferScreen** | Transfer money between accounts |
 | **BudgetScreen** | Budget management with category limits |
 | **BillRemindersScreen** | Manage recurring bills with Pay dialog, account picker, multi-month payment, paid/unpaid tracking |
