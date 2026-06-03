@@ -497,6 +497,23 @@ class FusionRepositoryImpl @Inject constructor(
         )
         transferDao.insertTransfer(transfer.toEntity())
 
+        if (transfer.fee > 0) {
+            expenseDao.insertExpense(
+                ExpenseEntity(
+                    amount = transfer.fee,
+                    category = ExpenseCategory.TRANSFER_FEE.name,
+                    date = System.currentTimeMillis(),
+                    notes = "Transfer fee: ${
+                        try { accountDao.getAccountById(fromAccountId)?.name ?: "Account $fromAccountId" } catch (e: Exception) { "Account $fromAccountId" }
+                    } → ${
+                        try { accountDao.getAccountById(toAccountId)?.name ?: "Account $toAccountId" } catch (e: Exception) { "Account $toAccountId" }
+                    }${note?.let { " - $it" } ?: ""}",
+                    accountId = fromAccountId,
+                    tags = "transfer_fee"
+                )
+            )
+        }
+
         return TransferResult(
             success = true,
             fromAccountNewBalance = newFromBalance,

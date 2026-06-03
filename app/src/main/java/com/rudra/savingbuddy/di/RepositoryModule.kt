@@ -78,9 +78,10 @@ object RepositoryModule {
     @Singleton
     fun provideAccountRepository(
         accountDao: AccountDao,
+        expenseDao: ExpenseDao,
         transferDao: TransferDao,
         balanceHistoryDao: AccountBalanceHistoryDao
-    ): AccountRepository = AccountRepositoryImpl(accountDao, transferDao, balanceHistoryDao)
+    ): AccountRepository = AccountRepositoryImpl(accountDao, expenseDao, transferDao, balanceHistoryDao)
 
     @Provides
     @Singleton

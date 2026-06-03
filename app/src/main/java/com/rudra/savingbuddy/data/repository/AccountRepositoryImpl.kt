@@ -2,9 +2,11 @@ package com.rudra.savingbuddy.data.repository
 
 import com.rudra.savingbuddy.data.local.converter.*
 import com.rudra.savingbuddy.data.local.dao.AccountDao
+import com.rudra.savingbuddy.data.local.dao.ExpenseDao
 import com.rudra.savingbuddy.data.local.dao.TransferDao
 import com.rudra.savingbuddy.data.local.dao.AccountBalanceHistoryDao
 import com.rudra.savingbuddy.data.local.entity.AccountBalanceHistoryEntity
+import com.rudra.savingbuddy.data.local.entity.ExpenseEntity
 import com.rudra.savingbuddy.domain.model.*
 import com.rudra.savingbuddy.domain.repository.AccountRepository
 import com.rudra.savingbuddy.domain.repository.TransferRepository
@@ -18,6 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class AccountRepositoryImpl @Inject constructor(
     private val accountDao: AccountDao,
+    private val expenseDao: ExpenseDao,
     private val transferDao: TransferDao,
     private val balanceHistoryDao: AccountBalanceHistoryDao
 ) : AccountRepository {
@@ -236,6 +239,19 @@ class AccountRepositoryImpl @Inject constructor(
                 balance = newToBalance
             )
         )
+
+        if (fee > 0) {
+            expenseDao.insertExpense(
+                ExpenseEntity(
+                    amount = fee,
+                    category = ExpenseCategory.TRANSFER_FEE.name,
+                    date = System.currentTimeMillis(),
+                    notes = "Transfer fee: ${fromAccount.name} → ${toAccount.name}${note?.let { " - $it" } ?: ""}",
+                    accountId = fromId,
+                    tags = "transfer_fee"
+                )
+            )
+        }
 
         return TransferResult(
             success = true,

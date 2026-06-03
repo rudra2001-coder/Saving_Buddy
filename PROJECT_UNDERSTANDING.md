@@ -405,12 +405,12 @@ AccountProvider (with daily limits):
   - CASH, PAYPAL, PAYONEER, STRIPE
 ```
 
-**Account dailyLimit**: Each account has a nullable `dailyLimit` (`Double?`) — users can set a custom limit or disable it entirely. Control is available both in the **Edit Account** screen (toggle + amount field) and inline in the **Account Detail** screen (dialog with toggle + amount). When `dailyLimit` is `null`, no limit is enforced. The Account Detail screen shows a progress bar with color-coded usage and a red "Limit reached" warning when the limit is hit.
+**Account dailyLimit**: Each account has a nullable `dailyLimit` (`Double?`) — users can set a custom limit or disable it entirely. Control is available in the **Add Account**, **Edit Account**, and **Account Detail** screens via a toggle + amount field. There are no hard-coded provider limits displayed in the UI; every limit is user-defined. When `dailyLimit` is `null`, no limit is enforced. The Account Detail screen shows a progress bar with color-coded usage and a red "Limit reached" warning when the limit is hit.
 
-### Expense Categories (15)
+### Expense Categories (16)
 ```
 FOOD, TRANSPORT, BILLS, SHOPPING, ENTERTAINMENT, HEALTH, EDUCATION,
-GIFTS, TRAVEL, SUBSCRIPTIONS, RENT, UTILITY, INSURANCE, TAX, EMI
+GIFTS, TRAVEL, SUBSCRIPTIONS, RENT, UTILITY, INSURANCE, TAX, EMI, TRANSFER_FEE
 ```
 
 ### Income Categories (7)
@@ -553,9 +553,9 @@ The main screen — most complex UI in the app:
 |---|---|
 | **AccountsScreen** | List all accounts with balances; shows remaining limit per account card |
 | **AccountDetailScreen** | Single account view with transactions; shows daily limit progress bar (color-coded green/orange/red), "Limit reached" warning, inline edit dialog with toggle + amount field |
-| **AddAccountScreen** | Create new account (Wallet/Bank/Mobile Banking etc.) — includes daily limit toggle + amount field |
-| **EditAccountScreen** | Edit existing account (reuses AddAccountViewModel) — includes daily limit toggle + amount field + provider limit info |
-| **TransferScreen** | Transfer money between accounts |
+| **AddAccountScreen** | Create new account (Wallet/Bank/Mobile Banking etc.) — includes daily limit toggle + custom amount field (no hard-coded provider limits) |
+| **EditAccountScreen** | Edit existing account (reuses AddAccountViewModel) — includes daily limit toggle + custom amount field |
+| **TransferScreen** | Transfer money between accounts — fee is recorded as a TRANSFER_FEE expense linked to source account |
 | **BudgetScreen** | Budget management with category limits |
 | **BillRemindersScreen** | Manage recurring bills with Pay dialog, account picker, multi-month payment, paid/unpaid tracking |
 | **GoalsScreen** | Savings goals management |
@@ -779,6 +779,7 @@ Grade:
 | Bill Reminders | ✅ Complete | `BillReminderEntity`, `BillRemindersScreen` — upgraded with Pay from account, multi-month payment, paid/unpaid month tracking, auto-silence after payment |
 | Multi-Account | ✅ Complete | `AccountEntity`, `AccountsScreen` |
 | Account Transfers | ✅ Complete | `TransferEntity`, `TransferScreen` |
+| Transfer Fee as Expense | ✅ Complete | Fee auto-recorded as TRANSFER_FEE expense in `AccountRepositoryImpl.transferMoney()` + `FusionRepositoryImpl.processTransferWithFusion()` |
 | Subscriptions | ✅ Complete | `SubscriptionEntity`, `SubscriptionManagerScreen` |
 | Investments | ✅ Complete | `InvestmentEntity`, `InvestmentScreen` |
 | Currency Converter | ✅ Complete | `ExchangeManager`, `CurrencyConverterScreen` |

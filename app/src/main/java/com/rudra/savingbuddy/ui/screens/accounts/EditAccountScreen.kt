@@ -326,24 +326,6 @@ fun EditAccountScreen(
                             )
                         )
 
-                        val provider = uiState.selectedProvider
-                        if (provider != null && provider.dailyTransferLimit > 0) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = IncomeGreen.copy(alpha = 0.08f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(Icons.Default.Info, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
-                                    Text("Provider daily transfer limit: ৳${provider.dailyTransferLimit.toLong()}",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-                            }
-                        }
-
                         // Custom Daily Limit Toggle
                         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
                         Row(

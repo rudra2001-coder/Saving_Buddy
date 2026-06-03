@@ -52,6 +52,7 @@ enum class ExpenseCategory(
     INSURANCE("Insurance", "🛡️", true, true),
     TAX("Tax", "📋", false, true),
     EMI("EMI", "🏦", true),
+    TRANSFER_FEE("Transfer Fee", "💸"),
     OTHERS("Others", "📦");
 
     val isBill: Boolean

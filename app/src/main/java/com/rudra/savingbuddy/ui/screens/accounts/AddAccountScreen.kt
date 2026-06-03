@@ -321,22 +321,50 @@ fun AddAccountScreen(
                             )
                         )
 
-                        val provider = uiState.selectedProvider
-                        if (provider != null && provider.dailyTransferLimit > 0) {
-                            Card(
-                                colors = CardDefaults.cardColors(containerColor = IncomeGreen.copy(alpha = 0.08f)),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth().padding(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(Icons.Default.Info, null, tint = IncomeGreen, modifier = Modifier.size(18.dp))
-                                    Text("Daily transfer limit: ৳${provider.dailyTransferLimit.toLong()}",
-                                        style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        // Custom Daily Limit Toggle
+                        HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Icon(Icons.Default.Speed, null, tint = WarningOrange, modifier = Modifier.size(18.dp))
+                                    Text("Daily Limit", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold)
                                 }
+                                Text(
+                                    if (uiState.limitEnabled) "Limit will be enforced for this account" else "No limit set for this account",
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
+                            Switch(
+                                checked = uiState.limitEnabled,
+                                onCheckedChange = { viewModel.toggleLimit(it) },
+                                colors = SwitchDefaults.colors(checkedTrackColor = IncomeGreen, checkedThumbColor = Color.White)
+                            )
+                        }
+                        if (uiState.limitEnabled) {
+                            OutlinedTextField(
+                                value = uiState.dailyLimit,
+                                onValueChange = { viewModel.updateDailyLimit(it) },
+                                label = { Text("Limit Amount") },
+                                placeholder = { Text("e.g., 5000") },
+                                leadingIcon = { Text("৳", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = WarningOrange) },
+                                supportingText = { Text("Set a daily spending limit for this account") },
+                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+                                modifier = Modifier.fillMaxWidth(),
+                                singleLine = true,
+                                shape = RoundedCornerShape(12.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = WarningOrange,
+                                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                                    cursorColor = WarningOrange,
+                                    focusedLeadingIconColor = WarningOrange
+                                )
+                            )
                         }
                     }
                 }

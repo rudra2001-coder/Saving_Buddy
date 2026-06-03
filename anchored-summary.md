@@ -17,7 +17,7 @@
 
 ## Progress
 ### Done
-- **Transfer Fee** (`TransferScreen.kt`, `TransferViewModel.kt`, `AccountRepositoryImpl.kt`):
+- **Transfer Fee** (`TransferScreen.kt`, `TransferViewModel.kt`, `AccountRepositoryImpl.kt`, `FusionRepositoryImpl.kt`):
   - Fee input card below amount with `Receipt` icon and red accent
   - `feeText` in `TransferUiState`, parsed as `fee: Double` (default 0.0)
   - Validation: `updateFee()` only accepts digits and decimal via regex `^\d*\.?\d*$`
@@ -26,6 +26,14 @@
   - `AccountRepositoryImpl.transferMoney()` accepts `fee` param, validates `amount + fee`, deducts total from source, credits amount to destination
   - Success dialog shows fee breakdown and new balances for both accounts
   - Daily transfer limit check uses `totalDeduction` (amount + fee)
+
+- **Transfer Fee Recorded as Expense** (`AccountRepositoryImpl.kt`, `FusionRepositoryImpl.kt`):
+  - New `TRANSFER_FEE` category added to `ExpenseCategory` enum with "💸" icon
+  - After successful transfer with fee > 0, an expense entry is auto-inserted into the expense table
+  - Expense notes include "Transfer fee: SourceAccount → DestAccount"
+  - Expense is linked to the source account for accurate account-level reporting
+  - Works for both user-inputted fees (TransferScreen) and auto-calculated fees (Fusion transfers)
+  - No double-deduction: `expenseDao.insertExpense()` bypasses `ExpenseRepository` auto-deduction since fee is already deducted via `totalDeduction` in transfer
 
 - **Account-Based Recurring** (`RecurringViewModel.kt`, `RecurringScreen.kt`):
   - `saveRecurringIncome()` / `saveRecurringExpense()` accept `accountId: Long?`
@@ -44,6 +52,12 @@
 
 ### Blocked
 - (none)
+
+### Account Daily Limit Customization (`AddAccountScreen.kt`, `EditAccountScreen.kt`)
+- Hard-coded provider daily limit info cards removed from both Add and Edit Account screens
+- Users set their own limit via toggle + amount field (or disable limits entirely)
+- `dailyLimit = null` when toggle is off — no limit enforced
+- ViewModel already supported `limitEnabled`/`dailyLimit` fields; UI now exposes them in both screens
 
 ## Key Decisions
 - Fee stored as `feeText: String` in `TransferUiState` (consistent with `amount` pattern), parsed via computed `fee` property `get() = feeText.toDoubleOrNull() ?: 0.0`
@@ -65,8 +79,11 @@
 ## Relevant Files
 - `ui/screens/accounts/TransferScreen.kt` — fee input card, summary/confirmation/success dialogs with fee
 - `ui/screens/accounts/TransferViewModel.kt` — `TransferUiState.feeText`, `updateFee()`, `totalAmount`, `executeTransfer()` fee validation
-- `data/repository/AccountRepositoryImpl.kt` — `transferMoney(fromId, toId, amount, fee, note)` with fee deduction
+- `data/repository/AccountRepositoryImpl.kt` — `transferMoney(fromId, toId, amount, fee, note)` with fee deduction + expense insertion
+- `data/repository/FusionRepositoryImpl.kt` — `processTransferWithFusion()` with auto-calculated fee + expense insertion
 - `domain/repository/AccountRepository.kt` — interface with `fee` param
+- `domain/model/Expense.kt` — `TRANSFER_FEE` category in `ExpenseCategory` enum
+- `di/RepositoryModule.kt` — `provideAccountRepository()` updated to inject `ExpenseDao`
 
 - `ui/screens/recurring/RecurringViewModel.kt` — `saveRecurringIncome/Expense` with `accountId`, accounts loaded via `combine`
 - `ui/screens/recurring/RecurringScreen.kt` — `AddRecurringDialog` with account picker dropdown
