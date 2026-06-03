@@ -58,6 +58,15 @@ class ExpenseRepositoryImpl @Inject constructor(
     override suspend fun updateExpense(expense: Expense) =
         expenseDao.updateExpense(expense.toEntity())
 
-    override suspend fun deleteExpense(id: Long) =
+    override suspend fun deleteExpense(id: Long) {
+        val entity = expenseDao.getExpenseById(id) ?: return
+        if (entity.accountId != null) {
+            val account = accountDao.getAccountById(entity.accountId)
+            if (account != null) {
+                val newBalance = account.balance + entity.amount
+                accountDao.updateBalance(entity.accountId, newBalance)
+            }
+        }
         expenseDao.deleteExpenseById(id)
+    }
 }

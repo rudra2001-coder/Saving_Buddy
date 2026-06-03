@@ -68,8 +68,17 @@ class IncomeRepositoryImpl @Inject constructor(
     override suspend fun updateIncome(income: Income) =
         incomeDao.updateIncome(income.toEntity())
 
-    override suspend fun deleteIncome(id: Long) =
+    override suspend fun deleteIncome(id: Long) {
+        val entity = incomeDao.getIncomeById(id) ?: return
+        if (entity.accountId != null) {
+            val account = accountDao.getAccountById(entity.accountId)
+            if (account != null) {
+                val newBalance = account.balance - entity.amount
+                accountDao.updateBalance(entity.accountId, newBalance)
+            }
+        }
         incomeDao.deleteIncomeById(id)
+    }
 
     override suspend fun getWalletAccountId(): Long? {
         val accounts = accountDao.getAccountsByType(AccountType.WALLET.name).first()
